@@ -13,7 +13,7 @@ export const validate = (schema: {
   return (req: Request, res: Response, next: NextFunction): void => {
     const errors: any[] = [];
 
-    // Validate body
+    
     if (schema.body) {
       const { error } = schema.body.validate(req.body, { abortEarly: false });
       if (error) {
@@ -27,7 +27,7 @@ export const validate = (schema: {
       }
     }
 
-    // Validate params
+    
     if (schema.params) {
       const { error } = schema.params.validate(req.params, { abortEarly: false });
       if (error) {
@@ -41,7 +41,7 @@ export const validate = (schema: {
       }
     }
 
-    // Validate query
+    
     if (schema.query) {
       const { error } = schema.query.validate(req.query, { abortEarly: false });
       if (error) {
@@ -55,7 +55,7 @@ export const validate = (schema: {
       }
     }
 
-    // Return validation errors if any
+    
     if (errors.length > 0) {
       return validationErrorResponse(res, errors) as any;
     }
@@ -68,14 +68,20 @@ export const validate = (schema: {
  * Sanitize request data
  */
 export const sanitize = (req: Request, _res: Response, next: NextFunction): void => {
-  // Sanitize body
+  
   if (req.body && typeof req.body === 'object') {
     req.body = sanitizeObject(req.body);
   }
 
-  // Sanitize query
+  
   if (req.query && typeof req.query === 'object') {
-    req.query = sanitizeObject(req.query);
+    const sanitizedQuery = sanitizeObject(req.query);
+    
+    for (const key in sanitizedQuery) {
+      if (sanitizedQuery.hasOwnProperty(key)) {
+        (req.query as any)[key] = sanitizedQuery[key];
+      }
+    }
   }
 
   next();
@@ -100,7 +106,7 @@ const sanitizeObject = (obj: any): any => {
       const value = obj[key];
       
       if (typeof value === 'string') {
-        // Basic XSS prevention
+        
         sanitized[key] = value.trim();
       } else if (typeof value === 'object') {
         sanitized[key] = sanitizeObject(value);

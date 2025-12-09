@@ -1,0 +1,154 @@
+import { Request, Response } from 'express';
+import { asyncHandler } from '../middlewares/errorHandler';
+import {
+  successResponse,
+  createdResponse,
+  noContentResponse,
+} from '../utils/responseFormatter';
+import { NotFoundError } from '../utils/errorTypes';
+import citationRepository from '../repositories/citationRepository';
+import logger from '../utils/logger';
+
+/**
+ * Create a new citation
+ * POST /api/documents/:documentId/citations
+ * Protected (requires edit permission)
+ */
+export const createCitation = asyncHandler(async (req: Request, res: Response) => {
+  const { documentId } = req.params;
+  const citationData = req.body;
+  
+  logger.info('Create citation request', { documentId });
+  
+  const citation = await citationRepository.create({
+    documentId,
+    ...citationData,
+  });
+  
+  return createdResponse(res, { citation }, 'Citation created successfully');
+});
+
+/**
+ * Get all citations for a document
+ * GET /api/documents/:documentId/citations
+ * Protected (requires document access)
+ */
+export const getDocumentCitations = asyncHandler(async (req: Request, res: Response) => {
+  const { documentId } = req.params;
+  const { type } = req.query;
+  
+  logger.info('Get document citations request', { documentId, type });
+  
+  let citations;
+  
+  if (type) {
+    citations = await citationRepository.findByType(documentId, type as string);
+  } else {
+    citations = await citationRepository.findByDocument(documentId);
+  }
+  
+  return successResponse(
+    res,
+    { citations, count: citations.length },
+    'Citations retrieved successfully'
+  );
+});
+
+/**
+ * Get citation by ID
+ * GET /api/documents/:documentId/citations/:citationId
+ * Protected (requires document access)
+ */
+export const getCitationById = asyncHandler(async (req: Request, res: Response) => {
+  const { citationId } = req.params;
+  
+  logger.info('Get citation request', { citationId });
+  
+  const citation = await citationRepository.findById(citationId);
+  
+  if (!citation) {
+    throw new NotFoundError('Citation not found');
+  }
+  
+  return successResponse(res, { citation }, 'Citation retrieved successfully');
+});
+
+/**
+ * Update citation
+ * PUT /api/documents/:documentId/citations/:citationId
+ * Protected (requires edit permission)
+ */
+export const updateCitation = asyncHandler(async (req: Request, res: Response) => {
+  const { citationId } = req.params;
+  const updates = req.body;
+  
+  logger.info('Update citation request', { citationId, updates });
+  
+  const citation = await citationRepository.update(citationId, updates);
+  
+  return successResponse(res, { citation }, 'Citation updated successfully');
+});
+
+/**
+ * Delete citation
+ * DELETE /api/documents/:documentId/citations/:citationId
+ * Protected (requires edit permission)
+ */
+export const deleteCitation = asyncHandler(async (req: Request, res: Response) => {
+  const { citationId } = req.params;
+  
+  logger.info('Delete citation request', { citationId });
+  
+  await citationRepository.delete(citationId);
+  
+  return noContentResponse(res);
+});
+
+/**
+ * Search citations by title or author
+ * GET /api/documents/:documentId/citations/search?q=query
+ * Protected (requires document access)
+ */
+export const searchCitations = asyncHandler(async (req: Request, res: Response) => {
+  const { documentId } = req.params;
+  const { q } = req.query as { q: string };
+  
+  logger.info('Search citations request', { documentId, query: q });
+  
+  const citations = await citationRepository.search(documentId, q);
+  
+  return successResponse(
+    res,
+    { citations, count: citations.length },
+    'Citations retrieved successfully'
+  );
+});
+
+/**
+ * Find citation by DOI
+ * GET /api/documents/:documentId/citations/doi/:doi
+ * Protected (requires document access)
+ */
+export const getCitationByDOI = asyncHandler(async (req: Request, res: Response) => {
+  const { documentId, doi } = req.params;
+  
+  logger.info('Get citation by DOI request', { documentId, doi });
+  
+  const citation = await citationRepository.findByDoi(documentId, doi);
+  
+  if (!citation) {
+    throw new NotFoundError('Citation not found');
+  }
+  
+  return successResponse(res, { citation }, 'Citation retrieved successfully');
+});
+
+export default {
+  createCitation,
+  getDocumentCitations,
+  getCitationById,
+  updateCitation,
+  deleteCitation,
+  searchCitations,
+  getCitationByDOI,
+};

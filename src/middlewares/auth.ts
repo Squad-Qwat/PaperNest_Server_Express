@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { auth } from '../config/firebase';
 import { env } from '../config/env';
 import { unauthorizedResponse } from '../utils/responseFormatter';
 import userRepository from '../repositories/userRepository';
-import '../types/express'; // Import type augmentation
+import logger from '../utils/logger';
 
 export interface JwtPayload {
   userId: string;
@@ -12,7 +13,8 @@ export interface JwtPayload {
 }
 
 /**
- * Verify JWT token middleware
+ * Verify Firebase Auth token middleware
+ * This is the PRIMARY authentication method - uses Firebase Auth tokens from frontend
  */
 export const authenticate = async (
   req: Request,
@@ -29,36 +31,59 @@ export const authenticate = async (
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Verify token
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    try {
+      // First, try to verify as Firebase Auth token
+      const decodedToken = await auth.verifyIdToken(token);
+      
+      // Get user from our database using Firebase UID
+      const user = await userRepository.findById(decodedToken.uid);
 
-    // Get user from database
-    const user = await userRepository.findById(decoded.userId);
+      if (!user) {
+        // User authenticated with Firebase but not in our database
+        logger.warn(`User ${decodedToken.uid} authenticated with Firebase but not found in database`);
+        return unauthorizedResponse(res, 'User not found. Please complete registration.') as any;
+      }
 
-    if (!user) {
-      return unauthorizedResponse(res, 'User not found') as any;
+      // Attach user to request
+      req.user = user;
+      req.userId = user.userId;
+
+      logger.info(`User ${user.userId} authenticated via Firebase Auth`);
+      return next();
+
+    } catch (firebaseError) {
+      // If Firebase Auth verification fails, try custom JWT (for backward compatibility)
+      try {
+        const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+        const user = await userRepository.findById(decoded.userId);
+
+        if (!user) {
+          return unauthorizedResponse(res, 'User not found') as any;
+        }
+
+        req.user = user;
+        req.userId = user.userId;
+
+        logger.info(`User ${user.userId} authenticated via custom JWT`);
+        return next();
+
+      } catch (jwtError) {
+        logger.error('Authentication failed for both Firebase Auth and custom JWT', {
+          firebaseError: firebaseError instanceof Error ? firebaseError.message : firebaseError,
+          jwtError: jwtError instanceof Error ? jwtError.message : jwtError,
+        });
+        return unauthorizedResponse(res, 'Invalid or expired token') as any;
+      }
     }
-
-    // Attach user to request
-    req.user = user;
-    req.userId = user.userId;
-
-    next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      return unauthorizedResponse(res, 'Invalid token') as any;
-    }
-
-    if (error instanceof jwt.TokenExpiredError) {
-      return unauthorizedResponse(res, 'Token expired') as any;
-    }
-
+    logger.error('Authentication error:', error);
     return unauthorizedResponse(res, 'Authentication failed') as any;
   }
 };
 
 /**
  * Optional authentication middleware (doesn't fail if no token)
+ * Supports both Firebase Auth and custom JWT
  */
 export const optionalAuthenticate = async (
   req: Request,
@@ -73,12 +98,29 @@ export const optionalAuthenticate = async (
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-    const user = await userRepository.findById(decoded.userId);
 
-    if (user) {
-      req.user = user;
-      req.userId = user.userId;
+    try {
+      // Try Firebase Auth first
+      const decodedToken = await auth.verifyIdToken(token);
+      const user = await userRepository.findById(decodedToken.uid);
+
+      if (user) {
+        req.user = user;
+        req.userId = user.userId;
+      }
+    } catch {
+      // Try custom JWT
+      try {
+        const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+        const user = await userRepository.findById(decoded.userId);
+
+        if (user) {
+          req.user = user;
+          req.userId = user.userId;
+        }
+      } catch {
+        // Ignore errors in optional authentication
+      }
     }
 
     next();
