@@ -18,7 +18,7 @@ import logger from '../utils/logger';
  * Protected
  */
 export const createWorkspace = asyncHandler(async (req: Request, res: Response) => {
-  const { title, description } = req.body;
+  const { title, description, icon } = req.body;
   const userId = req.userId!;
   
   logger.info('Create workspace request', { userId, title });
@@ -27,6 +27,7 @@ export const createWorkspace = asyncHandler(async (req: Request, res: Response) 
   const workspace = await workspaceRepository.create({
     title,
     description: description || '',
+    ...(icon && { icon }),
     ownerId: userId,
   });
   

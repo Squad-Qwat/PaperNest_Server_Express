@@ -20,6 +20,12 @@ export const createWorkspaceSchema = Joi.object({
     .messages({
       'string.max': 'Description cannot exceed 1000 characters',
     }),
+  icon: Joi.string()
+    .allow('')
+    .optional()
+    .messages({
+      'string.base': 'Icon must be a string',
+    }),
 });
 
 /**
@@ -38,6 +44,12 @@ export const updateWorkspaceSchema = Joi.object({
     .max(1000)
     .messages({
       'string.max': 'Description cannot exceed 1000 characters',
+    }),
+  icon: Joi.string()
+    .allow('')
+    .optional()
+    .messages({
+      'string.base': 'Icon must be a string',
     }),
 }).min(1);
 

@@ -127,7 +127,6 @@ describe('CitationController', () => {
 
       citationController.getCitationById(req as Request, res as Response, next);
 
-      // Wait for async operations to complete
       await new Promise(resolve => setImmediate(resolve));
 
       expect(next).toHaveBeenCalledWith(expect.any(NotFoundError));

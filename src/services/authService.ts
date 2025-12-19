@@ -107,6 +107,9 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
   }
 };
 
+
+// sendEmailVerification
+
 /**
  * Login user with Firebase Auth verification
  * Note: Actual password verification happens on client-side with Firebase Auth
