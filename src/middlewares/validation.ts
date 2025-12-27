@@ -78,7 +78,7 @@ export const sanitize = (req: Request, _res: Response, next: NextFunction): void
     const sanitizedQuery = sanitizeObject(req.query);
     
     for (const key in sanitizedQuery) {
-      if (sanitizedQuery.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(sanitizedQuery, key)) {
         (req.query as any)[key] = sanitizedQuery[key];
       }
     }
@@ -102,11 +102,13 @@ const sanitizeObject = (obj: any): any => {
   const sanitized: any = {};
   
   for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const value = obj[key];
       
-      if (typeof value === 'string') {
-        
+      // Skip sanitization for content fields to preserve JSON structure
+      if (key === 'content' || key === 'savedContent') {
+        sanitized[key] = value;
+      } else if (typeof value === 'string') {
         sanitized[key] = value.trim();
       } else if (typeof value === 'object') {
         sanitized[key] = sanitizeObject(value);

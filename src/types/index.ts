@@ -35,7 +35,7 @@ export interface Document {
   documentId: string;
   workspaceId: string;
   title: string;
-  savedContent: string;
+  savedContent: any;
   currentVersionId: string;
   createdBy: string;
   createdAt: Date;
@@ -46,7 +46,7 @@ export interface DocumentBody {
   documentBodyId: string;
   documentId: string;
   userId: string;
-  content: string;
+  content: any;
   message: string;
   isCurrentVersion: boolean;
   versionNumber: number;

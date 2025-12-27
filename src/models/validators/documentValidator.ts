@@ -13,11 +13,10 @@ export const createDocumentSchema = Joi.object({
       'string.max': 'Title cannot exceed 500 characters',
       'any.required': 'Title is required',
     }),
-  content: Joi.string()
-    .allow('')
+  content: Joi.any()
     .default('')
     .messages({
-      'string.base': 'Content must be a string',
+      'any.base': 'Content must be a valid value',
     }),
   message: Joi.string()
     .max(500)
@@ -44,11 +43,10 @@ export const updateDocumentSchema = Joi.object({
  * Validation schema for updating document content (creates new version)
  */
 export const updateDocumentContentSchema = Joi.object({
-  content: Joi.string()
+  content: Joi.any()
     .required()
     .messages({
       'any.required': 'Content is required',
-      'string.base': 'Content must be a string',
     }),
   message: Joi.string()
     .max(500)
