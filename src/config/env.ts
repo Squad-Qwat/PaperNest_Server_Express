@@ -23,6 +23,11 @@ export const env = {
   // Google AI Configuration (Gemini)
   GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY || '',
   
+  // Liveblocks Configuration
+  LIVEBLOCKS_SECRET_KEY: process.env.LIVEBLOCKS_SECRET_KEY || '',
+  LIVEBLOCKS_WEBHOOK_SECRET: process.env.LIVEBLOCKS_WEBHOOK_SECRET || '',
+  LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET: process.env.LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET || process.env.LIVEBLOCKS_WEBHOOK_SECRET || '',
+  
   // External API Keys
   SEMANTIC_SCHOLAR_API_KEY: process.env.SEMANTIC_SCHOLAR_API_KEY || '',
   PUBMED_API_KEY: process.env.PUBMED_API_KEY || '',

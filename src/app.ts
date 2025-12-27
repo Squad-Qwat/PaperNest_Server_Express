@@ -16,6 +16,7 @@ import citationRoutes from './routes/citations';
 import commentRoutes from './routes/comments';
 import reviewRoutes from './routes/reviews';
 import notificationRoutes from './routes/notifications';
+import webhookRoutes from './routes/webhooks';
 
 // Create Express app
 const app: Application = express();
@@ -44,6 +45,9 @@ if (env.NODE_ENV === 'development') {
 
 // Sanitize input
 app.use(sanitize);
+
+// Webhook routes (before rate limiting and auth)
+app.use('/api/webhooks', webhookRoutes);
 
 // Global rate limiting
 app.use('/api', globalRateLimiter);

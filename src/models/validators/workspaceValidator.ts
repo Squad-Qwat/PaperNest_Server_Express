@@ -95,3 +95,15 @@ export const updateInvitationStatusSchema = Joi.object({
       'any.required': 'Status is required',
     }),
 });
+
+/**
+ * Validation schema for joining workspace
+ */
+export const joinWorkspaceSchema = Joi.object({
+  role: Joi.string()
+    .valid('editor', 'viewer', 'reviewer')
+    .default('viewer')
+    .messages({
+      'any.only': 'Role must be either editor, viewer, or reviewer',
+    }),
+});

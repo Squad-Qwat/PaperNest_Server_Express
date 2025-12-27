@@ -12,6 +12,7 @@ import {
   inviteMemberSchema,
   updateMemberRoleSchema,
   updateInvitationStatusSchema,
+  joinWorkspaceSchema,
 } from '../models/validators/workspaceValidator';
 
 const router = Router();
@@ -124,6 +125,18 @@ router.delete(
   authenticate,
   authorizeWorkspace(),
   workspaceController.removeMember
+);
+
+/**
+ * @route   POST /api/workspaces/:workspaceId/join
+ * @desc    Join workspace directly
+ * @access  Protected
+ */
+router.post(
+  '/:workspaceId/join',
+  authenticate,
+  validate({ body: joinWorkspaceSchema }),
+  workspaceController.joinWorkspace
 );
 
 export default router;

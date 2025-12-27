@@ -175,11 +175,12 @@ export const authorizeDocumentEdit = async (req: Request, res: Response, next: N
 };
 
 /**
- * Check if user owns a comment
+ * Check if user owns a comment and has workspace access
  */
 export const authorizeCommentOwner = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const commentId = req.params.commentId;
+    const documentId = req.params.documentId;
     const userId = req.userId;
 
     if (!userId) {
@@ -188,6 +189,10 @@ export const authorizeCommentOwner = async (req: Request, res: Response, next: N
 
     if (!commentId) {
       throw new Error('Comment ID is required');
+    }
+
+    if (!documentId) {
+      throw new Error('Document ID is required');
     }
 
     const comment = await commentRepository.findById(commentId);
@@ -199,7 +204,21 @@ export const authorizeCommentOwner = async (req: Request, res: Response, next: N
       throw new ForbiddenError('You can only edit or delete your own comments');
     }
 
+    // Get document to verify workspace access
+    const document = await documentRepository.findById(documentId);
+    if (!document) {
+      throw new NotFoundError('Document not found');
+    }
+
+    // Verify user still has access to the workspace
+    const hasAccess = await userWorkspaceRepository.hasAccess(userId, document.workspaceId);
+    if (!hasAccess) {
+      throw new ForbiddenError('You do not have access to this workspace');
+    }
+
     (req as any).comment = comment;
+    (req as any).document = document;
+    (req as any).workspaceId = document.workspaceId;
 
     next();
   } catch (error) {
@@ -301,6 +320,53 @@ export const authorizeReviewLecturer = async (req: Request, res: Response, next:
   }
 };
 
+/**
+ * Check if user is the student who created the review and has workspace access
+ */
+export const authorizeReviewStudent = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const reviewId = req.params.reviewId;
+    const userId = req.userId;
+
+    if (!userId) {
+      throw new UnauthorizedError('Authentication required');
+    }
+
+    if (!reviewId) {
+      throw new Error('Review ID is required');
+    }
+
+    const review = await reviewRepository.findById(reviewId);
+    if (!review) {
+      throw new NotFoundError('Review not found');
+    }
+
+    if (review.studentUserId !== userId) {
+      throw new ForbiddenError('You can only delete your own review requests');
+    }
+
+    // Get document to verify workspace access
+    const document = await documentRepository.findById(review.documentId);
+    if (!document) {
+      throw new NotFoundError('Document not found');
+    }
+
+    // Verify user still has access to the workspace
+    const hasAccess = await userWorkspaceRepository.hasAccess(userId, document.workspaceId);
+    if (!hasAccess) {
+      throw new ForbiddenError('You do not have access to this workspace');
+    }
+
+    (req as any).review = review;
+    (req as any).document = document;
+    (req as any).workspaceId = document.workspaceId;
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   authorizeWorkspace,
   authorizeWorkspaceOwner,
@@ -310,4 +376,5 @@ export default {
   authorizeLecturer,
   authorizeReview,
   authorizeReviewLecturer,
+  authorizeReviewStudent,
 };

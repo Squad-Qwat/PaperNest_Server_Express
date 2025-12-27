@@ -7,6 +7,7 @@ import {
   authorizeLecturer,
   authorizeReview,
   authorizeReviewLecturer,
+  authorizeReviewStudent,
 } from '../middlewares/authorization';
 import {
   createReviewSchema,
@@ -111,6 +112,7 @@ router.post(
 router.delete(
   '/:reviewId',
   authenticate,
+  authorizeReviewStudent,
   reviewController.deleteReview
 );
 

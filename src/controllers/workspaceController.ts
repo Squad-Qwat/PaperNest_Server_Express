@@ -337,6 +337,48 @@ export const updateInvitationStatus = asyncHandler(async (req: Request, res: Res
   );
 });
 
+/**
+ * Join workspace directly
+ * POST /api/workspaces/:workspaceId/join
+ * Protected
+ */
+export const joinWorkspace = asyncHandler(async (req: Request, res: Response) => {
+  const { workspaceId } = req.params;
+  const userId = req.userId!;
+  const { role } = req.body;
+  
+  logger.info('Join workspace request', { workspaceId, userId });
+  
+  const workspace = await workspaceRepository.findById(workspaceId);
+  if (!workspace) {
+    throw new NotFoundError('Workspace not found');
+  }
+  
+  const existing = await userWorkspaceRepository.findByUserAndWorkspace(userId, workspaceId);
+  if (existing) {
+    if (existing.invitationStatus === 'accepted') {
+      throw new ConflictError('You are already a member of this workspace');
+    }
+    if (existing.invitationStatus === 'pending') {
+      throw new ConflictError('You have a pending invitation for this workspace');
+    }
+  }
+  
+  const userWorkspace = await userWorkspaceRepository.create({
+    userId,
+    workspaceId,
+    role: role || 'viewer',
+    invitationStatus: 'accepted',
+    invitedBy: userId,
+  });
+  
+  return createdResponse(
+    res,
+    { userWorkspace, workspace },
+    'Successfully joined workspace'
+  );
+});
+
 export default {
   createWorkspace,
   getUserWorkspaces,
@@ -349,4 +391,5 @@ export default {
   removeMember,
   getPendingInvitations,
   updateInvitationStatus,
+  joinWorkspace,
 };
