@@ -24,7 +24,7 @@ const router = Router();
  * @access  Protected
  */
 router.get(
-  '/',
+  '/reviews',
   authenticate,
   reviewController.getUserReviews
 );
@@ -35,7 +35,7 @@ router.get(
  * @access  Protected (lecturer only)
  */
 router.get(
-  '/pending',
+  '/reviews/pending',
   authenticate,
   authorizeLecturer,
   reviewController.getPendingReviews
@@ -47,7 +47,7 @@ router.get(
  * @access  Protected (must be involved in review)
  */
 router.get(
-  '/:reviewId',
+  '/reviews/:reviewId',
   authenticate,
   authorizeReview,
   reviewController.getReviewById
@@ -59,7 +59,7 @@ router.get(
  * @access  Protected (assigned lecturer only)
  */
 router.put(
-  '/:reviewId',
+  '/reviews/:reviewId',
   authenticate,
   authorizeReviewLecturer,
   validate({ body: updateReviewSchema }),
@@ -72,7 +72,7 @@ router.put(
  * @access  Protected (assigned lecturer only)
  */
 router.post(
-  '/:reviewId/approve',
+  '/reviews/:reviewId/approve',
   authenticate,
   authorizeReviewLecturer,
   reviewController.approveReview
@@ -84,7 +84,7 @@ router.post(
  * @access  Protected (assigned lecturer only)
  */
 router.post(
-  '/:reviewId/reject',
+  '/reviews/:reviewId/reject',
   authenticate,
   authorizeReviewLecturer,
   validate({ body: updateReviewStatusSchema }),
@@ -97,7 +97,7 @@ router.post(
  * @access  Protected (assigned lecturer only)
  */
 router.post(
-  '/:reviewId/request-revision',
+  '/reviews/:reviewId/request-revision',
   authenticate,
   authorizeReviewLecturer,
   validate({ body: updateReviewStatusSchema }),
@@ -110,7 +110,7 @@ router.post(
  * @access  Protected (student who created it)
  */
 router.delete(
-  '/:reviewId',
+  '/reviews/:reviewId',
   authenticate,
   authorizeReviewStudent,
   reviewController.deleteReview

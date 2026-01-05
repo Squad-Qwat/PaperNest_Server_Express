@@ -50,7 +50,7 @@ app.use(sanitize);
 app.use('/api/webhooks', webhookRoutes);
 
 // Global rate limiting
-app.use('/api', globalRateLimiter);
+// app.use('/api', globalRateLimiter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

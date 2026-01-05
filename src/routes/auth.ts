@@ -34,8 +34,8 @@ router.post(
  */
 router.post(
   '/login',
-  authRateLimiter,
-  validate({ body: loginSchema }),
+  // authRateLimiter,
+validate({ body: loginSchema }),
   authController.login
 );
 
@@ -46,7 +46,7 @@ router.post(
  */
 router.post(
   '/login/email',
-  authRateLimiter,
+  // authRateLimiter,
   validate({ body: loginWithEmailPasswordSchema }),
   authController.loginWithEmailPassword
 );

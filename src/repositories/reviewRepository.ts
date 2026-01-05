@@ -42,10 +42,15 @@ export class ReviewRepository {
   async findByDocument(documentId: string): Promise<Review[]> {
     const snapshot = await this.collection
       .where('documentId', '==', documentId)
-      .orderBy('requestedAt', 'desc')
       .get();
     
-    return snapshot.docs.map(doc => doc.data() as Review);
+    const reviews = snapshot.docs.map(doc => doc.data() as Review);
+    
+    // Sort in memory to avoid composite index requirement
+    return reviews.sort((a, b) => {
+      const getMillis = (d: any) => d.toMillis ? d.toMillis() : new Date(d).getTime();
+      return getMillis(b.requestedAt) - getMillis(a.requestedAt);
+    });
   }
 
   /**
@@ -58,9 +63,15 @@ export class ReviewRepository {
       query = query.where('status', '==', status);
     }
     
-    const snapshot = await query.orderBy('requestedAt', 'desc').get();
+    const snapshot = await query.get();
     
-    return snapshot.docs.map(doc => doc.data() as Review);
+    const reviews = snapshot.docs.map(doc => doc.data() as Review);
+    
+    // Sort in memory
+    return reviews.sort((a, b) => {
+      const getMillis = (d: any) => d.toMillis ? d.toMillis() : new Date(d).getTime();
+      return getMillis(b.requestedAt) - getMillis(a.requestedAt);
+    });
   }
 
   /**
@@ -73,9 +84,15 @@ export class ReviewRepository {
       query = query.where('status', '==', status);
     }
     
-    const snapshot = await query.orderBy('requestedAt', 'desc').get();
+    const snapshot = await query.get();
     
-    return snapshot.docs.map(doc => doc.data() as Review);
+    const reviews = snapshot.docs.map(doc => doc.data() as Review);
+    
+    // Sort in memory
+    return reviews.sort((a, b) => {
+      const getMillis = (d: any) => d.toMillis ? d.toMillis() : new Date(d).getTime();
+      return getMillis(b.requestedAt) - getMillis(a.requestedAt);
+    });
   }
 
   /**
