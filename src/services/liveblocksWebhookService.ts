@@ -36,7 +36,7 @@ export class LiveblocksWebhookService {
     }
   }
 
-  private async getActiveUsers(roomId: string): Promise<any[]> {
+  async getActiveUsers(roomId: string): Promise<any[]> {
     const response = await fetch(
       `https://api.liveblocks.io/v2/rooms/${roomId}/active_users`,
       {

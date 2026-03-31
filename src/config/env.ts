@@ -41,6 +41,13 @@ export const env = {
   
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+  
+  // Cloudflare R2 Configuration
+  R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID || '',
+  R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || '',
+  R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || '',
+  R2_BUCKET_NAME: process.env.R2_BUCKET_NAME || 'papernest',
+  R2_PUBLIC_DOMAIN: process.env.R2_PUBLIC_DOMAIN || '',
 };
 
 // Validate required environment variables
@@ -48,6 +55,9 @@ const requiredEnvVars = [
   'FIREBASE_PROJECT_ID',
   'FIREBASE_PRIVATE_KEY',
   'FIREBASE_CLIENT_EMAIL',
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
 ];
 
 requiredEnvVars.forEach((varName) => {

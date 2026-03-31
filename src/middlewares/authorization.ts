@@ -5,7 +5,9 @@ import workspaceRepository from '../repositories/workspaceRepository';
 import documentRepository from '../repositories/documentRepository';
 import commentRepository from '../repositories/commentRepository';
 import reviewRepository from '../repositories/reviewRepository';
+import permissionService from '../services/permissionService';
 import logger from '../utils/logger';
+import type { DocumentPermission } from '../types/Permission.types';
 
 /**
  * Check if user has access to a workspace with minimum role requirement
@@ -367,6 +369,64 @@ export const authorizeReviewStudent = async (req: Request, res: Response, next: 
   }
 };
 
+/**
+ * Check if user has minimum required permission on a document
+ * Supports direct document permissions + workspace role inheritance
+ * Permission levels: 'viewer' (read-only) < 'editor' (write) < 'admin' (full control)
+ */
+export const authorizeDocumentPermission = (
+  requiredPermission: DocumentPermission
+) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const documentId = req.params.documentId;
+      const userId = req.userId;
+
+      if (!userId) {
+        throw new UnauthorizedError('Authentication required');
+      }
+
+      if (!documentId) {
+        throw new Error('Document ID is required');
+      }
+
+      // Verify document exists
+      const document = await documentRepository.findById(documentId);
+      if (!document) {
+        throw new NotFoundError('Document not found');
+      }
+
+      // Check effective permission (direct or workspace-inherited)
+      const hasPermission = await permissionService.hasMinimumPermission(
+        userId,
+        documentId,
+        requiredPermission
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenError(
+          `You need at least '${requiredPermission}' permission to perform this action`
+        );
+      }
+
+      // Attach document info for downstream use
+      (req as any).document = document;
+      (req as any).workspaceId = document.workspaceId;
+      (req as any).userPermission = requiredPermission;
+
+      logger.info('Document permission authorized', {
+        userId,
+        documentId,
+        requiredPermission,
+      });
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
 export default {
   authorizeWorkspace,
   authorizeWorkspaceOwner,
@@ -377,4 +437,5 @@ export default {
   authorizeReview,
   authorizeReviewLecturer,
   authorizeReviewStudent,
+  authorizeDocumentPermission,
 };

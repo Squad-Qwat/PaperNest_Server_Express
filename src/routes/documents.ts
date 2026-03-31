@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import * as documentController from '../controllers/documentController';
 import * as versionController from '../controllers/versionController';
+import * as batchOperationController from '../controllers/batchOperationController';
 import { validate } from '../middlewares/validation';
 import { authenticate } from '../middlewares/auth';
 import {
   authorizeWorkspace,
   authorizeDocument,
   authorizeDocumentEdit,
+  authorizeDocumentPermission,
 } from '../middlewares/authorization';
 import {
   createDocumentSchema,
@@ -14,6 +16,7 @@ import {
   updateDocumentContentSchema,
   searchDocumentSchema,
 } from '../models/validators/documentValidator';
+import { batchOperationRequestSchema } from '../models/validators/batchOperationValidator';
 import {
   createVersionSchema,
   versionNumberSchema,
@@ -30,6 +33,19 @@ router.get(
   '/my-documents',
   authenticate,
   documentController.getUserDocuments
+);
+
+/**
+ * @route   GET /api/documents/:documentId/with-room-state
+ * @desc    Get document with Liveblocks room state (consolidated endpoint)
+ * @access  Protected (requires workspace access)
+ * @optimization Reduces double-fetch pattern - returns document + version + room info in single call
+ */
+router.get(
+  '/:documentId/with-room-state',
+  authenticate,
+  authorizeDocument,
+  documentController.getDocumentWithRoomState
 );
 
 /**
@@ -189,4 +205,19 @@ router.post(
   versionController.revertToVersion
 );
 
+/**
+ * @route   POST /api/documents/:documentId/batch
+ * @desc    Execute atomic batch operations (save content + update metadata + create version)
+ * @access  Protected (requires editor permission on document)
+ * @optimization Reduces 3 API calls to 1, with atomic transaction support
+ */
+router.post(
+  '/documents/:documentId/batch',
+  authenticate,
+  authorizeDocumentPermission('editor'),
+  validate({ body: batchOperationRequestSchema }),
+  batchOperationController.executeBatchOperations
+);
+
 export default router;
+

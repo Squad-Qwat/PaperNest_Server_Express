@@ -8,6 +8,8 @@ import {
 import { NotFoundError } from '../utils/errorTypes';
 import documentRepository from '../repositories/documentRepository';
 import documentBodyRepository from '../repositories/documentBodyRepository';
+import permissionService from '../services/permissionService';
+import liveblocksWebhookService from '../services/liveblocksWebhookService';
 import logger from '../utils/logger';
 
 /**
@@ -47,6 +49,20 @@ export const createDocument = asyncHandler(async (req: Request, res: Response) =
     content || '',
     version.documentBodyId
   );
+
+  // Initialize document permissions (grant creator 'admin' permission)
+  try {
+    await permissionService.initializeDefaultDocumentPermissions(
+      document.documentId,
+      workspaceId,
+      userId
+    );
+    logger.info('Document permissions initialized', { documentId: document.documentId, userId });
+  } catch (permissionError) {
+    logger.error('Failed to initialize document permissions:', permissionError);
+    // Don't fail document creation if permission initialization fails
+    // This is a non-critical operation
+  }
   
   return createdResponse(
     res,
@@ -100,6 +116,66 @@ export const getDocumentById = asyncHandler(async (req: Request, res: Response) 
     res,
     { document, currentVersion },
     'Document retrieved successfully'
+  );
+});
+
+/**
+ * Get document with room state and active users (Consolidated endpoint)
+ * GET /api/documents/:documentId/with-room-state
+ * Protected (requires workspace access)
+ * Returns: document + currentVersion + liveblocks room metadata in single call
+ * Optimization: Reduces double-fetch pattern from client-side loading
+ */
+export const getDocumentWithRoomState = asyncHandler(async (req: Request, res: Response) => {
+  const { documentId } = req.params;
+  
+  logger.info('Get document with room state', { documentId });
+  
+  const document = await documentRepository.findById(documentId);
+  
+  if (!document) {
+    throw new NotFoundError('Document not found');
+  }
+  
+  // Get current version details
+  let currentVersion = null;
+  if (document.currentVersionId) {
+    currentVersion = await documentBodyRepository.findById(document.currentVersionId);
+  }
+  
+  // Get Liveblocks room information
+  // Room ID format: document:${documentId} (matching Liveblocks room naming convention)
+  const roomId = `document:${documentId}`;
+  let roomInfo: { id: string; activeUsers: number; status: 'active' | 'inactive' } = {
+    id: roomId,
+    activeUsers: 0,
+    status: 'active',
+  };
+  
+  try {
+    // Fetch active users from Liveblocks API
+    const activeUsers = await liveblocksWebhookService.getActiveUsers(roomId);
+    roomInfo.activeUsers = activeUsers.length;
+    logger.info(`Room ${roomId} has ${activeUsers.length} active users`);
+  } catch (error: any) {
+    // Room not found is expected for new documents - not an error condition
+    if (error.message?.includes('Room not found')) {
+      logger.info(`Room ${roomId} not found - document may be newly created`);
+      roomInfo.status = 'inactive';
+    } else {
+      // Log other errors but don't fail the request
+      logger.warn(`Could not fetch room info for ${roomId}:`, error);
+    }
+  }
+  
+  return successResponse(
+    res,
+    {
+      document,
+      currentVersion,
+      room: roomInfo,
+    },
+    'Document with room state retrieved successfully'
   );
 });
 
@@ -221,6 +297,7 @@ export default {
   createDocument,
   getWorkspaceDocuments,
   getDocumentById,
+  getDocumentWithRoomState,
   updateDocument,
   updateDocumentContent,
   deleteDocument,

@@ -168,6 +168,13 @@ export const sendPasswordReset = asyncHandler(async (req: Request, res: Response
   );
 });
 
+
+
+export const loginWithGoogle = asyncHandler(async (req: Request, res: Response) => {
+  logger.info('Google login request received');
+  
+});
+
 export default {
   register,
   login,
