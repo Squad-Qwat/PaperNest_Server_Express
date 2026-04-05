@@ -1,13 +1,13 @@
-import { Request, Response } from 'express';
-import { asyncHandler } from '../middlewares/errorHandler';
+import type { Request, Response } from "express";
+import { SUCCESS_MESSAGES } from "../config/constants";
+import { asyncHandler } from "../middlewares/errorHandler";
+import * as authService from "../services/authService";
+import logger from "../utils/logger";
 import {
-  successResponse,
-  createdResponse,
-  noContentResponse,
-} from '../utils/responseFormatter';
-import { SUCCESS_MESSAGES } from '../config/constants';
-import * as authService from '../services/authService';
-import logger from '../utils/logger';
+	createdResponse,
+	noContentResponse,
+	successResponse,
+} from "../utils/responseFormatter";
 
 /**
  * Register a new user
@@ -15,15 +15,11 @@ import logger from '../utils/logger';
  * Public
  */
 export const register = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Registration request received', { email: req.body.email });
+	logger.info("Registration request received", { email: req.body.email });
 
-  const result = await authService.register(req.body);
+	const result = await authService.register(req.body);
 
-  return createdResponse(
-    res,
-    result,
-    SUCCESS_MESSAGES.REGISTER_SUCCESS
-  );
+	return createdResponse(res, result, SUCCESS_MESSAGES.REGISTER_SUCCESS);
 });
 
 /**
@@ -32,15 +28,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
  * Public
  */
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Login request received');
+	logger.info("Login request received");
 
-  const result = await authService.login(req.body.firebaseToken);
+	const result = await authService.login(req.body.firebaseToken);
 
-  return successResponse(
-    res,
-    result,
-    SUCCESS_MESSAGES.LOGIN_SUCCESS
-  );
+	return successResponse(res, result, SUCCESS_MESSAGES.LOGIN_SUCCESS);
 });
 
 /**
@@ -48,34 +40,32 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
  * POST /api/auth/login/email
  * Public
  */
-export const loginWithEmailPassword = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Email/password login request received', { email: req.body.email });
+export const loginWithEmailPassword = asyncHandler(
+	async (req: Request, res: Response) => {
+		logger.info("Email/password login request received", {
+			email: req.body.email,
+		});
 
-  const result = await authService.loginWithEmailPassword(req.body);
+		const result = await authService.loginWithEmailPassword(req.body);
 
-  return successResponse(
-    res,
-    result,
-    SUCCESS_MESSAGES.LOGIN_SUCCESS
-  );
-});
+		return successResponse(res, result, SUCCESS_MESSAGES.LOGIN_SUCCESS);
+	},
+);
 
 /**
  * Refresh access token
  * POST /api/auth/refresh
  * Public (requires valid refresh token in body)
  */
-export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Token refresh request received');
+export const refreshToken = asyncHandler(
+	async (req: Request, res: Response) => {
+		logger.info("Token refresh request received");
 
-  const result = await authService.refreshAccessToken(req.body.refreshToken);
+		const result = await authService.refreshAccessToken(req.body.refreshToken);
 
-  return successResponse(
-    res,
-    result,
-    'Access token refreshed successfully'
-  );
-});
+		return successResponse(res, result, "Access token refreshed successfully");
+	},
+);
 
 /**
  * Verify Firebase token
@@ -83,15 +73,11 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
  * Public
  */
 export const verifyToken = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Token verification request received');
+	logger.info("Token verification request received");
 
-  const user = await authService.verifyFirebaseToken(req.body.token);
+	const user = await authService.verifyFirebaseToken(req.body.token);
 
-  return successResponse(
-    res,
-    { user },
-    'Token is valid'
-  );
+	return successResponse(res, { user }, "Token is valid");
 });
 
 /**
@@ -99,33 +85,37 @@ export const verifyToken = asyncHandler(async (req: Request, res: Response) => {
  * GET /api/auth/me
  * Protected
  */
-export const getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Get current user request received', { userId: req.userId });
+export const getCurrentUser = asyncHandler(
+	async (req: Request, res: Response) => {
+		logger.info("Get current user request received", { userId: req.userId });
 
-  // User is already attached to request by authenticate middleware
-  return successResponse(
-    res,
-    { user: req.user },
-    'User retrieved successfully'
-  );
-});
+		// User is already attached to request by authenticate middleware
+		return successResponse(
+			res,
+			{ user: req.user },
+			"User retrieved successfully",
+		);
+	},
+);
 
 /**
  * Delete user account
  * DELETE /api/auth/account
  * Protected
  */
-export const deleteAccount = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Delete account request received', { userId: req.userId });
+export const deleteAccount = asyncHandler(
+	async (req: Request, res: Response) => {
+		logger.info("Delete account request received", { userId: req.userId });
 
-  if (!req.userId) {
-    throw new Error('User ID not found in request');
-  }
+		if (!req.userId) {
+			throw new Error("User ID not found in request");
+		}
 
-  await authService.deleteUser(req.userId);
+		await authService.deleteUser(req.userId);
 
-  return noContentResponse(res);
-});
+		return noContentResponse(res);
+	},
+);
 
 /**
  * Update user email
@@ -133,22 +123,18 @@ export const deleteAccount = asyncHandler(async (req: Request, res: Response) =>
  * Protected
  */
 export const updateEmail = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Update email request received', {
-    userId: req.userId,
-    newEmail: req.body.newEmail
-  });
+	logger.info("Update email request received", {
+		userId: req.userId,
+		newEmail: req.body.newEmail,
+	});
 
-  if (!req.userId) {
-    throw new Error('User ID not found in request');
-  }
+	if (!req.userId) {
+		throw new Error("User ID not found in request");
+	}
 
-  await authService.updateUserEmail(req.userId, req.body.newEmail);
+	await authService.updateUserEmail(req.userId, req.body.newEmail);
 
-  return successResponse(
-    res,
-    null,
-    'Email updated successfully'
-  );
+	return successResponse(res, null, "Email updated successfully");
 });
 
 /**
@@ -156,17 +142,19 @@ export const updateEmail = asyncHandler(async (req: Request, res: Response) => {
  * POST /api/auth/password/reset
  * Public
  */
-export const sendPasswordReset = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Password reset request received', { email: req.body.email });
+export const sendPasswordReset = asyncHandler(
+	async (req: Request, res: Response) => {
+		logger.info("Password reset request received", { email: req.body.email });
 
-  await authService.sendPasswordResetEmail(req.body.email);
+		await authService.sendPasswordResetEmail(req.body.email);
 
-  return successResponse(
-    res,
-    null,
-    'If the email exists, a password reset link has been sent'
-  );
-});
+		return successResponse(
+			res,
+			null,
+			"If the email exists, a password reset link has been sent",
+		);
+	},
+);
 
 /**
  * Login user with Social Auth (Google, GitHub, dsb.)
@@ -174,20 +162,23 @@ export const sendPasswordReset = asyncHandler(async (req: Request, res: Response
  * Public
  */
 export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Social login request received');
-  
-  if (!req.body.firebaseToken) {
-    throw new Error('Firebase token is required');
-  }
+	logger.info("Social login request received");
 
-  const result = await authService.handleSocialLogin(req.body.firebaseToken, req.body.accessToken);
-  
-  // Jika user baru, frontend akan menangkap flag isNewUser
-  return successResponse(
-    res,
-    result,
-    result.isNewUser ? 'New user detected' : SUCCESS_MESSAGES.LOGIN_SUCCESS
-  );
+	if (!req.body.firebaseToken) {
+		throw new Error("Firebase token is required");
+	}
+
+	const result = await authService.handleSocialLogin(
+		req.body.firebaseToken,
+		req.body.accessToken,
+	);
+
+	// Jika user baru, frontend akan menangkap flag isNewUser
+	return successResponse(
+		res,
+		result,
+		result.isNewUser ? "New user detected" : SUCCESS_MESSAGES.LOGIN_SUCCESS,
+	);
 });
 
 /**
@@ -195,28 +186,32 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
  * POST /api/auth/social/complete
  * Public
  */
-export const completeSocialRegistration = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Complete social registration request received');
-  
-  const { firebaseToken, username, role } = req.body;
-  
-  if (!firebaseToken || !username || !role) {
-    throw new Error('Missing required fields: firebaseToken, username, and role are required');
-  }
+export const completeSocialRegistration = asyncHandler(
+	async (req: Request, res: Response) => {
+		logger.info("Complete social registration request received");
 
-  const result = await authService.completeSocialRegistration({
-    firebaseToken,
-    username,
-    role,
-    email: req.body.email
-  });
-  
-  return successResponse(
-    res,
-    result,
-    'Social registration completed successfully'
-  );
-});
+		const { firebaseToken, username, role } = req.body;
+
+		if (!firebaseToken || !username || !role) {
+			throw new Error(
+				"Missing required fields: firebaseToken, username, and role are required",
+			);
+		}
+
+		const result = await authService.completeSocialRegistration({
+			firebaseToken,
+			username,
+			role,
+			email: req.body.email,
+		});
+
+		return successResponse(
+			res,
+			result,
+			"Social registration completed successfully",
+		);
+	},
+);
 
 /**
  * Check email availability
@@ -224,16 +219,16 @@ export const completeSocialRegistration = asyncHandler(async (req: Request, res:
  * Public
  */
 export const checkEmail = asyncHandler(async (req: Request, res: Response) => {
-  const { email } = req.body;
-  logger.info('Check email availability request', { email });
+	const { email } = req.body;
+	logger.info("Check email availability request", { email });
 
-  const result = await authService.checkEmailAvailability(email);
+	const result = await authService.checkEmailAvailability(email);
 
-  return successResponse(
-    res,
-    result,
-    result.available ? 'Email is available' : 'Email is already in use'
-  );
+	return successResponse(
+		res,
+		result,
+		result.available ? "Email is available" : "Email is already in use",
+	);
 });
 
 /**
@@ -241,33 +236,33 @@ export const checkEmail = asyncHandler(async (req: Request, res: Response) => {
  * POST /api/auth/register/finalize
  * Public (requires Firebase token)
  */
-export const finalizeRegistration = asyncHandler(async (req: Request, res: Response) => {
-  logger.info('Finalize registration request received');
-  
-  if (!req.body.firebaseToken) {
-    throw new Error('Firebase token is required');
-  }
+export const finalizeRegistration = asyncHandler(
+	async (req: Request, res: Response) => {
+		logger.info("Finalize registration request received");
 
-  const result = await authService.finalizeRegistration(req.body.firebaseToken);
-  
-  return successResponse(
-    res,
-    result,
-    'Account finalized successfully'
-  );
-});
+		if (!req.body.firebaseToken) {
+			throw new Error("Firebase token is required");
+		}
+
+		const result = await authService.finalizeRegistration(
+			req.body.firebaseToken,
+		);
+
+		return successResponse(res, result, "Account finalized successfully");
+	},
+);
 
 export default {
-  register,
-  finalizeRegistration,
-  login,
-  socialLogin,
-  completeSocialRegistration,
-  refreshToken,
-  verifyToken,
-  getCurrentUser,
-  deleteAccount,
-  updateEmail,
-  sendPasswordReset,
-  checkEmail,
+	register,
+	finalizeRegistration,
+	login,
+	socialLogin,
+	completeSocialRegistration,
+	refreshToken,
+	verifyToken,
+	getCurrentUser,
+	deleteAccount,
+	updateEmail,
+	sendPasswordReset,
+	checkEmail,
 };

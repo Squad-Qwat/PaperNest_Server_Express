@@ -1,11 +1,15 @@
-import * as admin from 'firebase-admin';
+import * as admin from "firebase-admin";
 
 const firestore = admin.firestore();
-import { DocumentPermissionRecord, DocumentPermission } from '../types/Permission.types';
-import logger from '../utils/logger';
+
+import type {
+	DocumentPermission,
+	DocumentPermissionRecord,
+} from "../types/Permission.types";
+import logger from "../utils/logger";
 
 class DocumentPermissionRepository {
-	private readonly COLLECTION_NAME = 'documentPermissions';
+	private readonly COLLECTION_NAME = "documentPermissions";
 
 	/**
 	 * Get user's permission for a specific document
@@ -13,13 +17,13 @@ class DocumentPermissionRepository {
 	 */
 	async getUserDocumentPermission(
 		userId: string,
-		documentId: string
+		documentId: string,
 	): Promise<DocumentPermission | null> {
 		try {
 			const snapshot = await firestore
 				.collection(this.COLLECTION_NAME)
-				.where('userId', '==', userId)
-				.where('documentId', '==', documentId)
+				.where("userId", "==", userId)
+				.where("documentId", "==", documentId)
 				.get();
 
 			if (snapshot.empty) {
@@ -29,7 +33,7 @@ class DocumentPermissionRepository {
 			const record = snapshot.docs[0].data() as DocumentPermissionRecord;
 			return record.permission;
 		} catch (error) {
-			logger.error('Error getting document permission:', error);
+			logger.error("Error getting document permission:", error);
 			throw error;
 		}
 	}
@@ -41,10 +45,13 @@ class DocumentPermissionRepository {
 		userId: string,
 		documentId: string,
 		permission: DocumentPermission,
-		grantedBy: string
+		grantedBy: string,
 	): Promise<DocumentPermissionRecord> {
 		try {
-			const permissionRecord: Omit<DocumentPermissionRecord, 'documentPermissionId'> = {
+			const permissionRecord: Omit<
+				DocumentPermissionRecord,
+				"documentPermissionId"
+			> = {
 				userId,
 				documentId,
 				permission,
@@ -53,9 +60,11 @@ class DocumentPermissionRepository {
 				updatedAt: admin.firestore.FieldValue.serverTimestamp(),
 			};
 
-			const docSnapshot = await firestore.collection(this.COLLECTION_NAME).add(permissionRecord);
+			const docSnapshot = await firestore
+				.collection(this.COLLECTION_NAME)
+				.add(permissionRecord);
 
-			logger.info('Permission granted:', {
+			logger.info("Permission granted:", {
 				permissionId: docSnapshot.id,
 				userId,
 				documentId,
@@ -68,7 +77,7 @@ class DocumentPermissionRepository {
 				...permissionRecord,
 			} as DocumentPermissionRecord;
 		} catch (error) {
-			logger.error('Error granting permission:', error);
+			logger.error("Error granting permission:", error);
 			throw error;
 		}
 	}
@@ -80,17 +89,17 @@ class DocumentPermissionRepository {
 		userId: string,
 		documentId: string,
 		newPermission: DocumentPermission,
-		updatedBy: string
+		updatedBy: string,
 	): Promise<void> {
 		try {
 			const snapshot = await firestore
 				.collection(this.COLLECTION_NAME)
-				.where('userId', '==', userId)
-				.where('documentId', '==', documentId)
+				.where("userId", "==", userId)
+				.where("documentId", "==", documentId)
 				.get();
 
 			if (snapshot.empty) {
-				throw new Error('Permission record not found');
+				throw new Error("Permission record not found");
 			}
 
 			const permissionDoc = snapshot.docs[0];
@@ -99,14 +108,14 @@ class DocumentPermissionRepository {
 				updatedAt: admin.firestore.FieldValue.serverTimestamp(),
 			});
 
-			logger.info('Permission updated:', {
+			logger.info("Permission updated:", {
 				userId,
 				documentId,
 				newPermission,
 				updatedBy,
 			});
 		} catch (error) {
-			logger.error('Error updating permission:', error);
+			logger.error("Error updating permission:", error);
 			throw error;
 		}
 	}
@@ -118,19 +127,19 @@ class DocumentPermissionRepository {
 		try {
 			const snapshot = await firestore
 				.collection(this.COLLECTION_NAME)
-				.where('userId', '==', userId)
-				.where('documentId', '==', documentId)
+				.where("userId", "==", userId)
+				.where("documentId", "==", documentId)
 				.get();
 
 			if (snapshot.empty) {
-				throw new Error('Permission record not found');
+				throw new Error("Permission record not found");
 			}
 
 			await snapshot.docs[0].ref.delete();
 
-			logger.info('Permission revoked:', { userId, documentId });
+			logger.info("Permission revoked:", { userId, documentId });
 		} catch (error) {
-			logger.error('Error revoking permission:', error);
+			logger.error("Error revoking permission:", error);
 			throw error;
 		}
 	}
@@ -138,22 +147,26 @@ class DocumentPermissionRepository {
 	/**
 	 * Get all permissions for a document
 	 */
-	async getDocumentPermissions(documentId: string): Promise<DocumentPermissionRecord[]> {
+	async getDocumentPermissions(
+		documentId: string,
+	): Promise<DocumentPermissionRecord[]> {
 		try {
 			const snapshot = await firestore
 				.collection(this.COLLECTION_NAME)
-				.where('documentId', '==', documentId)
+				.where("documentId", "==", documentId)
 				.get();
 
 			return snapshot.docs.map(
-				(doc: admin.firestore.QueryDocumentSnapshot<admin.firestore.DocumentData>) =>
+				(
+					doc: admin.firestore.QueryDocumentSnapshot<admin.firestore.DocumentData>,
+				) =>
 					({
 						documentPermissionId: doc.id,
 						...doc.data(),
-					} as DocumentPermissionRecord)
+					}) as DocumentPermissionRecord,
 			);
 		} catch (error) {
-			logger.error('Error getting document permissions:', error);
+			logger.error("Error getting document permissions:", error);
 			throw error;
 		}
 	}
@@ -164,18 +177,25 @@ class DocumentPermissionRepository {
 	async hasPermissionLevel(
 		userId: string,
 		documentId: string,
-		minPermission: DocumentPermission
+		minPermission: DocumentPermission,
 	): Promise<boolean> {
 		try {
-			const permission = await this.getUserDocumentPermission(userId, documentId);
+			const permission = await this.getUserDocumentPermission(
+				userId,
+				documentId,
+			);
 			if (!permission) {
 				return false;
 			}
 
-			const HIERARCHY: Record<DocumentPermission, number> = { viewer: 1, editor: 2, admin: 3 };
+			const HIERARCHY: Record<DocumentPermission, number> = {
+				viewer: 1,
+				editor: 2,
+				admin: 3,
+			};
 			return HIERARCHY[permission] >= HIERARCHY[minPermission];
 		} catch (error) {
-			logger.error('Error checking permission level:', error);
+			logger.error("Error checking permission level:", error);
 			throw error;
 		}
 	}

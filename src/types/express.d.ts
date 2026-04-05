@@ -1,13 +1,11 @@
 // Extend Express Request type
-import { User } from './index';
+import { User } from "./index";
 
 declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-      userId?: string;
-    }
-  }
+	namespace Express {
+		interface Request {
+			user?: User;
+			userId?: string;
+		}
+	}
 }
-
-export {};

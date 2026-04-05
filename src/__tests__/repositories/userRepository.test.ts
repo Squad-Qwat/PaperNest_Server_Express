@@ -1,247 +1,206 @@
-import { UserRepository } from '../../repositories/userRepository';
-import { __mockFirestore } from '../../../__mocks__/firebase-admin';
-import { mockUser, mockUsers } from '../../tests/fixtures';
-import { User } from '../../types';
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { __mockFirestore } from "../../../__mocks__/firebase-admin";
+import { UserRepository } from "../../repositories/userRepository";
+import { mockUser, mockUsers } from "../../tests/fixtures";
+import { User } from "../../types";
 
 // Mock firebase config
-jest.mock('../../config/firebase', () => ({
-  db: require('../../../__mocks__/firebase-admin').__mockFirestore,
-  auth: require('../../../__mocks__/firebase-admin').__mockAuth,
+jest.mock("../../config/firebase", () => ({
+	db: require("../../../__mocks__/firebase-admin").__mockFirestore,
+	auth: require("../../../__mocks__/firebase-admin").__mockAuth,
 }));
 
-describe('UserRepository', () => {
-  let userRepository: UserRepository;
-  let mockCollection: any;
+describe("UserRepository", () => {
+	let userRepository: UserRepository;
+	let mockCollection: any;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    userRepository = new UserRepository();
-    mockCollection = __mockFirestore.collection('users');
-  });
+	beforeEach(() => {
+		jest.clearAllMocks();
+		userRepository = new UserRepository();
+		mockCollection = __mockFirestore.collection("users");
+	});
 
-  describe('create', () => {
-    it('should create a new user successfully', async () => {
-      const userId = 'user-123';
-      const userData = {
-        name: 'John Doe',
-        email: 'john@example.com',
-        username: 'johndoe',
-        role: 'Student' as const,
-        photoURL: null,
-      };
+	describe("create", () => {
+		it("should create a new user successfully", async () => {
+			const userId = "user-123";
+			const userData = {
+				name: "John Doe",
+				email: "john@example.com",
+				username: "johndoe",
+				role: "Student" as const,
+				photoURL: null,
+			};
 
-      const result = await userRepository.create(userId, userData);
+			const result = await userRepository.create(userId, userData);
 
-      expect(result).toMatchObject({
-        userId,
-        ...userData,
-      });
-      expect(result.createdAt).toBeInstanceOf(Date);
-      expect(result.updatedAt).toBeInstanceOf(Date);
-    });
+			expect(result).toMatchObject({
+				userId,
+				...userData,
+			});
+			expect(result.createdAt).toBeInstanceOf(Date);
+			expect(result.updatedAt).toBeInstanceOf(Date);
+		});
 
-    it('should include optional fields when provided', async () => {
-      const userId = 'user-456';
-      const userData = {
-        name: 'Jane Smith',
-        email: 'jane@example.com',
-        username: 'janesmith',
-        role: 'Lecturer' as const,
-        photoURL: 'https://example.com/photo.jpg',
-      };
+		it("should include optional fields when provided", async () => {
+			const userId = "user-456";
+			const userData = {
+				name: "Jane Smith",
+				email: "jane@example.com",
+				username: "janesmith",
+				role: "Lecturer" as const,
+				photoURL: "https://example.com/photo.jpg",
+			};
 
-      const result = await userRepository.create(userId, userData);
+			const result = await userRepository.create(userId, userData);
 
-      expect(result.photoURL).toBe(userData.photoURL);
-    });
-  });
+			expect(result.photoURL).toBe(userData.photoURL);
+		});
+	});
 
-  describe('findById', () => {
-    it('should return user when found', async () => {
-      const userId = 'user-123';
-      
-      const mockGet = jest.fn().mockResolvedValue({
-        exists: true,
-        data: () => mockUser,
-      });
+	describe("findById", () => {
+		it("should return user when found", async () => {
+			const userId = "user-123";
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        get: mockGet,
-      });
+			const mockGet = (jest.fn() as any).mockResolvedValue({
+				exists: true,
+				data: () => mockUser,
+			});
 
-      const result = await userRepository.findById(userId);
+			mockCollection.doc = jest.fn().mockReturnValue({
+				get: mockGet,
+			});
 
-      expect(result).toEqual(mockUser);
-      expect(mockCollection.doc).toHaveBeenCalledWith(userId);
-      expect(mockGet).toHaveBeenCalled();
-    });
+			const result = await userRepository.findById(userId);
 
-    it('should return null when user not found', async () => {
-      const userId = 'non-existent';
-      
-      const mockGet = jest.fn().mockResolvedValue({
-        exists: false,
-      });
+			expect(result).toEqual(mockUser);
+			expect(mockCollection.doc).toHaveBeenCalledWith(userId);
+			expect(mockGet).toHaveBeenCalled();
+		});
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        get: mockGet,
-      });
+		it("should return null when user not found", async () => {
+			const userId = "non-existent";
 
-      const result = await userRepository.findById(userId);
+			const mockGet = (jest.fn() as any).mockResolvedValue({
+				exists: false,
+			});
 
-      expect(result).toBeNull();
-    });
-  });
+			mockCollection.doc = jest.fn().mockReturnValue({
+				get: mockGet,
+			});
 
-  describe('findByEmail', () => {
-    it('should return user when found by email', async () => {
-      const email = 'john@example.com';
-      
-      mockCollection.where = jest.fn().mockReturnValue({
-        limit: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
-            empty: false,
-            docs: [{ data: () => mockUser }],
-          }),
-        }),
-      });
+			const result = await userRepository.findById(userId);
 
-      const result = await userRepository.findByEmail(email);
+			expect(result).toBeNull();
+		});
+	});
 
-      expect(result).toEqual(mockUser);
-      expect(mockCollection.where).toHaveBeenCalledWith('email', '==', email);
-    });
+	describe("findByEmail", () => {
+		it("should return user when found by email", async () => {
+			const email = "john@example.com";
+			const whereSpy = jest.spyOn(mockCollection, "where");
 
-    it('should return null when user not found by email', async () => {
-      const email = 'nonexistent@example.com';
-      
-      mockCollection.where = jest.fn().mockReturnValue({
-        limit: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
-            empty: true,
-          }),
-        }),
-      });
+			mockCollection.setMockDocs([mockUser]);
 
-      const result = await userRepository.findByEmail(email);
+			const result = await userRepository.findByEmail(email);
 
-      expect(result).toBeNull();
-    });
-  });
+			expect(result).toEqual(mockUser);
+			expect(whereSpy).toHaveBeenCalledWith("email", "==", email);
+		});
 
-  describe('findByUsername', () => {
-    it('should return user when found by username', async () => {
-      const username = 'johndoe';
-      
-      mockCollection.where = jest.fn().mockReturnValue({
-        limit: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
-            empty: false,
-            docs: [{ data: () => mockUser }],
-          }),
-        }),
-      });
+		it("should return null when user not found by email", async () => {
+			const email = "nonexistent@example.com";
 
-      const result = await userRepository.findByUsername(username);
+			mockCollection.setMockDocs([]);
 
-      expect(result).toEqual(mockUser);
-      expect(mockCollection.where).toHaveBeenCalledWith('username', '==', username);
-    });
+			const result = await userRepository.findByEmail(email);
 
-    it('should return null when user not found by username', async () => {
-      const username = 'nonexistent';
-      
-      mockCollection.where = jest.fn().mockReturnValue({
-        limit: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
-            empty: true,
-          }),
-        }),
-      });
+			expect(result).toBeNull();
+		});
+	});
 
-      const result = await userRepository.findByUsername(username);
+	describe("findByUsername", () => {
+		it("should return user when found by username", async () => {
+			const username = "johndoe";
+			const whereSpy = jest.spyOn(mockCollection, "where");
 
-      expect(result).toBeNull();
-    });
-  });
+			mockCollection.setMockDocs([mockUser]);
 
-  describe('update', () => {
-    it('should update user successfully', async () => {
-      const userId = 'user-123';
-      const updates = { name: 'John Updated' };
-      const updatedUser = { ...mockUser, ...updates };
+			const result = await userRepository.findByUsername(username);
 
-      const mockUpdate = jest.fn().mockResolvedValue(undefined);
-      const mockGet = jest.fn().mockResolvedValue({
-        exists: true,
-        data: () => updatedUser,
-      });
+			expect(result).toEqual(mockUser);
+			expect(whereSpy).toHaveBeenCalledWith("username", "==", username);
+		});
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        update: mockUpdate,
-        get: mockGet,
-      });
+		it("should return null when user not found by username", async () => {
+			const username = "nonexistent";
 
-      const result = await userRepository.update(userId, updates);
+			mockCollection.setMockDocs([]);
 
-      expect(result).toMatchObject(updates);
-      expect(mockUpdate).toHaveBeenCalled();
-    });
-  });
+			const result = await userRepository.findByUsername(username);
 
-  describe('delete', () => {
-    it('should delete user successfully', async () => {
-      const userId = 'user-123';
+			expect(result).toBeNull();
+		});
+	});
 
-      const mockDelete = jest.fn().mockResolvedValue(undefined);
+	describe("update", () => {
+		it("should update user successfully", async () => {
+			const userId = "user-123";
+			const updates = { name: "John Updated" };
+			const updatedUser = { ...mockUser, ...updates };
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        delete: mockDelete,
-      });
+			const mockUpdate = (jest.fn() as any).mockResolvedValue(undefined);
+			const mockGet = (jest.fn() as any).mockResolvedValue({
+				exists: true,
+				data: () => updatedUser,
+			});
 
-      await userRepository.delete(userId);
+			mockCollection.doc = jest.fn().mockReturnValue({
+				update: mockUpdate,
+				get: mockGet,
+			});
 
-      expect(mockDelete).toHaveBeenCalled();
-    });
-  });
+			const result = await userRepository.update(userId, updates);
 
-  describe('search', () => {
-    it('should return users matching search query', async () => {
-      const query = 'john';
-      
-      mockCollection.where = jest.fn().mockReturnValue({
-        where: jest.fn().mockReturnValue({
-          limit: jest.fn().mockReturnValue({
-            get: jest.fn().mockResolvedValue({
-              empty: false,
-              docs: [{ data: () => mockUser }],
-            }),
-          }),
-        }),
-      });
+			expect(result).toMatchObject(updates);
+			expect(mockUpdate).toHaveBeenCalled();
+		});
+	});
 
-      const result = await userRepository.search(query);
+	describe("delete", () => {
+		it("should delete user successfully", async () => {
+			const userId = "user-123";
 
-      expect(result).toEqual([mockUser]);
-    });
+			const mockDelete = (jest.fn() as any).mockResolvedValue(undefined);
 
-    it('should return empty array when no users match', async () => {
-      const query = 'nonexistent';
-      
-      mockCollection.where = jest.fn().mockReturnValue({
-        where: jest.fn().mockReturnValue({
-          limit: jest.fn().mockReturnValue({
-            get: jest.fn().mockResolvedValue({
-              empty: true,
-              docs: [],
-            }),
-          }),
-        }),
-      });
+			mockCollection.doc = jest.fn().mockReturnValue({
+				delete: mockDelete,
+			});
 
-      const result = await userRepository.search(query);
+			await userRepository.delete(userId);
 
-      expect(result).toEqual([]);
-    });
-  });
+			expect(mockDelete).toHaveBeenCalled();
+		});
+	});
+
+	describe("search", () => {
+		it("should return users matching search query", async () => {
+			const query = "john";
+
+			mockCollection.setMockDocs([mockUser]);
+
+			const result = await userRepository.search(query);
+
+			expect(result).toEqual([mockUser]);
+		});
+
+		it("should return empty array when no users match", async () => {
+			const query = "nonexistent";
+
+			mockCollection.setMockDocs([]);
+
+			const result = await userRepository.search(query);
+
+			expect(result).toEqual([]);
+		});
+	});
 });
