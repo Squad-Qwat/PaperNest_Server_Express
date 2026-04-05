@@ -19,7 +19,7 @@ import logger from '../utils/logger';
  */
 export const createDocument = asyncHandler(async (req: Request, res: Response) => {
   const { workspaceId } = req.params;
-  const { title, content, message } = req.body;
+  const { title, description, content, message } = req.body;
   const userId = req.userId!;
   
   logger.info('Create document request', { workspaceId, title, userId });
@@ -28,6 +28,7 @@ export const createDocument = asyncHandler(async (req: Request, res: Response) =
   const document = await documentRepository.create({
     workspaceId,
     title,
+    description,
     savedContent: content || '',
     currentVersionId: '',
     createdBy: userId,

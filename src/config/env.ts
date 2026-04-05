@@ -6,7 +6,7 @@ export const env = {
   // Server Configuration
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '3000', 10),
-  
+
   // Firebase Configuration
   FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || '',
   FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
@@ -14,36 +14,36 @@ export const env = {
   FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL || '',
   FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || '',
   FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || '',
-  
+
   // JWT Configuration
   JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-change-in-production',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
-  
+
   // Google AI Configuration (Gemini)
   GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY || '',
-  
+
   // Liveblocks Configuration
   LIVEBLOCKS_SECRET_KEY: process.env.LIVEBLOCKS_SECRET_KEY || '',
   LIVEBLOCKS_WEBHOOK_SECRET: process.env.LIVEBLOCKS_WEBHOOK_SECRET || '',
   LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET: process.env.LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET || process.env.LIVEBLOCKS_WEBHOOK_SECRET || '',
-  
+
   // External API Keys
   SEMANTIC_SCHOLAR_API_KEY: process.env.SEMANTIC_SCHOLAR_API_KEY || '',
   PUBMED_API_KEY: process.env.PUBMED_API_KEY || '',
-  
+
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
-  
+
   // CORS & Frontend URLs
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3001',
   FRONTEND_URL: process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3001',
-  
+
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
-  
+
   // Cloudflare R2 Configuration
   R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID || '',
   R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || '',

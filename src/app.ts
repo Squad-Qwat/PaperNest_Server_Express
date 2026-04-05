@@ -18,6 +18,7 @@ import reviewRoutes from './routes/reviews';
 import notificationRoutes from './routes/notifications';
 import webhookRoutes from './routes/webhooks';
 import uploadRoutes from './routes/uploadRoutes';
+import latexRoutes from './routes/latex';
 
 // Create Express app
 const app: Application = express();
@@ -82,6 +83,7 @@ app.use('/api', commentRoutes); // Handles /api/comments/* and /api/documents/:d
 app.use('/api', reviewRoutes); // Handles /api/reviews/* and /api/documents/:documentId/versions/:documentBodyId/reviews
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/latex', latexRoutes);
 
 // Handle 404
 app.use(notFound);

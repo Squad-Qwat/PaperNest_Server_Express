@@ -13,6 +13,12 @@ export const createDocumentSchema = Joi.object({
       'string.max': 'Title cannot exceed 500 characters',
       'any.required': 'Title is required',
     }),
+  description: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Description cannot exceed 2000 characters',
+    }),
   content: Joi.any()
     .default('')
     .messages({
@@ -36,6 +42,12 @@ export const updateDocumentSchema = Joi.object({
     .messages({
       'string.min': 'Title cannot be empty',
       'string.max': 'Title cannot exceed 500 characters',
+    }),
+  description: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Description cannot exceed 2000 characters',
     }),
 }).min(1);
 

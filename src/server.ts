@@ -14,6 +14,15 @@ const server = app.listen(PORT, () => {
   logger.info(`❤️  Health check at: http://localhost:${PORT}/health`);
 });
 
+server.on('error', (error: any) => {
+  if (error.code === 'EADDRINUSE') {
+    logger.error(`❌ Port ${PORT} is already in use. Please kill the other process or change the PORT in .env`);
+  } else {
+    logger.error('❌ Server error:', error);
+  }
+  process.exit(1);
+});
+
 // Graceful shutdown
 const gracefulShutdown = (signal: string) => {
   logger.info(`${signal} received. Starting graceful shutdown...`);

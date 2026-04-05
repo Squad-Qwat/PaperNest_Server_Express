@@ -14,8 +14,6 @@ const initializeFirebase = () => {
         databaseURL: env.FIREBASE_DATABASE_URL,
         storageBucket: env.FIREBASE_STORAGE_BUCKET,
       });
-      
-      console.log('✅ Firebase Admin SDK initialized successfully');
     } catch (error) {
       console.error('❌ Firebase Admin SDK initialization error:', error);
       throw error;
