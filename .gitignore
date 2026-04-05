@@ -52,3 +52,7 @@ build/
 # Package manager lock files (uncomment if needed)
 # package-lock.json
 # yarn.lock
+
+.agents/
+.agent/
+skills-lock.json

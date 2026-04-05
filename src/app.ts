@@ -7,6 +7,18 @@ import { errorHandler, notFound } from './middlewares/errorHandler';
 import { globalRateLimiter } from './middlewares/rateLimiter';
 import { sanitize } from './middlewares/validation';
 import logger from './utils/logger';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import workspaceRoutes from './routes/workspaces';
+import invitationRoutes from './routes/invitations';
+import documentRoutes from './routes/documents';
+import citationRoutes from './routes/citations';
+import commentRoutes from './routes/comments';
+import reviewRoutes from './routes/reviews';
+import notificationRoutes from './routes/notifications';
+import webhookRoutes from './routes/webhooks';
+import uploadRoutes from './routes/uploadRoutes';
+import latexRoutes from './routes/latex';
 
 // Create Express app
 const app: Application = express();
@@ -36,8 +48,11 @@ if (env.NODE_ENV === 'development') {
 // Sanitize input
 app.use(sanitize);
 
+// Webhook routes (before rate limiting and auth)
+app.use('/api/webhooks', webhookRoutes);
+
 // Global rate limiting
-app.use('/api', globalRateLimiter);
+// app.use('/api', globalRateLimiter);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -48,19 +63,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// API Routes
-// TODO: Import and use routes here
-// app.use('/api/auth', authRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/workspaces', workspaceRoutes);
-// app.use('/api/documents', documentRoutes);
-// app.use('/api/citations', citationRoutes);
-// app.use('/api/reviews', reviewRoutes);
-// app.use('/api/comments', commentRoutes);
-// app.use('/api/ai', aiRoutes);
-// app.use('/api/notifications', notificationRoutes);
-
-// Test route
+// Test route for API root
 app.get('/api', (_req, res) => {
   res.json({
     message: 'PaperNest API',
@@ -68,6 +71,19 @@ app.get('/api', (_req, res) => {
     docs: '/api/docs',
   });
 });
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/invitations', invitationRoutes);
+app.use('/api', documentRoutes); // Handles /api/documents/* and /api/workspaces/:workspaceId/documents/*
+app.use('/api/documents', citationRoutes); // Handles /api/documents/:documentId/citations/*
+app.use('/api', commentRoutes); // Handles /api/comments/* and /api/documents/:documentId/comments/*
+app.use('/api', reviewRoutes); // Handles /api/reviews/* and /api/documents/:documentId/versions/:documentBodyId/reviews
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/latex', latexRoutes);
 
 // Handle 404
 app.use(notFound);

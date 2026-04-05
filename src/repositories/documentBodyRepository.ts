@@ -42,10 +42,10 @@ export class DocumentBodyRepository {
   async findByDocument(documentId: string): Promise<DocumentBody[]> {
     const snapshot = await this.collection
       .where('documentId', '==', documentId)
-      .orderBy('versionNumber', 'desc')
       .get();
     
-    return snapshot.docs.map(doc => doc.data() as DocumentBody);
+    const versions = snapshot.docs.map(doc => doc.data() as DocumentBody);
+    return versions.sort((a, b) => b.versionNumber - a.versionNumber);
   }
 
   /**
@@ -88,15 +88,19 @@ export class DocumentBodyRepository {
   async getLatestVersionNumber(documentId: string): Promise<number> {
     const snapshot = await this.collection
       .where('documentId', '==', documentId)
-      .orderBy('versionNumber', 'desc')
-      .limit(1)
       .get();
     
     if (snapshot.empty) {
       return 0;
     }
     
-    return snapshot.docs[0].data().versionNumber;
+    let max = 0;
+    snapshot.docs.forEach(doc => {
+      const v = doc.data().versionNumber;
+      if (typeof v === 'number' && v > max) max = v;
+    });
+    
+    return max;
   }
 
   /**

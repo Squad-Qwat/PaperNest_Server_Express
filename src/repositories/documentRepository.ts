@@ -82,7 +82,7 @@ export class DocumentRepository {
   /**
    * Update document content
    */
-  async updateContent(documentId: string, savedContent: string, currentVersionId: string): Promise<Document> {
+  async updateContent(documentId: string, savedContent: any, currentVersionId: string): Promise<Document> {
     return this.update(documentId, { savedContent, currentVersionId });
   }
 
