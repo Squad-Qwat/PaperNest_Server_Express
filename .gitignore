@@ -55,3 +55,4 @@ build/
 
 .agents/
 .agent/
+skills-lock.json
