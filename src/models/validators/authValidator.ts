@@ -46,6 +46,23 @@ export const registerSchema = Joi.object({
       'any.only': `Role must be either ${USER_ROLES.STUDENT} or ${USER_ROLES.LECTURER}`,
       'any.required': 'Role is required',
     }),
+  workspaceData: Joi.object({
+    mode: Joi.string().valid('create', 'join').required(),
+    title: Joi.string()
+      .min(3)
+      .when('mode', { is: 'create', then: Joi.required(), otherwise: Joi.optional().allow('') })
+      .messages({
+        'string.min': 'Workspace title must be at least 3 characters long',
+        'any.required': 'Workspace title is required when creating a new workspace',
+      }),
+    description: Joi.string().allow('').optional(),
+    icon: Joi.string().allow('').optional(),
+    invitationCode: Joi.string()
+      .when('mode', { is: 'join', then: Joi.required(), otherwise: Joi.optional().allow('') })
+      .messages({
+        'any.required': 'Invitation code is required when joining a workspace',
+      }),
+  }).optional(),
 });
 
 /**
@@ -57,6 +74,8 @@ export const loginSchema = Joi.object({
     .messages({
       'any.required': 'Firebase token is required',
     }),
+  accessToken: Joi.string()
+    .optional(),
 });
 
 /**
@@ -116,6 +135,30 @@ export const updateEmailSchema = Joi.object({
  * Validation schema for password reset request
  */
 export const passwordResetSchema = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      'string.email': 'Please provide a valid email address',
+      'any.required': 'Email is required',
+    }),
+});
+
+/**
+ * Validation schema for finalizing registration
+ */
+export const finalizeRegistrationSchema = Joi.object({
+  firebaseToken: Joi.string()
+    .required()
+    .messages({
+      'any.required': 'Firebase token is required',
+    }),
+});
+
+/**
+ * Validation schema for checking email availability
+ */
+export const checkEmailSchema = Joi.object({
   email: Joi.string()
     .email()
     .required()

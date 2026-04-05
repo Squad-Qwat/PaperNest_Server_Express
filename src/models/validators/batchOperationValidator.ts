@@ -4,11 +4,15 @@ import Joi from 'joi';
  * Validation schema for save-content operation
  */
 const saveContentPayloadSchema = Joi.object({
-	content: Joi.string().required().messages({
-		'any.required': 'Content is required for save-content operation',
-	}),
+	content: Joi.string()
+		.required()
+		.allow('', null)
+		.messages({
+			'any.required': 'Content is required for save-content operation',
+		}),
 	contentChecksum: Joi.string()
 		.optional()
+		.allow('', null)
 		.messages({
 			'string.base': 'Content checksum must be a string',
 		}),
@@ -26,10 +30,10 @@ const updateMetadataPayloadSchema = Joi.object({
 			'string.min': 'Title cannot be empty',
 			'string.max': 'Title cannot exceed 500 characters',
 		}),
-	defaultFont: Joi.string().max(100).optional(),
-	defaultFontSize: Joi.string().max(20).optional(),
-	paperSize: Joi.string().max(20).optional(),
-	theme: Joi.string().max(50).optional(),
+	defaultFont: Joi.string().max(100).optional().allow('', null),
+	defaultFontSize: Joi.string().max(20).optional().allow('', null),
+	paperSize: Joi.string().max(20).optional().allow('', null),
+	theme: Joi.string().max(50).optional().allow('', null),
 }).min(1);
 
 /**
@@ -45,8 +49,8 @@ const createCheckpointPayloadSchema = Joi.object({
 			'string.min': 'Version message cannot be empty',
 			'string.max': 'Version message cannot exceed 500 characters',
 		}),
-	userId: Joi.string().required().messages({
-		'any.required': 'userId is required for create-checkpoint operation',
+	userId: Joi.string().optional().messages({
+		'string.base': 'userId must be a string',
 	}),
 });
 

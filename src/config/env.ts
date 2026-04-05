@@ -13,6 +13,7 @@ export const env = {
   FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || '',
   FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL || '',
   FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || '',
+  FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || '',
   
   // JWT Configuration
   JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
@@ -36,8 +37,9 @@ export const env = {
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   
-  // CORS
+  // CORS & Frontend URLs
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3001',
+  FRONTEND_URL: process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3001',
   
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',

@@ -6,6 +6,7 @@ export interface User {
   username: string;
   role: 'Student' | 'Lecturer';
   photoURL: string | null;
+  linkedUids?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

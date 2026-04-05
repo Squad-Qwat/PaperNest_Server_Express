@@ -11,9 +11,22 @@ import {
   verifyTokenSchema,
   updateEmailSchema,
   passwordResetSchema,
+  finalizeRegistrationSchema,
+  checkEmailSchema,
 } from '../models/validators/authValidator';
 
 const router = Router();
+
+/**
+ * @route   POST /api/auth/check-email
+ * @desc    Check email availability
+ * @access  Public
+ */
+router.post(
+  '/check-email',
+  validate({ body: checkEmailSchema }),
+  authController.checkEmail
+);
 
 /**
  * @route   POST /api/auth/register
@@ -28,27 +41,47 @@ router.post(
 );
 
 /**
+ * @route   POST /api/auth/register/finalize
+ * @desc    Finalize registration after email verification
+ * @access  Public
+ */
+router.post(
+  '/register/finalize',
+  authRateLimiter,
+  validate({ body: finalizeRegistrationSchema }),
+  authController.finalizeRegistration
+);
+
+/**
  * @route   POST /api/auth/login
- * @desc    Login with Firebase token
+ * @desc    Login with Firebase token (Standard)
  * @access  Public
  */
 router.post(
   '/login',
-  // authRateLimiter,
-validate({ body: loginSchema }),
+  validate({ body: loginSchema }),
   authController.login
 );
 
 /**
- * @route   POST /api/auth/login/email
- * @desc    Login with email and password (alternative method for testing)
+ * @route   POST /api/auth/social
+ * @desc    Login with Social Auth (Google, GitHub, etc.)
  * @access  Public
  */
 router.post(
-  '/login/email',
-  // authRateLimiter,
-  validate({ body: loginWithEmailPasswordSchema }),
-  authController.loginWithEmailPassword
+  '/social',
+  validate({ body: loginSchema }),
+  authController.socialLogin
+);
+
+/**
+ * @route   POST /api/auth/social/complete
+ * @desc    Complete social registration (Onboarding)
+ * @access  Public
+ */
+router.post(
+  '/social/complete',
+  authController.completeSocialRegistration
 );
 
 /**
