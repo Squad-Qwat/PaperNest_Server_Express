@@ -83,7 +83,7 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
 
     // 3. Native Firebase Email will be triggered by frontend after sign-in
     // using the custom token returned below.
-    
+
     return {
       isVerificationRequired: true,
       firebaseToken: await auth.createCustomToken(firebaseUser.uid),
@@ -100,14 +100,15 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
 export const finalizeRegistration = async (firebaseToken: string): Promise<AuthResponse> => {
   try {
     const decodedToken = await auth.verifyIdToken(firebaseToken);
-    
+
     // Check if email is verified in Firebase
     if (!decodedToken.email_verified) {
       throw new Error('EMAIL_NOT_VERIFIED');
     }
 
     // Check if registration was already finalized (idempotency check)
-    const existingUser = await userRepository.findById(decodedToken.uid);
+    const existingUser = await userRepository.findById(decodedToken.uid) || 
+                         await userRepository.findByLinkedUid(decodedToken.uid);
     if (existingUser) {
       logger.info(`Registration already finalized for user ${decodedToken.uid}`);
       return {
@@ -137,13 +138,14 @@ export const finalizeRegistration = async (firebaseToken: string): Promise<AuthR
 export const login = async (firebaseToken: string): Promise<AuthResponse> => {
   try {
     const decodedToken = await auth.verifyIdToken(firebaseToken);
-    
+
     // Check if email is verified
     if (!decodedToken.email_verified) {
       return { isVerificationRequired: true };
     }
 
-    const user = await userRepository.findById(decodedToken.uid);
+    const user = await userRepository.findById(decodedToken.uid) || 
+                 await userRepository.findByLinkedUid(decodedToken.uid);
 
     if (!user) throw new Error(ERROR_MESSAGES.USER_NOT_FOUND);
 

@@ -34,9 +34,10 @@ export const authenticate = async (
     try {
       // First, try to verify as Firebase Auth token
       const decodedToken = await auth.verifyIdToken(token);
-      
-      // Get user from our database using Firebase UID
-      const user = await userRepository.findById(decodedToken.uid);
+
+      // Get user from our database using Firebase UID (check both primary and linked UIDs)
+      const user = await userRepository.findById(decodedToken.uid) || 
+                   await userRepository.findByLinkedUid(decodedToken.uid);
 
       if (!user) {
         // User authenticated with Firebase but not in our database
@@ -100,9 +101,10 @@ export const optionalAuthenticate = async (
     const token = authHeader.substring(7);
 
     try {
-      // Try Firebase Auth first
+      // Try Firebase Auth first (check both primary and linked UIDs)
       const decodedToken = await auth.verifyIdToken(token);
-      const user = await userRepository.findById(decodedToken.uid);
+      const user = await userRepository.findById(decodedToken.uid) || 
+                   await userRepository.findByLinkedUid(decodedToken.uid);
 
       if (user) {
         req.user = user;
