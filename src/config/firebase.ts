@@ -25,9 +25,9 @@ const initializeFirebase = () => {
 
 // Export initialized instances
 export const firebaseAdmin = initializeFirebase();
-export const db = firebaseAdmin.firestore();
-export const auth = firebaseAdmin.auth();
-export const storage = firebaseAdmin.storage();
+export const db: admin.firestore.Firestore = firebaseAdmin.firestore();
+export const auth: admin.auth.Auth = firebaseAdmin.auth();
+export const storage: admin.storage.Storage = firebaseAdmin.storage();
 
 // Firestore settings
 db.settings({

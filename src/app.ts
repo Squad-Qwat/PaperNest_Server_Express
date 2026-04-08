@@ -18,6 +18,7 @@ import reviewRoutes from './routes/reviews';
 import notificationRoutes from './routes/notifications';
 import webhookRoutes from './routes/webhooks';
 import uploadRoutes from './routes/uploadRoutes';
+import aiRoutes from './routes/ai.routes';
 import latexRoutes from './routes/latex';
 
 // Create Express app
@@ -26,7 +27,11 @@ const app: Application = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: env.CORS_ORIGIN,
+  origin: [
+    env.CORS_ORIGIN,
+    env.CORS_ORIGIN_2,
+    env.CORS_ORIGIN_3,
+  ],
   credentials: true,
 }));
 
@@ -84,6 +89,7 @@ app.use('/api', reviewRoutes); // Handles /api/reviews/* and /api/documents/:doc
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/latex', latexRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Handle 404
 app.use(notFound);

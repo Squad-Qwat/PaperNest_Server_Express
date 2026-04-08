@@ -39,6 +39,8 @@ export const env = {
 
   // CORS & Frontend URLs
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3001',
+  CORS_ORIGIN_2: process.env.CORS_ORIGIN_2 || 'http://localhost:3001',
+  CORS_ORIGIN_3: process.env.CORS_ORIGIN_3 || 'http://localhost:3001',
   FRONTEND_URL: process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3001',
 
   // Logging
