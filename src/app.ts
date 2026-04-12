@@ -20,6 +20,7 @@ import webhookRoutes from './routes/webhooks';
 import uploadRoutes from './routes/uploadRoutes';
 import aiRoutes from './routes/ai.routes';
 import latexRoutes from './routes/latex';
+import semanticScholarRoutes from './routes/semanticScholar';
 
 // Create Express app
 const app: Application = express();
@@ -90,6 +91,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/latex', latexRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/semantic-scholar', semanticScholarRoutes);
 
 // Handle 404
 app.use(notFound);

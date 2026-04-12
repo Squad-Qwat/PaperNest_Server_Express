@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
-import { streamAgent, ToolResult } from '../services/ai/langgraph-agent'
+import { agentFactory } from '../services/ai/agents/agent.factory'
 import { validateAICredentials } from '../services/ai/config'
+import { ToolResult } from '../services/ai/types/agent.types'
 
 export const streamAIResponse = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -8,7 +9,6 @@ export const streamAIResponse = async (req: Request, res: Response): Promise<voi
 			message,
 			documentContent = '',
 			documentHTML = '',
-			documentSections = [],
 			conversationHistory = [],
 			toolResults,
 			documentId,
@@ -17,6 +17,7 @@ export const streamAIResponse = async (req: Request, res: Response): Promise<voi
 			reasoningEnabled = false,
 			providerId,
 			modelId,
+			agentId = 'manual_graph', // New parameter
 		} = req.body
 
 		const credentialsCheck = validateAICredentials(providerId)
@@ -53,7 +54,7 @@ export const streamAIResponse = async (req: Request, res: Response): Promise<voi
 			res.on('close', () => {
 				isDisconnected = true
 				if (keepAliveInterval) clearInterval(keepAliveInterval)
-				console.log('[AI Stream] Client disconnected from response stream')
+				console.log(`[AI Stream] Client disconnected from response stream (${agentId})`)
 			})
 
 			// Helper to keep connection alive if LLM is slow
@@ -63,20 +64,23 @@ export const streamAIResponse = async (req: Request, res: Response): Promise<voi
 				}
 			}, 15000)
 
-			// Stream the agent response
-			for await (const chunk of streamAgent(
+			// Resolve Agent and Stream
+			const agent = agentFactory.getAgent(agentId)
+			console.log(`[AI Controller] Invoking agent: ${agentId}`)
+
+			for await (const chunk of agent.stream({
 				message,
 				documentContent,
 				documentHTML,
 				threadId,
 				conversationHistory,
-				toolResults as ToolResult[] | undefined,
+				toolResults: toolResults as ToolResult[] | undefined,
 				documentId,
-				plan,
+				initialPlan: plan,
 				reasoningEnabled,
 				providerId,
 				modelId
-			)) {
+			})) {
 				// Check if client is still connected
 				if (isDisconnected) break
 
@@ -105,12 +109,16 @@ export const streamAIResponse = async (req: Request, res: Response): Promise<voi
 				error: 'Failed to initialize streaming',
 				details: error instanceof Error ? error.message : 'Unknown error',
 			})
-		} else {
-			res.write(`data: ${JSON.stringify({
-				type: 'error',
-				error: error instanceof Error ? error.message : 'Unknown error',
-			})}\n\n`)
-			if (!res.writableEnded) res.end()
+		} else if (!res.writableEnded && res.writable) {
+			try {
+				res.write(`data: ${JSON.stringify({
+					type: 'error',
+					error: error instanceof Error ? error.message : 'Unknown error',
+				})}\n\n`)
+				res.end()
+			} catch (writeError) {
+				console.error('[AI Stream] Failed to write error to response:', writeError)
+			}
 		}
 	}
 }

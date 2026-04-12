@@ -73,7 +73,7 @@ export const reflectorNode = async (state: AgentStateType) => {
 
     // Get tool result for the active step: match by tool_call_id if available
     let resultText = 'No tool result available'
-    
+
     console.log(`[Reflector] Active step: ${activeStep?.id} (tool: ${activeStep?.tool}, status: ${activeStep?.status})`)
     console.log('[Reflector] Full plan state:', {
         activeIndex,
@@ -89,14 +89,14 @@ export const reflectorNode = async (state: AgentStateType) => {
         count: state.lastToolResults?.length ?? 0,
         results: state.lastToolResults?.map(r => ({ name: r.name, hasResult: !!r.result })),
     })
-    
+
     // Try to find result matching this step's expected tool
     if (state.lastToolResults && state.lastToolResults.length > 0) {
         const stepTool = activeStep?.tool
         const resultForStep = stepTool
             ? state.lastToolResults.find(r => r.name === stepTool)
             : state.lastToolResults.at(-1)
-        
+
         if (resultForStep?.result) {
             resultText = resultForStep.result
             console.log(`[Reflector] Found result for tool '${resultForStep.name}'`)
@@ -108,13 +108,13 @@ export const reflectorNode = async (state: AgentStateType) => {
         const lastToolMessage = [...(state.messages || [])]
             .reverse()
             .find(m => m._getType?.() === 'tool')
-        
+
         if (lastToolMessage && typeof lastToolMessage.content === 'string') {
             resultText = lastToolMessage.content
             console.log('[Reflector] Using last ToolMessage as fallback')
         }
     }
-    
+
     console.log(`[Reflector] Evaluating step with result: ${resultText.substring(0, 100)}...`)
 
     const remainingSteps = plan
@@ -162,39 +162,38 @@ export const reflectorNode = async (state: AgentStateType) => {
 
         consecutiveNoExecutionCycles += 1
         const shouldLightReplan = consecutiveNoExecutionCycles >= 2 && !hasMeaningfulText
-        
+
         if (shouldLightReplan) {
             needsReplanning = true
             replanAttempts += 1
         }
 
-        const remainingAfterNoExec = plan.filter(
-            (s) => s.status === 'pending' || s.status === 'active'
-        )
-
         return {
             plan,
             pastSteps,
-            needsReplanning,
-            confidence: hasMeaningfulText ? 0.9 : 0.45,
-            replanAttempts,
-            consecutiveNoExecutionCycles,
-            isComplete: !needsReplanning && remainingAfterNoExec.length === 0,
-            lastReasoningSummary: hasMeaningfulText 
-                ? `### Reflector\nAI provided a text response. Considering step ${activeStep?.id} satisfied by dialogue.`
-                : `### Reflector\nNo meaningful execution evidence for step ${activeStep?.id}. Soft-completed to avoid looping${shouldLightReplan ? ', requesting replan' : ''}.`,
+            needsReplanning: true, // Force a replan if no execution was detected
+            confidence: hasMeaningfulText ? 0.9 : 0.2,
+            replanAttempts: (state.replanAttempts ?? 0) + 1,
+            consecutiveNoExecutionCycles: consecutiveNoExecutionCycles + 1,
+            isComplete: false,
+            lastReasoningSummary: hasMeaningfulText
+                ? `### Reflector\nAI provided a text response but no document change was executed. Triggering replan to ensure the goal is met.`
+                : `### Reflector\nNo execution detected for step ${activeStep?.id}. Triggering replan to avoid infinite loop.`,
             lastReasoningPhase: 'reflector',
         }
     }
 
     // Logic for judging text-only outcome even if a tool was planned
-    const executorPromptAddon = lastExecutionOutcome === 'executed_text_only' 
+    const executorPromptAddon = lastExecutionOutcome === 'executed_text_only'
         ? "\n\nNOTE: The AI provided a text-only response instead of using the planned tool. If the text response is a valid greeting or correctly answers the user's intent without needing the tool, mark it as COMPLETE or CONTINUE."
         : ""
 
     let reflectorReasoning = ''
 
     let responseMetadata: any = {}
+
+    // Define isComplete here as it's modified in the try block
+    let isComplete = false;
 
     try {
         const response = await model.invoke([
@@ -216,8 +215,9 @@ export const reflectorNode = async (state: AgentStateType) => {
             console.log(`[Reflector] Step ${activeStep?.id}: active → REPLAN NEEDED`)
             reflectorReasoning = `**Step ${activeStep.id} Verdict:** REPLAN (Retry needed)`
         } else if (verdict.startsWith('COMPLETE')) {
-            // Task fully accomplished (Short-Circuit)
-            // Mark all steps as completed
+            // Task fully accomplished
+            // We trust the LLM's COMPLETE verdict as the ultimate authority, 
+            // relying on updated System/Reflector prompts for accuracy.
             for (let i = 0; i < plan.length; i++) {
                 if (plan[i].status !== 'failed') {
                     plan[i] = { ...plan[i], status: 'completed' as const }
@@ -226,6 +226,7 @@ export const reflectorNode = async (state: AgentStateType) => {
             needsReplanning = false
             confidence = 1.0
             consecutiveNoExecutionCycles = 0
+            isComplete = true
             reflectorReasoning = `**Step ${activeStep.id} Verdict:** COMPLETE (Goal achieved)`
         } else {
             // Step succeeded (CONTINUE)
@@ -259,12 +260,13 @@ export const reflectorNode = async (state: AgentStateType) => {
         reflectorReasoning = `### Reflector\nEvaluation failed due to model error, requesting replan.`
     }
 
-    const remainingAfterReflection = plan.filter(
-        (s) => s.status === 'pending' || s.status === 'active'
-    )
 
     const usage = responseMetadata.token_usage || {}
     const tokens = extractTokenMetadata(usage)
+
+    const remainingFinal = plan.filter(
+        (s) => s.status === 'pending' || s.status === 'active'
+    )
 
     return {
         plan,
@@ -273,7 +275,7 @@ export const reflectorNode = async (state: AgentStateType) => {
         confidence,
         replanAttempts,
         consecutiveNoExecutionCycles,
-        isComplete: !needsReplanning && remainingAfterReflection.length === 0,
+        isComplete: !needsReplanning && (isComplete || remainingFinal.length === 0),
         lastReasoningSummary: reflectorReasoning,
         lastReasoningPhase: reflectorReasoning ? 'reflector' : '',
         inputTokens: tokens.inputTokens,

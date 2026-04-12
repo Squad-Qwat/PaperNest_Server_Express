@@ -1,30 +1,27 @@
 import { ToolNode as BaseToolNode } from '@langchain/langgraph/prebuilt'
 import { createCodeMirrorTools } from '../../tools/schemas'
+import { semanticScholarTool } from '../../tools/semanticScholar.tool'
+import { createRAGTool } from '../../tools/rag.tool'
 import { AgentStateType } from '../state'
 import { ToolMessage, BaseMessage } from '@langchain/core/messages'
 
-const baseToolNode = new BaseToolNode(createCodeMirrorTools())
-
-/**
- * ToolNode (Handover Node)
- * 
- * ARCHITECTURE NOTE:
- * All business tools (LaTeX compile, document edit) are executed CLIENT-SIDE 
- * in the user's browser (CodeMirror/React context) for maximum performance 
- * and access to current editor state.
- * 
- * This node primarily acts as a handover point. It is reached when the model
- * generates tool_calls. The Graph then routes to END, returning the call
- * names and arguments to the frontend via SSE.
- */
 export const toolNode = async (state: AgentStateType) => {
     try {
-        console.log('[ToolNode] Handoff initiated. Generating client-side execution payload.')
+        console.log('[ToolNode] Handoff initiated. Generating client/backend execution payload.')
 
-        // Execute pre-built tool node to process the AIMessage tool_calls
+        // Create a tool node instance that includes backend-executed tools
+        const tools = [
+            ...createCodeMirrorTools(),
+            semanticScholarTool,
+            createRAGTool(state.documentId || 'unknown')
+        ]
+        const baseToolNode = new BaseToolNode(tools)
+
+        // Execute tool node (this will run Semantic Scholar/RAG on backend, 
+        // and generate action stubs for CodeMirror tools)
         const result = await baseToolNode.invoke(state)
         
-        console.log('[ToolNode] Handoff prepared. Control returning to Client.')
+        console.log('[ToolNode] Tool execution/handoff prepared. returning to Client/Next node.')
 
         // Extract ToolMessages (stubs) to ensure state.lastToolResults is initialized
         if (result.messages && result.messages.length > 0) {

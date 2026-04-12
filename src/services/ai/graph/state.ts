@@ -7,16 +7,7 @@
 
 import { Annotation, messagesStateReducer } from '@langchain/langgraph'
 import { BaseMessage } from '@langchain/core/messages'
-
-/**
- * Tool result from execution
- */
-export interface ToolResult {
-    toolCallId: string
-    name: string
-    result: string
-    success: boolean
-}
+import { ToolResult } from '../types/agent.types'
 
 export type ExecutionOutcome =
     | 'executed_tool'

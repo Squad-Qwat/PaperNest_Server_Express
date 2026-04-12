@@ -110,12 +110,18 @@ export const plannerNode = async (state: AgentStateType) => {
 
         const parsedPlan = response.parsed
         const rawMsg = response.raw
+
+        if (!parsedPlan || !parsedPlan.steps) {
+            console.error('[Planner] Structured output returned success but parsedPlan or steps is null/undefined. Falling back.')
+            throw new Error('Incomplete structured output from model')
+        }
+
         const usage = (rawMsg as any).response_metadata?.token_usage || {}
         const tokens = extractTokenMetadata(usage)
 
         console.log('[Planner] Structured output succeeded:', {
-            stepsCount: parsedPlan.steps?.length,
-            firstStepTool: parsedPlan.steps?.[0]?.tool,
+            stepsCount: parsedPlan.steps.length,
+            firstStepTool: parsedPlan.steps[0]?.tool,
         })
 
         const plan = parsedPlan.steps.map((step: any, idx: number) => ({

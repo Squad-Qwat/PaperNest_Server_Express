@@ -1,6 +1,7 @@
 import { loadPrompts } from '../../promptLoader'
 import { createAIModel } from '../../config'
 import { createCodeMirrorTools } from '../../tools/schemas'
+import { semanticScholarTool } from '../../tools/semanticScholar.tool'
 import { AgentStateType } from '../state'
 import { HumanMessage, SystemMessage } from '@langchain/core/messages'
 import { contentToText, extractTokenMetadata, getToolDescriptions } from '../../utils'
@@ -27,7 +28,7 @@ export const executorNode = async (state: AgentStateType) => {
         model: state.modelId,
         reasoningEnabled: state.reasoningEnabled,
     })
-    const tools = createCodeMirrorTools()
+    const tools = [...createCodeMirrorTools(), semanticScholarTool]
     const modelWithTools = (model as any).bindTools(tools)
 
     // Priority: 'active' step first (FE tool results returned for this step in round 2),
