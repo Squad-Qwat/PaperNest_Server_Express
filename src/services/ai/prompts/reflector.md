@@ -39,9 +39,10 @@ If result contains `apply_diff_edit FAILED`:
 
 Respond with EXACTLY one of these three words followed by brief reason + recovery if error (2-3 sentences max):
 
-- `COMPLETE` — task fully accomplished (even if remaining steps exist, we are done)
-- `CONTINUE` — this step succeeded, there are more steps to do
-- `REPLAN` — something failed; include what error occurred and how to recover
+- `COMPLETE` — Task fully accomplished. Use this ONLY when the user's primary goal is completely satisfied.
+    - **CRITICAL**: If the goal is **Informational (Search, Research, Read)**, do NOT return `COMPLETE` until the results have been summarized and presented to the user in a text response. If only a tool result is present without a text summary, return `CONTINUE`.
+- `CONTINUE` — Step succeeded, but more work is needed (e.g., summarizing search results, following up with another tool, or finishing remaining steps). Use this after a search tool succeeds but before the final answer is written.
+- `REPLAN` — Something failed or the results are unusable; provide error details and recovery steps.
 
 **Example responses:**
 - `CONTINUE — apply_diff_edit succeeded, compile step next.`

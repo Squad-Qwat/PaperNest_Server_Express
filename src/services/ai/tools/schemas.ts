@@ -13,11 +13,11 @@ export const createCodeMirrorTools = () => {
 			async ({ fromLine, toLine, full }) => JSON.stringify({ action: 'read_document', fromLine, toLine, full: full ?? false }),
 			{
 				name: 'read_document',
-				description: 'Read document content. Defaults to a 50-line preview if no parameters are provided.',
+				description: 'Read document content. AVOID full=true for large files; instead, use fromLine/toLine for precision based on search_text_lines results. Defaults to a 50-line preview if no parameters are provided.',
 				schema: z.object({
 					fromLine: z.number().optional().describe('Start line number (1-based)'),
 					toLine: z.number().optional().describe('End line number (inclusive)'),
-					full: z.boolean().optional().default(false).describe('Read the entire document. Defaults to false (provides preview instead).'),
+					full: z.boolean().optional().default(false).describe('Read the entire document. WARNING: Use only for tiny files (< 50 lines). For larger files, it will be truncated.'),
 				}),
 			}
 		),

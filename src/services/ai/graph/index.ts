@@ -8,7 +8,7 @@
  */
 
 import { StateGraph, END, START, MemorySaver } from '@langchain/langgraph'
-import { AgentState, AgentStateType, ToolResult } from './state'
+import { AgentState, AgentStateType } from './state'
 import { plannerNode, executorNode, toolNode, reflectorNode } from './nodes'
 import {
     routeAfterPlanner,
@@ -19,6 +19,7 @@ import {
 
 import { HumanMessage, AIMessage, BaseMessage, ToolMessage } from '@langchain/core/messages'
 import { contentToText, extractTokenMetadata } from '../utils'
+import { ToolResult, StreamEvent, AgentStreamParams } from '../types/agent.types'
 
 const toSafeText = contentToText
 
@@ -101,20 +102,7 @@ const checkpointer = new MemorySaver()
 export const graph = graphBuilder.compile({ checkpointer })
 
 // Type definitions
-export type { AgentStateType, ToolResult }
-
-export interface StreamEvent {
-    type: 'content' | 'tool_calls' | 'tool_results' | 'done' | 'error' | 'plan_update' | 'reasoning'
-    content?: string
-    toolCalls?: { id: string; name: string; args: Record<string, unknown> }[]
-    results?: ToolResult[]
-    fullContent?: string
-    hasMoreSteps?: boolean
-    error?: string
-    plan?: any[] // New event for plan updates
-    phase?: 'planner' | 'executor' | 'reflector'
-    duration?: number
-}
+export type { AgentStateType }
 
 /**
  * Stream the agent execution
@@ -290,8 +278,14 @@ export async function* streamAgent(
                         }
 
                         if (textContent && textContent.trim()) {
-                            contentParts.push(textContent)
-                            yield { type: 'content', content: textContent }
+                            // CONSISTENCY FIX: Detect and filter out raw JSON tool calls from text content
+                            const isJson = textContent.trim().startsWith('{') && textContent.trim().endsWith('}')
+                            const hasAction = textContent.includes('"action"') || textContent.includes('"tool"') || textContent.includes('"tool_calls"')
+                            
+                            if (!(isJson && hasAction)) {
+                                contentParts.push(textContent)
+                                yield { type: 'content', content: textContent }
+                            }
                         }
 
                         const aiToolCalls = (newAiMsg as any).tool_calls ?? []

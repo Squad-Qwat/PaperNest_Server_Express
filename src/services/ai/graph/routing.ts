@@ -97,12 +97,18 @@ export function routeAfterExecutor(state: AgentStateType): RouteType {
     })
 
     if (toolCalls.length > 0) {
-        // ARCHITECTURE NOTE: All tools are client-side stubs (schemas.ts).
-        // The schema functions only return JSON action strings, NOT real results.
-        // Real execution happens in `executeEditorTool` on the frontend (CodeMirror).
-        // Flow: Backend yields tool_calls via SSE → FE executes → FE sends toolResults back.
-        // We MUST end the graph here so FE can execute and return results in the next request.
-        console.log('[Router] Tool calls detected → pausing for frontend execution (END)')
+        // ARCHITECTURE FIX: Distinguish between Backend-side and Client-side tools.
+        // Backend tools (Search/RAG) should continue to the TOOLS node.
+        // Client tools (Editor/LaTeX) should pause and handover to the frontend (END).
+        const BACKEND_ONLY_TOOLS = ['search_semantic_scholar', 'search_attached_pdfs']
+        const hasBackendTool = toolCalls.some((tc: any) => BACKEND_ONLY_TOOLS.includes(tc.name))
+
+        if (hasBackendTool) {
+            console.log('[Router] Backend tool detected → routing to TOOLS node for server-side execution')
+            return ROUTES.TOOLS
+        }
+
+        console.log('[Router] Client-side tool calls detected → pausing for frontend execution (END)')
         return ROUTES.END
     }
 

@@ -30,7 +30,7 @@ const router = Router();
  * @access  Protected
  */
 router.get(
-  '/my-documents',
+  '/documents/my-documents',
   authenticate,
   documentController.getUserDocuments
 );
@@ -42,7 +42,7 @@ router.get(
  * @optimization Reduces double-fetch pattern - returns document + version + room info in single call
  */
 router.get(
-  '/:documentId/with-room-state',
+  '/documents/:documentId/with-room-state',
   authenticate,
   authorizeDocument,
   documentController.getDocumentWithRoomState

@@ -10,6 +10,7 @@ export const COLLECTIONS = {
   COMMENTS: 'comments',
   NOTIFICATIONS: 'notifications',
   PRESENCE: 'presence',
+  RAG_CHUNKS: 'ragChunks',
 } as const;
 
 // User Roles

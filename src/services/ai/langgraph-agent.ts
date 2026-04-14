@@ -5,7 +5,8 @@
  * located in src/lib/ai/graph/index.ts
  */
 
-import { streamAgent as graphStreamAgent, ToolResult } from './graph'
+import { streamAgent as graphStreamAgent } from './graph'
+import { ToolResult } from './types/agent.types'
 
 /**
  * Re-export types if needed by consumers
