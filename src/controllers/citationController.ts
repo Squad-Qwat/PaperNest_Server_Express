@@ -15,7 +15,7 @@ import logger from '../utils/logger';
  * Protected (requires edit permission)
  */
 export const createCitation = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   const citationData = req.body;
   
   logger.info('Create citation request', { documentId });
@@ -34,15 +34,15 @@ export const createCitation = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires document access)
  */
 export const getDocumentCitations = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
-  const { type } = req.query;
+  const documentId = req.params.documentId as string;
+  const type = req.query.type as string | undefined;
   
   logger.info('Get document citations request', { documentId, type });
   
   let citations;
   
   if (type) {
-    citations = await citationRepository.findByType(documentId, type as string);
+    citations = await citationRepository.findByType(documentId, type);
   } else {
     citations = await citationRepository.findByDocument(documentId);
   }
@@ -60,7 +60,7 @@ export const getDocumentCitations = asyncHandler(async (req: Request, res: Respo
  * Protected (requires document access)
  */
 export const getCitationById = asyncHandler(async (req: Request, res: Response) => {
-  const { citationId } = req.params;
+  const citationId = req.params.citationId as string;
   
   logger.info('Get citation request', { citationId });
   
@@ -79,7 +79,7 @@ export const getCitationById = asyncHandler(async (req: Request, res: Response) 
  * Protected (requires edit permission)
  */
 export const updateCitation = asyncHandler(async (req: Request, res: Response) => {
-  const { citationId } = req.params;
+  const citationId = req.params.citationId as string;
   const updates = req.body;
   
   logger.info('Update citation request', { citationId, updates });
@@ -95,7 +95,7 @@ export const updateCitation = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires edit permission)
  */
 export const deleteCitation = asyncHandler(async (req: Request, res: Response) => {
-  const { citationId } = req.params;
+  const citationId = req.params.citationId as string;
   
   logger.info('Delete citation request', { citationId });
   
@@ -110,8 +110,8 @@ export const deleteCitation = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires document access)
  */
 export const searchCitations = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
-  const { q } = req.query as { q: string };
+  const documentId = req.params.documentId as string;
+  const q = req.query.q as string;
   
   logger.info('Search citations request', { documentId, query: q });
   
@@ -130,7 +130,8 @@ export const searchCitations = asyncHandler(async (req: Request, res: Response) 
  * Protected (requires document access)
  */
 export const getCitationByDOI = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId, doi } = req.params;
+  const documentId = req.params.documentId as string;
+  const doi = req.params.doi as string;
   
   logger.info('Get citation by DOI request', { documentId, doi });
   

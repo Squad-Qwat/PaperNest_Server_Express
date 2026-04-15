@@ -85,14 +85,14 @@ export const getWorkspaceById = asyncHandler(async (req: Request, res: Response)
   
   logger.info('Get workspace request', { workspaceId, userId });
   
-  const workspace = await workspaceRepository.findById(workspaceId);
+  const workspace = await workspaceRepository.findById(workspaceId as string);
   
   if (!workspace) {
     throw new NotFoundError('Workspace not found');
   }
   
   // Get user's role in workspace
-  const userRole = await userWorkspaceRepository.getUserRole(userId, workspaceId);
+  const userRole = await userWorkspaceRepository.getUserRole(userId, workspaceId as string);
   
   return successResponse(
     res,
@@ -112,7 +112,7 @@ export const updateWorkspace = asyncHandler(async (req: Request, res: Response) 
   
   logger.info('Update workspace request', { workspaceId, updates });
   
-  const workspace = await workspaceRepository.update(workspaceId, updates);
+  const workspace = await workspaceRepository.update(workspaceId as string, updates);
   
   return successResponse(res, { workspace }, 'Workspace updated successfully');
 });
@@ -128,7 +128,7 @@ export const deleteWorkspace = asyncHandler(async (req: Request, res: Response) 
   logger.info('Delete workspace request', { workspaceId });
   
   // TODO: Implement cascade delete for documents, comments, etc.
-  await workspaceRepository.delete(workspaceId);
+  await workspaceRepository.delete(workspaceId as string);
   
   return noContentResponse(res);
 });
@@ -143,7 +143,7 @@ export const getWorkspaceMembers = asyncHandler(async (req: Request, res: Respon
   
   logger.info('Get workspace members request', { workspaceId });
   
-  const userWorkspaces = await userWorkspaceRepository.findMembersByWorkspace(workspaceId);
+  const userWorkspaces = await userWorkspaceRepository.findMembersByWorkspace(workspaceId as string);
   
   // Get full user details for each member
   const members = await Promise.all(
@@ -186,7 +186,7 @@ export const inviteMember = asyncHandler(async (req: Request, res: Response) => 
   }
   
   // Check if already a member
-  const existing = await userWorkspaceRepository.findByUserAndWorkspace(userId, workspaceId);
+  const existing = await userWorkspaceRepository.findByUserAndWorkspace(userId, workspaceId as string);
   if (existing) {
     throw new ConflictError('User is already a member or has pending invitation');
   }
@@ -194,14 +194,14 @@ export const inviteMember = asyncHandler(async (req: Request, res: Response) => 
   // Create invitation
   const userWorkspace = await userWorkspaceRepository.create({
     userId,
-    workspaceId,
+    workspaceId: workspaceId as string,
     role: role || 'viewer',
     invitationStatus: 'pending',
     invitedBy: inviterId,
   });
   
   // Create notification for invited user
-  const workspace = await workspaceRepository.findById(workspaceId);
+  const workspace = await workspaceRepository.findById(workspaceId as string);
   await notificationRepository.create({
     userId,
     type: 'invitation',
@@ -225,7 +225,7 @@ export const updateMemberRole = asyncHandler(async (req: Request, res: Response)
   
   logger.info('Update member role request', { workspaceId, userWorkspaceId, role });
   
-  const userWorkspace = await userWorkspaceRepository.updateRole(userWorkspaceId, role);
+  const userWorkspace = await userWorkspaceRepository.updateRole(userWorkspaceId as string, role);
   
   return successResponse(res, { userWorkspace }, 'Member role updated successfully');
 });
@@ -241,9 +241,9 @@ export const removeMember = asyncHandler(async (req: Request, res: Response) => 
   
   logger.info('Remove member request', { workspaceId, userWorkspaceId });
   
-  const userWorkspace = await userWorkspaceRepository.findByUserAndWorkspace('', workspaceId);
+  const userWorkspace = await userWorkspaceRepository.findByUserAndWorkspace('', workspaceId as string);
   // Find the actual userWorkspace by ID
-  const allMembers = await userWorkspaceRepository.findMembersByWorkspace(workspaceId);
+  const allMembers = await userWorkspaceRepository.findMembersByWorkspace(workspaceId as string);
   const userWorkspaceFound = allMembers.find(uw => uw.userWorkspaceId === userWorkspaceId);
   
   if (!userWorkspace) {
@@ -251,7 +251,7 @@ export const removeMember = asyncHandler(async (req: Request, res: Response) => 
   }
   
   // Check if user is removing themselves or is owner
-  const workspace = await workspaceRepository.findById(workspaceId);
+  const workspace = await workspaceRepository.findById(workspaceId as string);
   const isSelf = userWorkspace.userId === userId;
   const isOwner = workspace?.ownerId === userId;
   
@@ -264,7 +264,7 @@ export const removeMember = asyncHandler(async (req: Request, res: Response) => 
     throw new ForbiddenError('Cannot remove workspace owner');
   }
   
-  await userWorkspaceRepository.delete(userWorkspaceId);
+  await userWorkspaceRepository.delete(userWorkspaceId as string);
   
   return noContentResponse(res);
 });
@@ -328,7 +328,7 @@ export const updateInvitationStatus = asyncHandler(async (req: Request, res: Res
     throw new ForbiddenError('You can only respond to your own invitations');
   }
   
-  const updated = await userWorkspaceRepository.updateInvitationStatus(userWorkspaceId, status);
+  const updated = await userWorkspaceRepository.updateInvitationStatus(userWorkspaceId as string, status);
   
   return successResponse(
     res,
@@ -349,12 +349,12 @@ export const joinWorkspace = asyncHandler(async (req: Request, res: Response) =>
   
   logger.info('Join workspace request', { workspaceId, userId });
   
-  const workspace = await workspaceRepository.findById(workspaceId);
+  const workspace = await workspaceRepository.findById(workspaceId as string);
   if (!workspace) {
     throw new NotFoundError('Workspace not found');
   }
   
-  const existing = await userWorkspaceRepository.findByUserAndWorkspace(userId, workspaceId);
+  const existing = await userWorkspaceRepository.findByUserAndWorkspace(userId, workspaceId as string);
   if (existing) {
     if (existing.invitationStatus === 'accepted') {
       throw new ConflictError('You are already a member of this workspace');
@@ -366,7 +366,7 @@ export const joinWorkspace = asyncHandler(async (req: Request, res: Response) =>
   
   const userWorkspace = await userWorkspaceRepository.create({
     userId,
-    workspaceId,
+    workspaceId: workspaceId as string,
     role: role || 'viewer',
     invitationStatus: 'accepted',
     invitedBy: userId,

@@ -15,7 +15,7 @@ import {
   joinWorkspaceSchema,
 } from '../models/validators/workspaceValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   POST /api/workspaces

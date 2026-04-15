@@ -18,7 +18,8 @@ import logger from '../utils/logger';
  * Protected (student requesting review)
  */
 export const createReview = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId, documentBodyId } = req.params;
+  const documentId = req.params.documentId as string;
+  const documentBodyId = req.params.documentBodyId as string;
   const { lecturerUserId, message } = req.body;
   const studentUserId = req.userId!;
   
@@ -71,7 +72,7 @@ export const createReview = asyncHandler(async (req: Request, res: Response) => 
  */
 export const getUserReviews = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.userId!;
-  const { status } = req.query;
+  const status = req.query.status as string | undefined;
   
   logger.info('Get user reviews request', { userId, status });
   
@@ -127,7 +128,7 @@ export const getPendingReviews = asyncHandler(async (req: Request, res: Response
  * Protected (requires document access)
  */
 export const getDocumentReviews = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   
   logger.info('Get document reviews request', { documentId });
   
@@ -146,7 +147,7 @@ export const getDocumentReviews = asyncHandler(async (req: Request, res: Respons
  * Protected (must be involved in review)
  */
 export const getReviewById = asyncHandler(async (req: Request, res: Response) => {
-  const { reviewId } = req.params;
+  const reviewId = req.params.reviewId as string;
   
   logger.info('Get review request', { reviewId });
   
@@ -165,7 +166,7 @@ export const getReviewById = asyncHandler(async (req: Request, res: Response) =>
  * Protected (lecturer only)
  */
 export const updateReview = asyncHandler(async (req: Request, res: Response) => {
-  const { reviewId } = req.params;
+  const reviewId = req.params.reviewId as string;
   const { message } = req.body;
   
   logger.info('Update review request', { reviewId });
@@ -181,7 +182,7 @@ export const updateReview = asyncHandler(async (req: Request, res: Response) => 
  * Protected (assigned lecturer only)
  */
 export const approveReview = asyncHandler(async (req: Request, res: Response) => {
-  const { reviewId } = req.params;
+  const reviewId = req.params.reviewId as string;
   const { message } = req.body;
   
   logger.info('Approve review request', { reviewId });
@@ -198,7 +199,6 @@ export const approveReview = asyncHandler(async (req: Request, res: Response) =>
   });
   
   return successResponse(res, { review }, 'Review approved successfully');
-  return successResponse(res, { review }, 'Review approved successfully');
 });
 
 /**
@@ -207,7 +207,7 @@ export const approveReview = asyncHandler(async (req: Request, res: Response) =>
  * Protected (assigned lecturer only)
  */
 export const rejectReview = asyncHandler(async (req: Request, res: Response) => {
-  const { reviewId } = req.params;
+  const reviewId = req.params.reviewId as string;
   const { message } = req.body;
   
   logger.info('Reject review request', { reviewId });
@@ -224,7 +224,6 @@ export const rejectReview = asyncHandler(async (req: Request, res: Response) => 
   });
   
   return successResponse(res, { review }, 'Review rejected successfully');
-  return successResponse(res, { review }, 'Review rejected successfully');
 });
 
 /**
@@ -233,7 +232,7 @@ export const rejectReview = asyncHandler(async (req: Request, res: Response) => 
  * Protected (assigned lecturer only)
  */
 export const requestRevision = asyncHandler(async (req: Request, res: Response) => {
-  const { reviewId } = req.params;
+  const reviewId = req.params.reviewId as string;
   const { message } = req.body;
   
   logger.info('Request revision request', { reviewId });
@@ -263,7 +262,7 @@ export const requestRevision = asyncHandler(async (req: Request, res: Response) 
  * Protected (student who created it or admin)
  */
 export const deleteReview = asyncHandler(async (req: Request, res: Response) => {
-  const { reviewId } = req.params;
+  const reviewId = req.params.reviewId as string;
   const userId = req.userId!;
   
   logger.info('Delete review request', { reviewId });

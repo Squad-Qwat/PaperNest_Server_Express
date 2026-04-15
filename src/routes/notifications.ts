@@ -7,7 +7,7 @@ import {
   filterNotificationReadSchema,
 } from '../models/validators/notificationValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   GET /api/notifications

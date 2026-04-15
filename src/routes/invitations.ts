@@ -6,7 +6,7 @@ import {
   updateInvitationStatusSchema,
 } from '../models/validators/workspaceValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   GET /api/invitations

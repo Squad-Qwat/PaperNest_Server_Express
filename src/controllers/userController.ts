@@ -11,7 +11,7 @@ import logger from '../utils/logger';
  * Protected
  */
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
-  const { userId } = req.params;
+  const userId = req.params.userId as string;
   
   logger.info('Get user request', { userId });
   

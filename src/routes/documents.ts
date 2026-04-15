@@ -22,7 +22,7 @@ import {
   versionNumberSchema,
 } from '../models/validators/versionValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   GET /api/documents/my-documents

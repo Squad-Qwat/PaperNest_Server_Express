@@ -16,7 +16,7 @@ import {
   filterReviewStatusSchema,
 } from '../models/validators/reviewValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   GET /api/reviews
