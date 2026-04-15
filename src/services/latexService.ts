@@ -74,8 +74,7 @@ export class LatexService {
       const binaryPath = 'tectonic';
       const args = [
         mainPath,
-        '--outdir', workDir,
-        '--noninteractive' // Prevent hanging in server environments
+        '--outdir', workDir
       ];
       
       logger.info(`[LatexService] Executing: "${binaryPath}" ${args.join(' ')}`);
