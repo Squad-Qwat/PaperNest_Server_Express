@@ -17,7 +17,7 @@ import logger from '../utils/logger';
  * Protected (requires document access)
  */
 export const createComment = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   const { content, textSelection, parentCommentId } = req.body;
   const userId = req.userId!;
   
@@ -69,8 +69,8 @@ export const createComment = asyncHandler(async (req: Request, res: Response) =>
  * Protected (requires document access)
  */
 export const getDocumentComments = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
-  const { resolved } = req.query;
+  const documentId = req.params.documentId as string;
+  const resolved = req.query.resolved as string | undefined;
   
   logger.info('Get document comments request', { documentId, resolved });
   
@@ -98,7 +98,7 @@ export const getDocumentComments = asyncHandler(async (req: Request, res: Respon
  * Protected (requires document access)
  */
 export const getRootComments = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   
   logger.info('Get root comments request', { documentId });
   
@@ -117,7 +117,7 @@ export const getRootComments = asyncHandler(async (req: Request, res: Response) 
  * Protected (requires document access)
  */
 export const getCommentById = asyncHandler(async (req: Request, res: Response) => {
-  const { commentId } = req.params;
+  const commentId = req.params.commentId as string;
   
   logger.info('Get comment request', { commentId });
   
@@ -136,7 +136,7 @@ export const getCommentById = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires document access)
  */
 export const getCommentReplies = asyncHandler(async (req: Request, res: Response) => {
-  const { commentId } = req.params;
+  const commentId = req.params.commentId as string;
   
   logger.info('Get comment replies request', { commentId });
   
@@ -155,7 +155,7 @@ export const getCommentReplies = asyncHandler(async (req: Request, res: Response
  * Protected (comment owner only)
  */
 export const updateComment = asyncHandler(async (req: Request, res: Response) => {
-  const { commentId } = req.params;
+  const commentId = req.params.commentId as string;
   const { content } = req.body;
   
   logger.info('Update comment request', { commentId });
@@ -171,7 +171,7 @@ export const updateComment = asyncHandler(async (req: Request, res: Response) =>
  * Protected (requires document access)
  */
 export const resolveComment = asyncHandler(async (req: Request, res: Response) => {
-  const { commentId } = req.params;
+  const commentId = req.params.commentId as string;
   
   logger.info('Resolve comment request', { commentId });
   
@@ -186,7 +186,7 @@ export const resolveComment = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires document access)
  */
 export const unresolveComment = asyncHandler(async (req: Request, res: Response) => {
-  const { commentId } = req.params;
+  const commentId = req.params.commentId as string;
   
   logger.info('Unresolve comment request', { commentId });
   
@@ -201,7 +201,7 @@ export const unresolveComment = asyncHandler(async (req: Request, res: Response)
  * Protected (comment owner only)
  */
 export const deleteComment = asyncHandler(async (req: Request, res: Response) => {
-  const { commentId } = req.params;
+  const commentId = req.params.commentId as string;
   
   logger.info('Delete comment request', { commentId });
   

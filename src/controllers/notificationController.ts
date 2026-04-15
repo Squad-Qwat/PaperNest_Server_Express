@@ -67,7 +67,7 @@ export const getUnreadNotifications = asyncHandler(async (req: Request, res: Res
  * Protected (own notification only)
  */
 export const getNotificationById = asyncHandler(async (req: Request, res: Response) => {
-  const { notificationId } = req.params;
+  const notificationId = req.params.notificationId as string;
   const userId = req.userId!;
   
   logger.info('Get notification request', { notificationId, userId });
@@ -92,7 +92,7 @@ export const getNotificationById = asyncHandler(async (req: Request, res: Respon
  * Protected (own notification only)
  */
 export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
-  const { notificationId } = req.params;
+  const notificationId = req.params.notificationId as string;
   const userId = req.userId!;
   
   logger.info('Mark notification as read request', { notificationId, userId });
@@ -134,7 +134,7 @@ export const markAllAsRead = asyncHandler(async (req: Request, res: Response) =>
  * Protected (own notification only)
  */
 export const deleteNotification = asyncHandler(async (req: Request, res: Response) => {
-  const { notificationId } = req.params;
+  const notificationId = req.params.notificationId as string;
   const userId = req.userId!;
   
   logger.info('Delete notification request', { notificationId, userId });

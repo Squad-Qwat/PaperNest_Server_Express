@@ -18,7 +18,7 @@ import logger from '../utils/logger';
  * Protected (requires editor role or higher)
  */
 export const createDocument = asyncHandler(async (req: Request, res: Response) => {
-  const { workspaceId } = req.params;
+  const workspaceId = req.params.workspaceId as string;
   const { title, description, content, message } = req.body;
   const userId = req.userId!;
   
@@ -62,7 +62,7 @@ export const createDocument = asyncHandler(async (req: Request, res: Response) =
   } catch (permissionError) {
     logger.error('Failed to initialize document permissions:', permissionError);
     // Don't fail document creation if permission initialization fails
-    // This is a non-critical operation
+    // This is a zero-critical operation
   }
   
   return createdResponse(
@@ -78,7 +78,7 @@ export const createDocument = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires workspace access)
  */
 export const getWorkspaceDocuments = asyncHandler(async (req: Request, res: Response) => {
-  const { workspaceId } = req.params;
+  const workspaceId = req.params.workspaceId as string;
   
   logger.info('Get workspace documents request', { workspaceId });
   
@@ -97,7 +97,7 @@ export const getWorkspaceDocuments = asyncHandler(async (req: Request, res: Resp
  * Protected (requires workspace access)
  */
 export const getDocumentById = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   
   logger.info('Get document request', { documentId });
   
@@ -128,7 +128,7 @@ export const getDocumentById = asyncHandler(async (req: Request, res: Response) 
  * Optimization: Reduces double-fetch pattern from client-side loading
  */
 export const getDocumentWithRoomState = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   
   logger.info('Get document with room state', { documentId });
   
@@ -186,7 +186,7 @@ export const getDocumentWithRoomState = asyncHandler(async (req: Request, res: R
  * Protected (requires edit permission)
  */
 export const updateDocument = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   const updates = req.body;
   
   logger.info('Update document request', { documentId, updates });
@@ -202,7 +202,7 @@ export const updateDocument = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires edit permission)
  */
 export const updateDocumentContent = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   const { content, message } = req.body;
   const userId = req.userId!;
   
@@ -245,7 +245,7 @@ export const updateDocumentContent = asyncHandler(async (req: Request, res: Resp
  * Protected (requires edit permission)
  */
 export const deleteDocument = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   
   logger.info('Delete document request', { documentId });
   
@@ -261,8 +261,8 @@ export const deleteDocument = asyncHandler(async (req: Request, res: Response) =
  * Protected (requires workspace access)
  */
 export const searchDocuments = asyncHandler(async (req: Request, res: Response) => {
-  const { workspaceId } = req.params;
-  const { q } = req.query as { q: string };
+  const workspaceId = req.params.workspaceId as string;
+  const q = req.query.q as string;
   
   logger.info('Search documents request', { workspaceId, query: q });
   

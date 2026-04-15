@@ -13,7 +13,7 @@ import {
   filterCitationTypeSchema,
 } from '../models/validators/citationValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   POST /api/documents/:documentId/citations

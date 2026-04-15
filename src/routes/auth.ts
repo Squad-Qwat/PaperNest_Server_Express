@@ -15,7 +15,7 @@ import {
   checkEmailSchema,
 } from '../models/validators/authValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   POST /api/auth/check-email

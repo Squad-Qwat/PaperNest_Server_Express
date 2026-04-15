@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as semanticScholarController from '../controllers/semanticScholarController';
 import { authenticate } from '../middlewares/auth';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   GET /api/semantic-scholar/search

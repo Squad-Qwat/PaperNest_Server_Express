@@ -4,7 +4,7 @@ import { authenticate } from '../middlewares/auth';
 import { validate } from '../middlewares/validation';
 import Joi from 'joi';
 
-const router = Router();
+const router: Router = Router();
 
 // Validation schema for LaTeX compilation
 const compileSchema = Joi.object({

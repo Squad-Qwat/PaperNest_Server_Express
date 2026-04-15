@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getPresignedUrl, proxyDownload, deleteFile } from '../controllers/uploadController';
 import { authenticate } from '../middlewares/auth';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   POST /api/upload/presigned-url

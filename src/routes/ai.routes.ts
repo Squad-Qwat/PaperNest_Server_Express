@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { streamAIResponse } from '../controllers/ai.controller'
 import { indexPDF } from '../controllers/rag.controller'
 
-const router = Router()
+const router: Router = Router()
 
 // POST /stream
 // Handles AI agent processing and streams Server-Sent Events (SSE)

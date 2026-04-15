@@ -109,7 +109,8 @@ export const proxyDownload = async (req: Request, res: Response): Promise<void> 
 
 export const deleteFile = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { documentId, fileId } = req.params;
+    const documentId = req.params.documentId as string;
+    const fileId = req.params.fileId as string;
 
     if (!documentId || !fileId) {
       res.status(400).json({ success: false, message: 'Document ID and File ID are required' });

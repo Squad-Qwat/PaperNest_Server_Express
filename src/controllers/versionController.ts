@@ -12,7 +12,7 @@ import logger from '../utils/logger';
  * Protected (requires document access)
  */
 export const getDocumentVersions = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   
   logger.info('Get document versions request', { documentId });
   
@@ -31,7 +31,7 @@ export const getDocumentVersions = asyncHandler(async (req: Request, res: Respon
  * Protected (requires document access)
  */
 export const getCurrentVersion = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   
   logger.info('Get current version request', { documentId });
   
@@ -50,7 +50,8 @@ export const getCurrentVersion = asyncHandler(async (req: Request, res: Response
  * Protected (requires document access)
  */
 export const getVersionByNumber = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId, versionNumber } = req.params;
+  const documentId = req.params.documentId as string;
+  const versionNumber = req.params.versionNumber as string;
   const versionNum = parseInt(versionNumber);
   
   logger.info('Get version by number request', { documentId, versionNumber: versionNum });
@@ -74,7 +75,7 @@ export const getVersionByNumber = asyncHandler(async (req: Request, res: Respons
  * Protected (requires edit permission)
  */
 export const createVersion = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId } = req.params;
+  const documentId = req.params.documentId as string;
   const { content, message } = req.body;
   const userId = req.userId!;
   
@@ -109,7 +110,8 @@ export const createVersion = asyncHandler(async (req: Request, res: Response) =>
  * Protected (requires edit permission)
  */
 export const revertToVersion = asyncHandler(async (req: Request, res: Response) => {
-  const { documentId, versionNumber } = req.params;
+  const documentId = req.params.documentId as string;
+  const versionNumber = req.params.versionNumber as string;
   const userId = req.userId!;
   const versionNum = parseInt(versionNumber);
   

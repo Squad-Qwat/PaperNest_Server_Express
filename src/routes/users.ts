@@ -7,7 +7,7 @@ import {
   searchUserSchema,
 } from '../models/validators/userValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   GET /api/users/search?q=query

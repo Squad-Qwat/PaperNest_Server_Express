@@ -15,7 +15,7 @@ import type { DocumentPermission } from '../types/Permission.types';
 export const authorizeWorkspace = (minRole?: 'owner' | 'editor' | 'viewer' | 'reviewer') => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const workspaceId = req.params.workspaceId;
+      const workspaceId = req.params.workspaceId as string;
       const userId = req.userId;
 
       if (!userId) {
@@ -72,7 +72,7 @@ export const authorizeWorkspace = (minRole?: 'owner' | 'editor' | 'viewer' | 're
  */
 export const authorizeWorkspaceOwner = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const workspaceId = req.params.workspaceId;
+    const workspaceId = req.params.workspaceId as string;
     const userId = req.userId;
 
     if (!userId) {
@@ -103,7 +103,7 @@ export const authorizeWorkspaceOwner = async (req: Request, res: Response, next:
  */
 export const authorizeDocument = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const documentId = req.params.documentId;
+    const documentId = req.params.documentId as string;
     const userId = req.userId;
 
     if (!userId) {
@@ -141,7 +141,7 @@ export const authorizeDocument = async (req: Request, res: Response, next: NextF
  */
 export const authorizeDocumentEdit = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const documentId = req.params.documentId;
+    const documentId = req.params.documentId as string;
     const userId = req.userId;
 
     if (!userId) {
@@ -181,8 +181,8 @@ export const authorizeDocumentEdit = async (req: Request, res: Response, next: N
  */
 export const authorizeCommentOwner = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const commentId = req.params.commentId;
-    const documentId = req.params.documentId;
+    const commentId = req.params.commentId as string;
+    const documentId = req.params.documentId as string;
     const userId = req.userId;
 
     if (!userId) {
@@ -258,7 +258,7 @@ export const authorizeLecturer = async (req: Request, res: Response, next: NextF
  */
 export const authorizeReview = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const reviewId = req.params.reviewId;
+    const reviewId = req.params.reviewId as string;
     const userId = req.userId;
 
     if (!userId) {
@@ -294,7 +294,7 @@ export const authorizeReview = async (req: Request, res: Response, next: NextFun
  */
 export const authorizeReviewLecturer = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const reviewId = req.params.reviewId;
+    const reviewId = req.params.reviewId as string;
     const userId = req.userId;
 
     if (!userId) {
@@ -327,7 +327,7 @@ export const authorizeReviewLecturer = async (req: Request, res: Response, next:
  */
 export const authorizeReviewStudent = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const reviewId = req.params.reviewId;
+    const reviewId = req.params.reviewId as string;
     const userId = req.userId;
 
     if (!userId) {
@@ -379,7 +379,7 @@ export const authorizeDocumentPermission = (
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const documentId = req.params.documentId;
+      const documentId = req.params.documentId as string;
       const userId = req.userId;
 
       if (!userId) {
@@ -405,20 +405,12 @@ export const authorizeDocumentPermission = (
 
       if (!hasPermission) {
         throw new ForbiddenError(
-          `You need at least '${requiredPermission}' permission to perform this action`
+          `You do not have ${requiredPermission} permission on this document`
         );
       }
 
-      // Attach document info for downstream use
       (req as any).document = document;
       (req as any).workspaceId = document.workspaceId;
-      (req as any).userPermission = requiredPermission;
-
-      logger.info('Document permission authorized', {
-        userId,
-        documentId,
-        requiredPermission,
-      });
 
       next();
     } catch (error) {

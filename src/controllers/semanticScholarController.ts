@@ -31,7 +31,7 @@ export const searchPapers = asyncHandler(async (req: Request, res: Response) => 
  * GET /api/semantic-scholar/paper/:id
  */
 export const getPaperDetails = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
 
   logger.info(`[SemanticScholarController] Getting paper details for: ${id}`);
   

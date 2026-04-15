@@ -12,7 +12,7 @@ import {
   filterCommentResolvedSchema,
 } from '../models/validators/commentValidator';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @route   GET /api/comments/my-comments

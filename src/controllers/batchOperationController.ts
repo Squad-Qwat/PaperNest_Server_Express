@@ -26,7 +26,7 @@ import { v4 as uuidv4 } from 'uuid'; // @types/uuid should be in devDependencies
  * Protected (requires editor permission)
  */
 export const executeBatchOperations = asyncHandler(async (req: Request, res: Response) => {
-	const { documentId } = req.params;
+	const documentId = req.params.documentId as string;
 	const { operations, transactionId: clientTransactionId } = req.body as BatchOperationRequest;
 	const userId = req.userId!;
 
