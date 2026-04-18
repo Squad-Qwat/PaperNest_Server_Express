@@ -57,3 +57,6 @@ pnpm-lock.yaml
 .agents/
 .agent/
 skills-lock.json
+
+# Temporary files
+temp/
