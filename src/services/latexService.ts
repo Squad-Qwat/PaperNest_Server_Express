@@ -32,7 +32,7 @@ export class LatexService {
    * @returns The compiled PDF buffer and logs
    */
   async compile(options: LatexCompileOptions): Promise<LatexCompileResult> {
-    const { content, mainFileName = 'main.tex', assets = [], engine = 'tectonic' } = options;
+    const { content, mainFileName = 'main.tex', assets = [], engine = 'pdflatex' } = options;
     
     // Use a project-local temp directory to avoid Snap/Flatpak permission issues on Linux/GCP
     const tempRoot = path.join(process.cwd(), 'temp');
