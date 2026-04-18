@@ -252,6 +252,15 @@ export const deleteDocument = asyncHandler(async (req: Request, res: Response) =
   // TODO: Implement cascade delete for versions, citations, comments, reviews
   await documentRepository.delete(documentId);
   
+  // Cleanup the Liveblocks Room corresponding to the document to truly delete the state
+  try {
+    const roomId = `document:${documentId}`;
+    await liveblocksWebhookService.deleteRoom(roomId);
+    logger.info(`Liveblocks room ${roomId} deleted alongside document`);
+  } catch (err: any) {
+    logger.warn(`Failed to delete liveblocks room for document ${documentId}:`, err);
+  }
+  
   return noContentResponse(res);
 });
 

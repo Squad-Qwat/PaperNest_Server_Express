@@ -22,9 +22,8 @@ export class LiveblocksWebhookService {
         return { action: 'keep_room', activeUsers: activeUsers.length };
       }
 
-      await this.deleteRoom(roomId);
-      logger.info(`Room ${roomId} deleted successfully`);
-      return { action: 'deleted', roomId };
+      logger.info(`Room ${roomId} has 0 active users. Preserving room state to maintain Yjs CRDT history.`);
+      return { action: 'keep_room', activeUsers: 0 };
 
     } catch (error: any) {
       if (error.message?.includes('Room not found')) {
@@ -60,7 +59,7 @@ export class LiveblocksWebhookService {
     return data.data || [];
   }
 
-  private async deleteRoom(roomId: string): Promise<void> {
+  public async deleteRoom(roomId: string): Promise<void> {
     const response = await fetch(
       `https://api.liveblocks.io/v2/rooms/${roomId}`,
       {
