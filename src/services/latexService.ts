@@ -11,6 +11,7 @@ export interface LatexCompileOptions {
   content: string;
   mainFileName?: string;
   assets?: Array<{ name: string; url: string }>;
+  engine?: 'tectonic' | 'pdflatex';
 }
 
 export interface LatexCompileResult {
@@ -31,7 +32,7 @@ export class LatexService {
    * @returns The compiled PDF buffer and logs
    */
   async compile(options: LatexCompileOptions): Promise<LatexCompileResult> {
-    const { content, mainFileName = 'main.tex', assets = [] } = options;
+    const { content, mainFileName = 'main.tex', assets = [], engine = 'tectonic' } = options;
     
     // Use a project-local temp directory to avoid Snap/Flatpak permission issues on Linux/GCP
     const tempRoot = path.join(process.cwd(), 'temp');
@@ -69,13 +70,21 @@ export class LatexService {
         }));
       }
 
-      // 4. Execute Tectonic
-      // We assume 'tectonic' is in the system PATH
-      const binaryPath = 'tectonic';
-      const args = [
+      // 4. Execute Compiler
+      let binaryPath = 'tectonic';
+      let args = [
         mainPath,
         '--outdir', workDir
       ];
+
+      if (engine === 'pdflatex') {
+        binaryPath = 'pdflatex';
+        args = [
+          '-interaction=nonstopmode',
+          `-output-directory=${workDir}`,
+          mainPath
+        ];
+      }
       
       logger.info(`[LatexService] Executing: "${binaryPath}" ${args.join(' ')}`);
 
@@ -85,33 +94,33 @@ export class LatexService {
       // Wrap spawn in a promise
       await new Promise<void>((resolve) => {
         // We use shell: false (default) to avoid CMD quoting issues with spaces
-        const tectonicProcess = spawn(binaryPath, args, { 
+        const compilerProcess = spawn(binaryPath, args, { 
           cwd: workDir,
           env: process.env // Inherit current environment
         });
 
-        tectonicProcess.stdout.on('data', (data: Buffer) => {
+        compilerProcess.stdout.on('data', (data: Buffer) => {
           const chunk = data.toString();
           log += chunk;
         });
 
-        tectonicProcess.stderr.on('data', (data: Buffer) => {
+        compilerProcess.stderr.on('data', (data: Buffer) => {
           const chunk = data.toString();
           log += chunk;
         });
 
-        tectonicProcess.on('close', (code: number | null) => {
+        compilerProcess.on('close', (code: number | null) => {
           status = code || 0;
           if (status !== 0) {
             // We log but don't resolve as fail yet - we'll check if a PDF was produced anyway
-            logger.warn(`[LatexService] Tectonic exited with code ${status}. Checking for output PDF...`);
+            logger.warn(`[LatexService] ${binaryPath} exited with code ${status}. Checking for output PDF...`);
           }
           resolve();
         });
 
-        tectonicProcess.on('error', (err: Error) => {
+        compilerProcess.on('error', (err: Error) => {
           status = -1;
-          log += `Error spawning tectonic: ${err.message}\n`;
+          log += `Error spawning ${binaryPath}: ${err.message}\n`;
           log += `Path attempted: ${binaryPath}\n`;
           logger.error(`[LatexService] Spawn error: ${err.message}`);
           resolve();

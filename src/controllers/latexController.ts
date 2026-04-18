@@ -6,7 +6,7 @@ import logger from '../utils/logger';
  * Controller to handle LaTeX-related requests.
  */
 export const compileLatex = async (req: Request, res: Response, NextFunction: NextFunction) => {
-  const { content, mainFileName, assets } = req.body;
+  const { content, mainFileName, assets, engine } = req.body;
 
   if (!content) {
     return res.status(400).json({ error: 'LaTeX content is required' });
@@ -18,7 +18,8 @@ export const compileLatex = async (req: Request, res: Response, NextFunction: Ne
     const result = await latexService.compile({
       content,
       mainFileName,
-      assets
+      assets,
+      engine
     });
 
     if (result.pdf) {

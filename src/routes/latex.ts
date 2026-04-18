@@ -13,7 +13,8 @@ const compileSchema = Joi.object({
   assets: Joi.array().items(Joi.object({
     name: Joi.string().required(),
     url: Joi.string().required()
-  }))
+  })),
+  engine: Joi.string().valid('tectonic', 'pdflatex').optional()
 });
 
 /**
