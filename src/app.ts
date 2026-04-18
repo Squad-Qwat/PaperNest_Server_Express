@@ -93,6 +93,22 @@ app.use('/api/latex', latexRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/semantic-scholar', semanticScholarRoutes);
 
+// Socket.IO Diagnostic Route (to identify the source of the 404s)
+app.all('/socket.io/', (req, res) => {
+  logger.info(`[SocketDiagnostic] Request received from ${req.ip}`);
+  logger.info(`[SocketDiagnostic] User-Agent: ${req.get('User-Agent')}`);
+  logger.info(`[SocketDiagnostic] Method: ${req.method}`);
+  logger.info(`[SocketDiagnostic] Query: ${JSON.stringify(req.query)}`);
+  
+  // Return consistent response for polling/EIO
+  res.json({
+    sid: "diagnostic-session",
+    upgrades: [],
+    pingInterval: 25000,
+    pingTimeout: 5000
+  });
+});
+
 // Handle 404
 app.use(notFound);
 

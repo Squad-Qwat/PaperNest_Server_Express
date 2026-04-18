@@ -32,10 +32,14 @@ export class LatexService {
    */
   async compile(options: LatexCompileOptions): Promise<LatexCompileResult> {
     const { content, mainFileName = 'main.tex', assets = [] } = options;
-    const workDir = path.join(os.tmpdir(), `papernest-latex-${uuidv4()}`);
+    
+    // Use a project-local temp directory to avoid Snap/Flatpak permission issues on Linux/GCP
+    const tempRoot = path.join(process.cwd(), 'temp');
+    const workDir = path.join(tempRoot, `papernest-latex-${uuidv4()}`);
     
     try {
-      // 1. Create temporary workspace
+      // 1. Create temporary workspace (ensure parent tempRoot exists too)
+      await fs.mkdir(tempRoot, { recursive: true });
       await fs.mkdir(workDir, { recursive: true });
       logger.info(`[LatexService] Created work directory: ${workDir}`);
 
@@ -99,7 +103,8 @@ export class LatexService {
         tectonicProcess.on('close', (code: number | null) => {
           status = code || 0;
           if (status !== 0) {
-            logger.warn(`[LatexService] Tectonic exited with code ${status}`);
+            // We log but don't resolve as fail yet - we'll check if a PDF was produced anyway
+            logger.warn(`[LatexService] Tectonic exited with code ${status}. Checking for output PDF...`);
           }
           resolve();
         });

@@ -35,6 +35,23 @@ export class UserRepository {
   }
 
   /**
+   * Find multiple users by their IDs using batch get
+   */
+  async findByIds(userIds: string[]): Promise<User[]> {
+    if (!userIds || userIds.length === 0) return [];
+    
+    // Remove duplicates to minimize reads
+    const uniqueIds = [...new Set(userIds)];
+    
+    const refs = uniqueIds.map(id => this.collection.doc(id));
+    const snapshots = await db.getAll(...refs);
+    
+    return snapshots
+      .filter(snap => snap.exists)
+      .map(snap => snap.data() as User);
+  }
+
+  /**
    * Find user by linked UID
    */
   async findByLinkedUid(uid: string): Promise<User | null> {
