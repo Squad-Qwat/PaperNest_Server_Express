@@ -3,7 +3,7 @@
  * Defines granular permission levels for document access control
  */
 
-export type DocumentPermission = 'viewer' | 'editor' | 'admin';
+export type DocumentPermission = "viewer" | "editor" | "admin";
 
 export interface DocumentPermissionRecord {
 	documentPermissionId: string;
@@ -18,7 +18,7 @@ export interface DocumentPermissionRecord {
 export interface PermissionCheckResult {
 	hasAccess: boolean;
 	permission: DocumentPermission | null;
-	source: 'direct' | 'workspace-inherited';
+	source: "direct" | "workspace-inherited";
 }
 
 /**
@@ -36,7 +36,23 @@ export const PERMISSION_HIERARCHY: Record<DocumentPermission, number> = {
  * Defines which permission levels can perform which actions
  */
 export const PERMISSION_ACTIONS: Record<DocumentPermission, string[]> = {
-	viewer: ['read', 'read-versions'],
-	editor: ['read', 'write', 'read-versions', 'create-version', 'read-comments', 'write-comments'],
-	admin: ['read', 'write', 'read-versions', 'create-version', 'delete', 'manage-permissions', 'read-comments', 'write-comments'],
+	viewer: ["read", "read-versions"],
+	editor: [
+		"read",
+		"write",
+		"read-versions",
+		"create-version",
+		"read-comments",
+		"write-comments",
+	],
+	admin: [
+		"read",
+		"write",
+		"read-versions",
+		"create-version",
+		"delete",
+		"manage-permissions",
+		"read-comments",
+		"write-comments",
+	],
 };

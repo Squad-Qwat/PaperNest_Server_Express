@@ -1,26 +1,26 @@
-import { Router } from 'express';
-import * as documentController from '../controllers/documentController';
-import * as versionController from '../controllers/versionController';
-import * as batchOperationController from '../controllers/batchOperationController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as batchOperationController from "../controllers/batchOperationController";
+import * as documentController from "../controllers/documentController";
+import * as versionController from "../controllers/versionController";
+import { authenticate } from "../middlewares/auth";
 import {
-  authorizeWorkspace,
-  authorizeDocument,
-  authorizeDocumentEdit,
-  authorizeDocumentPermission,
-} from '../middlewares/authorization';
+	authorizeDocument,
+	authorizeDocumentEdit,
+	authorizeDocumentPermission,
+	authorizeWorkspace,
+} from "../middlewares/authorization";
+import { validate } from "../middlewares/validation";
+import { batchOperationRequestSchema } from "../models/validators/batchOperationValidator";
 import {
-  createDocumentSchema,
-  updateDocumentSchema,
-  updateDocumentContentSchema,
-  searchDocumentSchema,
-} from '../models/validators/documentValidator';
-import { batchOperationRequestSchema } from '../models/validators/batchOperationValidator';
+	createDocumentSchema,
+	searchDocumentSchema,
+	updateDocumentContentSchema,
+	updateDocumentSchema,
+} from "../models/validators/documentValidator";
 import {
-  createVersionSchema,
-  versionNumberSchema,
-} from '../models/validators/versionValidator';
+	createVersionSchema,
+	versionNumberSchema,
+} from "../models/validators/versionValidator";
 
 const router: Router = Router();
 
@@ -30,9 +30,9 @@ const router: Router = Router();
  * @access  Protected
  */
 router.get(
-  '/documents/my-documents',
-  authenticate,
-  documentController.getUserDocuments
+	"/documents/my-documents",
+	authenticate,
+	documentController.getUserDocuments,
 );
 
 /**
@@ -42,10 +42,10 @@ router.get(
  * @optimization Reduces double-fetch pattern - returns document + version + room info in single call
  */
 router.get(
-  '/documents/:documentId/with-room-state',
-  authenticate,
-  authorizeDocument,
-  documentController.getDocumentWithRoomState
+	"/documents/:documentId/with-room-state",
+	authenticate,
+	authorizeDocument,
+	documentController.getDocumentWithRoomState,
 );
 
 /**
@@ -58,11 +58,11 @@ router.get(
  * @access  Protected (requires editor role or higher)
  */
 router.post(
-  '/workspaces/:workspaceId/documents',
-  authenticate,
-  authorizeWorkspace('editor'),
-  validate({ body: createDocumentSchema }),
-  documentController.createDocument
+	"/workspaces/:workspaceId/documents",
+	authenticate,
+	authorizeWorkspace("editor"),
+	validate({ body: createDocumentSchema }),
+	documentController.createDocument,
 );
 
 /**
@@ -71,11 +71,11 @@ router.post(
  * @access  Protected (requires workspace access)
  */
 router.get(
-  '/workspaces/:workspaceId/documents/search',
-  authenticate,
-  authorizeWorkspace(),
-  validate({ query: searchDocumentSchema }),
-  documentController.searchDocuments
+	"/workspaces/:workspaceId/documents/search",
+	authenticate,
+	authorizeWorkspace(),
+	validate({ query: searchDocumentSchema }),
+	documentController.searchDocuments,
 );
 
 /**
@@ -84,10 +84,10 @@ router.get(
  * @access  Protected (requires workspace access)
  */
 router.get(
-  '/workspaces/:workspaceId/documents',
-  authenticate,
-  authorizeWorkspace(),
-  documentController.getWorkspaceDocuments
+	"/workspaces/:workspaceId/documents",
+	authenticate,
+	authorizeWorkspace(),
+	documentController.getWorkspaceDocuments,
 );
 
 /**
@@ -96,10 +96,10 @@ router.get(
  * @access  Protected (requires workspace access)
  */
 router.get(
-  '/workspaces/:workspaceId/documents/:documentId',
-  authenticate,
-  authorizeDocument,
-  documentController.getDocumentById
+	"/workspaces/:workspaceId/documents/:documentId",
+	authenticate,
+	authorizeDocument,
+	documentController.getDocumentById,
 );
 
 /**
@@ -108,11 +108,11 @@ router.get(
  * @access  Protected (requires edit permission)
  */
 router.put(
-  '/workspaces/:workspaceId/documents/:documentId',
-  authenticate,
-  authorizeDocumentEdit,
-  validate({ body: updateDocumentSchema }),
-  documentController.updateDocument
+	"/workspaces/:workspaceId/documents/:documentId",
+	authenticate,
+	authorizeDocumentEdit,
+	validate({ body: updateDocumentSchema }),
+	documentController.updateDocument,
 );
 
 /**
@@ -121,11 +121,11 @@ router.put(
  * @access  Protected (requires edit permission)
  */
 router.put(
-  '/workspaces/:workspaceId/documents/:documentId/content',
-  authenticate,
-  authorizeDocumentEdit,
-  validate({ body: updateDocumentContentSchema }),
-  documentController.updateDocumentContent
+	"/workspaces/:workspaceId/documents/:documentId/content",
+	authenticate,
+	authorizeDocumentEdit,
+	validate({ body: updateDocumentContentSchema }),
+	documentController.updateDocumentContent,
 );
 
 /**
@@ -134,10 +134,10 @@ router.put(
  * @access  Protected (requires edit permission)
  */
 router.delete(
-  '/workspaces/:workspaceId/documents/:documentId',
-  authenticate,
-  authorizeDocumentEdit,
-  documentController.deleteDocument
+	"/workspaces/:workspaceId/documents/:documentId",
+	authenticate,
+	authorizeDocumentEdit,
+	documentController.deleteDocument,
 );
 
 /**
@@ -150,10 +150,10 @@ router.delete(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/documents/:documentId/versions',
-  authenticate,
-  authorizeDocument,
-  versionController.getDocumentVersions
+	"/documents/:documentId/versions",
+	authenticate,
+	authorizeDocument,
+	versionController.getDocumentVersions,
 );
 
 /**
@@ -162,10 +162,10 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/documents/:documentId/versions/current',
-  authenticate,
-  authorizeDocument,
-  versionController.getCurrentVersion
+	"/documents/:documentId/versions/current",
+	authenticate,
+	authorizeDocument,
+	versionController.getCurrentVersion,
 );
 
 /**
@@ -174,11 +174,11 @@ router.get(
  * @access  Protected (requires edit permission)
  */
 router.post(
-  '/documents/:documentId/versions',
-  authenticate,
-  authorizeDocumentEdit,
-  validate({ body: createVersionSchema }),
-  versionController.createVersion
+	"/documents/:documentId/versions",
+	authenticate,
+	authorizeDocumentEdit,
+	validate({ body: createVersionSchema }),
+	versionController.createVersion,
 );
 
 /**
@@ -187,10 +187,10 @@ router.post(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/documents/:documentId/versions/:versionNumber',
-  authenticate,
-  authorizeDocument,
-  versionController.getVersionByNumber
+	"/documents/:documentId/versions/:versionNumber",
+	authenticate,
+	authorizeDocument,
+	versionController.getVersionByNumber,
 );
 
 /**
@@ -199,10 +199,10 @@ router.get(
  * @access  Protected (requires edit permission)
  */
 router.post(
-  '/documents/:documentId/versions/:versionNumber/revert',
-  authenticate,
-  authorizeDocumentEdit,
-  versionController.revertToVersion
+	"/documents/:documentId/versions/:versionNumber/revert",
+	authenticate,
+	authorizeDocumentEdit,
+	versionController.revertToVersion,
 );
 
 /**
@@ -212,12 +212,11 @@ router.post(
  * @optimization Reduces 3 API calls to 1, with atomic transaction support
  */
 router.post(
-  '/documents/:documentId/batch',
-  authenticate,
-  authorizeDocumentPermission('editor'),
-  validate({ body: batchOperationRequestSchema }),
-  batchOperationController.executeBatchOperations
+	"/documents/:documentId/batch",
+	authenticate,
+	authorizeDocumentPermission("editor"),
+	validate({ body: batchOperationRequestSchema }),
+	batchOperationController.executeBatchOperations,
 );
 
 export default router;
-

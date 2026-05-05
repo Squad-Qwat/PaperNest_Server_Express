@@ -1,194 +1,158 @@
-import { DocumentRepository } from '../../repositories/documentRepository';
-import { __mockFirestore } from '../../../__mocks__/firebase-admin';
-import { mockDocument, mockDocuments } from '../../tests/fixtures';
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { __mockFirestore } from "../../../__mocks__/firebase-admin";
+import { DocumentRepository } from "../../repositories/documentRepository";
+import { mockDocument, mockDocuments } from "../../tests/fixtures";
 
-jest.mock('../../config/firebase', () => ({
-  db: require('../../../__mocks__/firebase-admin').__mockFirestore,
+jest.mock("../../config/firebase", () => ({
+	db: require("../../../__mocks__/firebase-admin").__mockFirestore,
 }));
 
-describe('DocumentRepository', () => {
-  let documentRepository: DocumentRepository;
-  let mockCollection: any;
+describe("DocumentRepository", () => {
+	let documentRepository: DocumentRepository;
+	let mockCollection: any;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    documentRepository = new DocumentRepository();
-    mockCollection = __mockFirestore.collection('documents');
-  });
+	beforeEach(() => {
+		jest.clearAllMocks();
+		documentRepository = new DocumentRepository();
+		mockCollection = __mockFirestore.collection("documents");
+	});
 
-  describe('create', () => {
-    it('should create a new document successfully', async () => {
-      const documentData = {
-        workspaceId: 'workspace-123',
-        title: 'Test Document',
-        savedContent: 'Document content',
-        currentVersionId: 'version-1',
-        createdBy: 'user-123',
-      };
+	describe("create", () => {
+		it("should create a new document successfully", async () => {
+			const documentData = {
+				workspaceId: "workspace-123",
+				title: "Test Document",
+				savedContent: "Document content",
+				currentVersionId: "version-1",
+				createdBy: "user-123",
+			};
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        id: 'doc-123',
-        set: jest.fn().mockResolvedValue(undefined),
-      });
+			mockCollection.doc = jest.fn().mockReturnValue({
+				id: "doc-123",
+				set: (jest.fn() as any).mockResolvedValue(undefined),
+			});
 
-      const result = await documentRepository.create(documentData);
+			const result = await documentRepository.create(documentData);
 
-      expect(result).toMatchObject(documentData);
-      expect(result.documentId).toBeDefined();
-      expect(result.createdAt).toBeInstanceOf(Date);
-      expect(mockCollection.doc).toHaveBeenCalled();
-    });
-  });
+			expect(result).toMatchObject(documentData);
+			expect(result.documentId).toBeDefined();
+			expect(result.createdAt).toBeInstanceOf(Date);
+			expect(mockCollection.doc).toHaveBeenCalled();
+		});
+	});
 
-  describe('findById', () => {
-    it('should return document when found', async () => {
-      const documentId = 'doc-123';
-      const mockDoc = {
-        exists: true,
-        data: () => mockDocument,
-      };
+	describe("findById", () => {
+		it("should return document when found", async () => {
+			const documentId = "doc-123";
+			const mockDoc = {
+				exists: true,
+				data: () => mockDocument,
+			};
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        get: jest.fn().mockResolvedValue(mockDoc),
-      });
+			mockCollection.doc = jest.fn().mockReturnValue({
+				get: (jest.fn() as any).mockResolvedValue(mockDoc),
+			});
 
-      const result = await documentRepository.findById(documentId);
+			const result = await documentRepository.findById(documentId);
 
-      expect(result).toEqual(mockDocument);
-    });
+			expect(result).toEqual(mockDocument);
+		});
 
-    it('should return null when document not found', async () => {
-      const documentId = 'non-existent';
-      const mockDoc = {
-        exists: false,
-      };
+		it("should return null when document not found", async () => {
+			const documentId = "non-existent";
+			const mockDoc = {
+				exists: false,
+			};
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        get: jest.fn().mockResolvedValue(mockDoc),
-      });
+			mockCollection.doc = jest.fn().mockReturnValue({
+				get: (jest.fn() as any).mockResolvedValue(mockDoc),
+			});
 
-      const result = await documentRepository.findById(documentId);
+			const result = await documentRepository.findById(documentId);
 
-      expect(result).toBeNull();
-    });
-  });
+			expect(result).toBeNull();
+		});
+	});
 
-  describe('findByWorkspace', () => {
-    it('should return all documents in a workspace', async () => {
-      const workspaceId = 'workspace-123';
+	describe("findByWorkspace", () => {
+		it("should return all documents in a workspace", async () => {
+			const workspaceId = "workspace-123";
+			const whereSpy = jest.spyOn(mockCollection, "where");
 
-      mockCollection.where = jest.fn().mockReturnValue({
-        orderBy: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
-            empty: false,
-            docs: mockDocuments.map((doc) => ({
-              data: () => doc,
-            })),
-          }),
-        }),
-      });
+			mockCollection.setMockDocs(mockDocuments);
 
-      const result = await documentRepository.findByWorkspace(workspaceId);
+			const result = await documentRepository.findByWorkspace(workspaceId);
 
-      expect(result).toEqual(mockDocuments);
-      expect(mockCollection.where).toHaveBeenCalledWith('workspaceId', '==', workspaceId);
-    });
+			expect(result).toEqual(mockDocuments);
+			expect(whereSpy).toHaveBeenCalledWith("workspaceId", "==", workspaceId);
+		});
 
-    it('should return empty array when no documents found', async () => {
-      const workspaceId = 'empty-workspace';
+		it("should return empty array when no documents found", async () => {
+			const workspaceId = "empty-workspace";
 
-      mockCollection.where = jest.fn().mockReturnValue({
-        orderBy: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
-            empty: true,
-            docs: [],
-          }),
-        }),
-      });
+			mockCollection.setMockDocs([]);
 
-      const result = await documentRepository.findByWorkspace(workspaceId);
+			const result = await documentRepository.findByWorkspace(workspaceId);
 
-      expect(result).toEqual([]);
-    });
-  });
+			expect(result).toEqual([]);
+		});
+	});
 
-  describe('searchByTitle', () => {
-    it('should return documents matching title search', async () => {
-      const workspaceId = 'workspace-123';
-      const query = 'research';
+	describe("searchByTitle", () => {
+		it("should return documents matching title search", async () => {
+			const workspaceId = "workspace-123";
+			const query = "research";
 
-      mockCollection.where = jest.fn().mockReturnValue({
-        where: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              get: jest.fn().mockResolvedValue({
-                empty: false,
-                docs: [{ data: () => mockDocument }],
-              }),
-            }),
-          }),
-        }),
-      });
+			mockCollection.setMockDocs([mockDocument]);
 
-      const result = await documentRepository.searchByTitle(workspaceId, query);
+			const result = await documentRepository.searchByTitle(workspaceId, query);
 
-      expect(result).toEqual([mockDocument]);
-    });
+			expect(result).toEqual([mockDocument]);
+		});
 
-    it('should return empty array when no matches found', async () => {
-      const workspaceId = 'workspace-123';
-      const query = 'nonexistent';
+		it("should return empty array when no matches found", async () => {
+			const workspaceId = "workspace-123";
+			const query = "nonexistent";
 
-      mockCollection.where = jest.fn().mockReturnValue({
-        where: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              get: jest.fn().mockResolvedValue({
-                empty: true,
-                docs: [],
-              }),
-            }),
-          }),
-        }),
-      });
+			mockCollection.setMockDocs([]);
 
-      const result = await documentRepository.searchByTitle(workspaceId, query);
+			const result = await documentRepository.searchByTitle(workspaceId, query);
 
-      expect(result).toEqual([]);
-    });
-  });
+			expect(result).toEqual([]);
+		});
+	});
 
-  describe('update', () => {
-    it('should update document successfully', async () => {
-      const documentId = 'doc-123';
-      const updates = { title: 'Updated Title' };
+	describe("update", () => {
+		it("should update document successfully", async () => {
+			const documentId = "doc-123";
+			const updates = { title: "Updated Title" };
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        update: jest.fn().mockResolvedValue(undefined),
-        get: jest.fn().mockResolvedValue({
-          exists: true,
-          data: () => ({ ...mockDocument, ...updates }),
-        }),
-      });
+			mockCollection.doc = jest.fn().mockReturnValue({
+				update: (jest.fn() as any).mockResolvedValue(undefined),
+				get: (jest.fn() as any).mockResolvedValue({
+					exists: true,
+					data: () => ({ ...mockDocument, ...updates }),
+				}),
+			});
 
-      const result = await documentRepository.update(documentId, updates);
+			const result = await documentRepository.update(documentId, updates);
 
-      expect(result).toMatchObject(updates);
-      expect(mockCollection.doc).toHaveBeenCalledWith(documentId);
-    });
-  });
+			expect(result).toMatchObject(updates);
+			expect(mockCollection.doc).toHaveBeenCalledWith(documentId);
+		});
+	});
 
-  describe('delete', () => {
-    it('should delete document successfully', async () => {
-      const documentId = 'doc-123';
+	describe("delete", () => {
+		it("should delete document successfully", async () => {
+			const documentId = "doc-123";
 
-      mockCollection.doc = jest.fn().mockReturnValue({
-        delete: jest.fn().mockResolvedValue(undefined),
-      });
+			mockCollection.doc = jest.fn().mockReturnValue({
+				delete: (jest.fn() as any).mockResolvedValue(undefined),
+			});
 
-      await documentRepository.delete(documentId);
+			await documentRepository.delete(documentId);
 
-      expect(mockCollection.doc).toHaveBeenCalledWith(documentId);
-    });
-  });
+			expect(mockCollection.doc).toHaveBeenCalledWith(documentId);
+		});
+	});
 });
