@@ -42,7 +42,7 @@ jobs:
           domain: "https://app.infisical.com"
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          env-slug: "production"
+          env-slug: "prod"
           project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
 
       - name: Test
