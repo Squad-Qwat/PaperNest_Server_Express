@@ -29,6 +29,14 @@ jobs:
 
       - name: Type Check
         run: npx tsc --noEmit
+      
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-id: ${{ secrets.INFISICAL_PROJECT_ID }}
+          env-slug: production
 
       - name: Test
         run: pnpm run test:verbose
