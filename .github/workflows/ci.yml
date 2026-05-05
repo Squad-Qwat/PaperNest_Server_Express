@@ -37,9 +37,11 @@ jobs:
       - name: Inject secrets from Infisical
         uses: Infisical/secrets-action@v1.0.9
         with:
-          method: "oidc"
+          method: "universal"
           identity-id: ${{ secrets.INFISICAL_IDENTITY_ID }}
           domain: "https://app.infisical.com"
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           env-slug: "production"
           project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
 
