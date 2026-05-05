@@ -39,84 +39,77 @@ export const getPresignedUrl = async (
 	}
 };
 
-export const proxyDownload = async (
-	req: Request,
-	res: Response,
-): Promise<void> => {
-	try {
-		const url = req.query.url as string;
-		if (!url) {
-			res.status(400).json({ success: false, message: "URL is required" });
-			return;
-		}
+export const proxyDownload = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const url = req.query.url as string;
+    if (!url) {
+      res.status(400).json({ success: false, message: 'URL is required' });
+      return;
+    }
 
-		console.log(`[ProxyDownload] Request: ${url}`);
+    console.log(`[ProxyDownload] Request: ${url}`);
+    
+    // Check if it's an R2 asset (belongs to our public domain)
+    const publicDomain = process.env.R2_PUBLIC_DOMAIN || 'assets.papernest.com';
+    if (url.includes(publicDomain)) {
+      try {
+        // Extract the key from the URL (everything after the domain//)
+        const urlObj = new URL(url);
+        let key = urlObj.pathname;
+        if (key.startsWith('/')) key = key.substring(1);
+        
+        console.log(`[ProxyDownload] Authenticated R2 Fetch - Key: ${key}`);
+        const response = await StorageService.getObject(key);
+        
+        if (response.Body) {
+          const contentType = response.ContentType || 'application/octet-stream';
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          
+          // Stream the response body if it's a readable stream
+          const body = response.Body as any;
+          if (typeof body.pipe === 'function') {
+            body.pipe(res);
+          } else {
+            // For other body types (like Uint8Array from SDK v3 in some environments)
+            const buffer = Buffer.from(await body.transformToByteArray());
+            res.send(buffer);
+          }
+          return;
+        }
+      } catch (r2Error: any) {
+        console.error(`[ProxyDownload] Authenticated R2 Fetch failed for ${url}:`, r2Error.message);
+        // Fallback to public fetch if authenticated fails (just in case)
+      }
+    }
 
-		// Check if it's an R2 asset (belongs to our public domain)
-		const publicDomain = process.env.R2_PUBLIC_DOMAIN || "assets.papernest.com";
-		if (url.includes(publicDomain)) {
-			try {
-				// Extract the key from the URL (everything after the domain//)
-				const urlObj = new URL(url);
-				let key = urlObj.pathname;
-				if (key.startsWith("/")) key = key.substring(1);
+    // Fallback: Generic fetch with axios (useful for non-R2 assets or if R2 fetch failed)
+    console.log(`[ProxyDownload] Generic Axios Fetch: ${url}`);
+    const response = await axios.get(url, { 
+      responseType: 'arraybuffer',
+      timeout: 15000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
 
-				console.log(`[ProxyDownload] Authenticated R2 Fetch - Key: ${key}`);
-				const response = await StorageService.getObject(key);
-
-				if (response.Body) {
-					const contentType =
-						response.ContentType || "application/octet-stream";
-					res.setHeader("Content-Type", contentType);
-					res.setHeader("Cache-Control", "public, max-age=3600");
-
-					// Stream the response body if it's a readable stream
-					const body = response.Body as any;
-					if (typeof body.pipe === "function") {
-						body.pipe(res);
-					} else {
-						// For other body types (like Uint8Array from SDK v3 in some environments)
-						const buffer = Buffer.from(await body.transformToByteArray());
-						res.send(buffer);
-					}
-					return;
-				}
-			} catch (r2Error: any) {
-				console.error(
-					`[ProxyDownload] Authenticated R2 Fetch failed for ${url}:`,
-					r2Error.message,
-				);
-				// Fallback to public fetch if authenticated fails (just in case)
-			}
-		}
-
-		// Fallback: Generic fetch with axios (useful for non-R2 assets or if R2 fetch failed)
-		console.log(`[ProxyDownload] Generic Axios Fetch: ${url}`);
-		const response = await axios.get(url, {
-			responseType: "arraybuffer",
-			timeout: 15000,
-			headers: {
-				"User-Agent":
-					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-			},
-		});
-
-		const contentType =
-			response.headers["content-type"] || "application/octet-stream";
-		res.setHeader("Content-Type", contentType);
-		res.setHeader("Cache-Control", "public, max-age=3600");
-		res.send(Buffer.from(response.data));
-	} catch (error: any) {
-		const status = error.response?.status || 500;
-		const message = error.response?.data?.toString() || error.message;
-		console.error(`[ProxyDownload] Error ${status}:`, message);
-
-		res.status(status).json({
-			success: false,
-			message: `Failed to proxy asset download: ${message}`,
-			upstreamStatus: status,
-		});
-	}
+    const contentTypeHeader = response.headers['content-type'];
+    const contentType = typeof contentTypeHeader === 'string' ? 
+    contentTypeHeader : 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(Buffer.from(response.data));
+  } catch (error: any) {
+    const status = error.response?.status || 500;
+    const message = error.response?.data?.toString() || error.message;
+    console.error(`[ProxyDownload] Error ${status}:`, message);
+    
+    res.status(status).json({
+      success: false,
+      message: `Failed to proxy asset download: ${message}`,
+      upstreamStatus: status
+    });
+  }
 };
 
 export const deleteFile = async (
