@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import * as semanticScholarController from '../controllers/semanticScholarController';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as semanticScholarController from "../controllers/semanticScholarController";
+import { authenticate } from "../middlewares/auth";
 
 const router: Router = Router();
 
@@ -9,11 +9,7 @@ const router: Router = Router();
  * @desc    Search papers on Semantic Scholar
  * @access  Protected
  */
-router.get(
-  '/search',
-  authenticate,
-  semanticScholarController.searchPapers
-);
+router.get("/search", authenticate, semanticScholarController.searchPapers);
 
 /**
  * @route   GET /api/semantic-scholar/paper/:id
@@ -21,9 +17,9 @@ router.get(
  * @access  Protected
  */
 router.get(
-  '/paper/:id',
-  authenticate,
-  semanticScholarController.getPaperDetails
+	"/paper/:id",
+	authenticate,
+	semanticScholarController.getPaperDetails,
 );
 
 export default router;

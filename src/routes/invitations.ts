@@ -1,10 +1,8 @@
-import { Router } from 'express';
-import * as workspaceController from '../controllers/workspaceController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
-import {
-  updateInvitationStatusSchema,
-} from '../models/validators/workspaceValidator';
+import { Router } from "express";
+import * as workspaceController from "../controllers/workspaceController";
+import { authenticate } from "../middlewares/auth";
+import { validate } from "../middlewares/validation";
+import { updateInvitationStatusSchema } from "../models/validators/workspaceValidator";
 
 const router: Router = Router();
 
@@ -13,11 +11,7 @@ const router: Router = Router();
  * @desc    Get pending invitations for current user
  * @access  Protected
  */
-router.get(
-  '/',
-  authenticate,
-  workspaceController.getPendingInvitations
-);
+router.get("/", authenticate, workspaceController.getPendingInvitations);
 
 /**
  * @route   PUT /api/invitations/:userWorkspaceId
@@ -25,10 +19,10 @@ router.get(
  * @access  Protected
  */
 router.put(
-  '/:userWorkspaceId',
-  authenticate,
-  validate({ body: updateInvitationStatusSchema }),
-  workspaceController.updateInvitationStatus
+	"/:userWorkspaceId",
+	authenticate,
+	validate({ body: updateInvitationStatusSchema }),
+	workspaceController.updateInvitationStatus,
 );
 
 export default router;

@@ -1,11 +1,11 @@
-import { Router } from 'express';
-import * as userController from '../controllers/userController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as userController from "../controllers/userController";
+import { authenticate } from "../middlewares/auth";
+import { validate } from "../middlewares/validation";
 import {
-  updateUserSchema,
-  searchUserSchema,
-} from '../models/validators/userValidator';
+	searchUserSchema,
+	updateUserSchema,
+} from "../models/validators/userValidator";
 
 const router: Router = Router();
 
@@ -15,10 +15,10 @@ const router: Router = Router();
  * @access  Protected
  */
 router.get(
-  '/search',
-  authenticate,
-  validate({ query: searchUserSchema }),
-  userController.searchUsers
+	"/search",
+	authenticate,
+	validate({ query: searchUserSchema }),
+	userController.searchUsers,
 );
 
 /**
@@ -26,11 +26,7 @@ router.get(
  * @desc    Get user by ID
  * @access  Protected
  */
-router.get(
-  '/:userId',
-  authenticate,
-  userController.getUserById
-);
+router.get("/:userId", authenticate, userController.getUserById);
 
 /**
  * @route   PUT /api/users/:userId
@@ -38,10 +34,10 @@ router.get(
  * @access  Protected
  */
 router.put(
-  '/:userId',
-  authenticate,
-  validate({ body: updateUserSchema }),
-  userController.updateUser
+	"/:userId",
+	authenticate,
+	validate({ body: updateUserSchema }),
+	userController.updateUser,
 );
 
 /**
@@ -49,10 +45,6 @@ router.put(
  * @desc    Delete user account (own account only)
  * @access  Protected
  */
-router.delete(
-  '/:userId',
-  authenticate,
-  userController.deleteUser
-);
+router.delete("/:userId", authenticate, userController.deleteUser);
 
 export default router;

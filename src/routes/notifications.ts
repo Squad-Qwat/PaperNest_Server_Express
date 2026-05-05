@@ -1,11 +1,11 @@
-import { Router } from 'express';
-import * as notificationController from '../controllers/notificationController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as notificationController from "../controllers/notificationController";
+import { authenticate } from "../middlewares/auth";
+import { validate } from "../middlewares/validation";
 import {
-  filterNotificationTypeSchema,
-  filterNotificationReadSchema,
-} from '../models/validators/notificationValidator';
+	filterNotificationReadSchema,
+	filterNotificationTypeSchema,
+} from "../models/validators/notificationValidator";
 
 const router: Router = Router();
 
@@ -14,11 +14,7 @@ const router: Router = Router();
  * @desc    Get all notifications for current user (can filter by type or read status)
  * @access  Protected
  */
-router.get(
-  '/',
-  authenticate,
-  notificationController.getUserNotifications
-);
+router.get("/", authenticate, notificationController.getUserNotifications);
 
 /**
  * @route   GET /api/notifications/unread
@@ -26,9 +22,9 @@ router.get(
  * @access  Protected
  */
 router.get(
-  '/unread',
-  authenticate,
-  notificationController.getUnreadNotifications
+	"/unread",
+	authenticate,
+	notificationController.getUnreadNotifications,
 );
 
 /**
@@ -36,11 +32,7 @@ router.get(
  * @desc    Mark all notifications as read
  * @access  Protected
  */
-router.put(
-  '/read-all',
-  authenticate,
-  notificationController.markAllAsRead
-);
+router.put("/read-all", authenticate, notificationController.markAllAsRead);
 
 /**
  * @route   DELETE /api/notifications/cleanup
@@ -48,9 +40,9 @@ router.put(
  * @access  Protected
  */
 router.delete(
-  '/cleanup',
-  authenticate,
-  notificationController.cleanupOldNotifications
+	"/cleanup",
+	authenticate,
+	notificationController.cleanupOldNotifications,
 );
 
 /**
@@ -58,11 +50,7 @@ router.delete(
  * @desc    Delete all notifications for user
  * @access  Protected
  */
-router.delete(
-  '/',
-  authenticate,
-  notificationController.deleteAllNotifications
-);
+router.delete("/", authenticate, notificationController.deleteAllNotifications);
 
 /**
  * @route   GET /api/notifications/:notificationId
@@ -70,9 +58,9 @@ router.delete(
  * @access  Protected (own notification only)
  */
 router.get(
-  '/:notificationId',
-  authenticate,
-  notificationController.getNotificationById
+	"/:notificationId",
+	authenticate,
+	notificationController.getNotificationById,
 );
 
 /**
@@ -81,9 +69,9 @@ router.get(
  * @access  Protected (own notification only)
  */
 router.put(
-  '/:notificationId/read',
-  authenticate,
-  notificationController.markAsRead
+	"/:notificationId/read",
+	authenticate,
+	notificationController.markAsRead,
 );
 
 /**
@@ -92,9 +80,9 @@ router.put(
  * @access  Protected (own notification only)
  */
 router.delete(
-  '/:notificationId',
-  authenticate,
-  notificationController.deleteNotification
+	"/:notificationId",
+	authenticate,
+	notificationController.deleteNotification,
 );
 
 export default router;

@@ -1,20 +1,20 @@
-import { Router } from 'express';
-import * as reviewController from '../controllers/reviewController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as reviewController from "../controllers/reviewController";
+import { authenticate } from "../middlewares/auth";
 import {
-  authorizeDocument,
-  authorizeLecturer,
-  authorizeReview,
-  authorizeReviewLecturer,
-  authorizeReviewStudent,
-} from '../middlewares/authorization';
+	authorizeDocument,
+	authorizeLecturer,
+	authorizeReview,
+	authorizeReviewLecturer,
+	authorizeReviewStudent,
+} from "../middlewares/authorization";
+import { validate } from "../middlewares/validation";
 import {
-  createReviewSchema,
-  updateReviewSchema,
-  updateReviewStatusSchema,
-  filterReviewStatusSchema,
-} from '../models/validators/reviewValidator';
+	createReviewSchema,
+	filterReviewStatusSchema,
+	updateReviewSchema,
+	updateReviewStatusSchema,
+} from "../models/validators/reviewValidator";
 
 const router: Router = Router();
 
@@ -23,11 +23,7 @@ const router: Router = Router();
  * @desc    Get all reviews for current user (filtered by role)
  * @access  Protected
  */
-router.get(
-  '/reviews',
-  authenticate,
-  reviewController.getUserReviews
-);
+router.get("/reviews", authenticate, reviewController.getUserReviews);
 
 /**
  * @route   GET /api/reviews/pending
@@ -35,10 +31,10 @@ router.get(
  * @access  Protected (lecturer only)
  */
 router.get(
-  '/reviews/pending',
-  authenticate,
-  authorizeLecturer,
-  reviewController.getPendingReviews
+	"/reviews/pending",
+	authenticate,
+	authorizeLecturer,
+	reviewController.getPendingReviews,
 );
 
 /**
@@ -47,10 +43,10 @@ router.get(
  * @access  Protected (must be involved in review)
  */
 router.get(
-  '/reviews/:reviewId',
-  authenticate,
-  authorizeReview,
-  reviewController.getReviewById
+	"/reviews/:reviewId",
+	authenticate,
+	authorizeReview,
+	reviewController.getReviewById,
 );
 
 /**
@@ -59,11 +55,11 @@ router.get(
  * @access  Protected (assigned lecturer only)
  */
 router.put(
-  '/reviews/:reviewId',
-  authenticate,
-  authorizeReviewLecturer,
-  validate({ body: updateReviewSchema }),
-  reviewController.updateReview
+	"/reviews/:reviewId",
+	authenticate,
+	authorizeReviewLecturer,
+	validate({ body: updateReviewSchema }),
+	reviewController.updateReview,
 );
 
 /**
@@ -72,10 +68,10 @@ router.put(
  * @access  Protected (assigned lecturer only)
  */
 router.post(
-  '/reviews/:reviewId/approve',
-  authenticate,
-  authorizeReviewLecturer,
-  reviewController.approveReview
+	"/reviews/:reviewId/approve",
+	authenticate,
+	authorizeReviewLecturer,
+	reviewController.approveReview,
 );
 
 /**
@@ -84,11 +80,11 @@ router.post(
  * @access  Protected (assigned lecturer only)
  */
 router.post(
-  '/reviews/:reviewId/reject',
-  authenticate,
-  authorizeReviewLecturer,
-  validate({ body: updateReviewStatusSchema }),
-  reviewController.rejectReview
+	"/reviews/:reviewId/reject",
+	authenticate,
+	authorizeReviewLecturer,
+	validate({ body: updateReviewStatusSchema }),
+	reviewController.rejectReview,
 );
 
 /**
@@ -97,11 +93,11 @@ router.post(
  * @access  Protected (assigned lecturer only)
  */
 router.post(
-  '/reviews/:reviewId/request-revision',
-  authenticate,
-  authorizeReviewLecturer,
-  validate({ body: updateReviewStatusSchema }),
-  reviewController.requestRevision
+	"/reviews/:reviewId/request-revision",
+	authenticate,
+	authorizeReviewLecturer,
+	validate({ body: updateReviewStatusSchema }),
+	reviewController.requestRevision,
 );
 
 /**
@@ -110,10 +106,10 @@ router.post(
  * @access  Protected (student who created it)
  */
 router.delete(
-  '/reviews/:reviewId',
-  authenticate,
-  authorizeReviewStudent,
-  reviewController.deleteReview
+	"/reviews/:reviewId",
+	authenticate,
+	authorizeReviewStudent,
+	reviewController.deleteReview,
 );
 
 /**
@@ -126,11 +122,11 @@ router.delete(
  * @access  Protected (requires document access)
  */
 router.post(
-  '/documents/:documentId/versions/:documentBodyId/reviews',
-  authenticate,
-  authorizeDocument,
-  validate({ body: createReviewSchema }),
-  reviewController.createReview
+	"/documents/:documentId/versions/:documentBodyId/reviews",
+	authenticate,
+	authorizeDocument,
+	validate({ body: createReviewSchema }),
+	reviewController.createReview,
 );
 
 /**
@@ -139,10 +135,10 @@ router.post(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/documents/:documentId/reviews',
-  authenticate,
-  authorizeDocument,
-  reviewController.getDocumentReviews
+	"/documents/:documentId/reviews",
+	authenticate,
+	authorizeDocument,
+	reviewController.getDocumentReviews,
 );
 
 export default router;

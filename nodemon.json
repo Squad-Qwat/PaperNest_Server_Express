@@ -1,24 +1,24 @@
 {
-  "watch": ["src"],
-  "ext": "ts,js,json",
-  "ignore": [
-    "src/**/*.test.ts",
-    "src/__tests__/*",
-    "node_modules",
-    "dist",
-    "logs",
-    "public",
-    "docs",
-    "temp",
-    "*.tex",
-    "*.pdf",
-    "*.log",
-    "*.aux",
-    "*.out",
-    "*.toc",
-    "*.blg",
-    "*.bbl",
-    "skills-lock.json"
-  ],
-  "exec": "ts-node src/server.ts"
+	"watch": ["src"],
+	"ext": "ts,js,json",
+	"ignore": [
+		"src/**/*.test.ts",
+		"src/__tests__/*",
+		"node_modules",
+		"dist",
+		"logs",
+		"public",
+		"docs",
+		"temp",
+		"*.tex",
+		"*.pdf",
+		"*.log",
+		"*.aux",
+		"*.out",
+		"*.toc",
+		"*.blg",
+		"*.bbl",
+		"skills-lock.json"
+	],
+	"exec": "ts-node src/server.ts"
 }
