@@ -90,7 +90,9 @@ export const proxyDownload = async (req: Request, res: Response): Promise<void> 
       }
     });
 
-    const contentType = response.headers['content-type'] || 'application/octet-stream';
+    const contentTypeHeader = response.headers['content-type'];
+    const contentType = typeof contentTypeHeader === 'string' ? 
+    contentTypeHeader : 'application/octet-stream';
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.send(Buffer.from(response.data));
