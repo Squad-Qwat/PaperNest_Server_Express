@@ -1,178 +1,184 @@
-import { db } from '../config/firebase';
-import { COLLECTIONS } from '../config/constants';
-import { User } from '../types';
+import { COLLECTIONS } from "../config/constants";
+import { db } from "../config/firebase";
+import type { User } from "../types";
 
 export class UserRepository {
-  private collection = db.collection(COLLECTIONS.USERS);
+	private collection = db.collection(COLLECTIONS.USERS);
 
-  /**
-   * Create a new user
-   */
-  async create(userId: string, userData: Omit<User, 'userId' | 'createdAt' | 'updatedAt'>): Promise<User> {
-    const now = new Date();
-    const user: User = {
-      userId,
-      ...userData,
-      createdAt: now,
-      updatedAt: now,
-    };
+	/**
+	 * Create a new user
+	 */
+	async create(
+		userId: string,
+		userData: Omit<User, "userId" | "createdAt" | "updatedAt">,
+	): Promise<User> {
+		const now = new Date();
+		const user: User = {
+			userId,
+			...userData,
+			createdAt: now,
+			updatedAt: now,
+		};
 
-    await this.collection.doc(userId).set(user);
-    return user;
-  }
+		await this.collection.doc(userId).set(user);
+		return user;
+	}
 
-  /**
-   * Find user by ID
-   */
-  async findById(userId: string): Promise<User | null> {
-    const doc = await this.collection.doc(userId).get();
+	/**
+	 * Find user by ID
+	 */
+	async findById(userId: string): Promise<User | null> {
+		const doc = await this.collection.doc(userId).get();
 
-    if (!doc.exists) {
-      return null;
-    }
+		if (!doc.exists) {
+			return null;
+		}
 
-    return doc.data() as User;
-  }
+		return doc.data() as User;
+	}
 
-  /**
-   * Find multiple users by their IDs using batch get
-   */
-  async findByIds(userIds: string[]): Promise<User[]> {
-    if (!userIds || userIds.length === 0) return [];
-    
-    // Remove duplicates to minimize reads
-    const uniqueIds = [...new Set(userIds)];
-    
-    const refs = uniqueIds.map(id => this.collection.doc(id));
-    const snapshots = await db.getAll(...refs);
-    
-    return snapshots
-      .filter(snap => snap.exists)
-      .map(snap => snap.data() as User);
-  }
+	/**
+	 * Find multiple users by their IDs using batch get
+	 */
+	async findByIds(userIds: string[]): Promise<User[]> {
+		if (!userIds || userIds.length === 0) return [];
 
-  /**
-   * Find user by linked UID
-   */
-  async findByLinkedUid(uid: string): Promise<User | null> {
-    const snapshot = await this.collection
-      .where('linkedUids', 'array-contains', uid)
-      .limit(1)
-      .get();
+		// Remove duplicates to minimize reads
+		const uniqueIds = [...new Set(userIds)];
 
-    if (snapshot.empty) {
-      return null;
-    }
+		const refs = uniqueIds.map((id) => this.collection.doc(id));
+		const snapshots = await db.getAll(...refs);
 
-    return snapshot.docs[0].data() as User;
-  }
+		return snapshots
+			.filter((snap) => snap.exists)
+			.map((snap) => snap.data() as User);
+	}
 
-  /**
-   * Find user by email
-   */
-  async findByEmail(email: string): Promise<User | null> {
-    const snapshot = await this.collection
-      .where('email', '==', email)
-      .limit(1)
-      .get();
+	/**
+	 * Find user by linked UID
+	 */
+	async findByLinkedUid(uid: string): Promise<User | null> {
+		const snapshot = await this.collection
+			.where("linkedUids", "array-contains", uid)
+			.limit(1)
+			.get();
 
-    if (snapshot.empty) {
-      return null;
-    }
+		if (snapshot.empty) {
+			return null;
+		}
 
-    return snapshot.docs[0].data() as User;
-  }
+		return snapshot.docs[0].data() as User;
+	}
 
-  /**
-   * Find user by username
-   */
-  async findByUsername(username: string): Promise<User | null> {
-    const snapshot = await this.collection
-      .where('username', '==', username)
-      .limit(1)
-      .get();
+	/**
+	 * Find user by email
+	 */
+	async findByEmail(email: string): Promise<User | null> {
+		const snapshot = await this.collection
+			.where("email", "==", email)
+			.limit(1)
+			.get();
 
-    if (snapshot.empty) {
-      return null;
-    }
+		if (snapshot.empty) {
+			return null;
+		}
 
-    return snapshot.docs[0].data() as User;
-  }
+		return snapshot.docs[0].data() as User;
+	}
 
-  /**
-   * Search users by name or email
-   */
-  async search(query: string, limit: number = 10): Promise<User[]> {
-    const searchTerm = query.toLowerCase();
+	/**
+	 * Find user by username
+	 */
+	async findByUsername(username: string): Promise<User | null> {
+		const snapshot = await this.collection
+			.where("username", "==", username)
+			.limit(1)
+			.get();
 
-    // Search by name
-    const nameSnapshot = await this.collection
-      .where('name', '>=', searchTerm)
-      .where('name', '<=', searchTerm + '\uf8ff')
-      .limit(limit)
-      .get();
+		if (snapshot.empty) {
+			return null;
+		}
 
-    // Search by email
-    const emailSnapshot = await this.collection
-      .where('email', '>=', searchTerm)
-      .where('email', '<=', searchTerm + '\uf8ff')
-      .limit(limit)
-      .get();
+		return snapshot.docs[0].data() as User;
+	}
 
-    const users = new Map<string, User>();
+	/**
+	 * Search users by name or email
+	 */
+	async search(query: string, limit: number = 10): Promise<User[]> {
+		const searchTerm = query.toLowerCase();
 
-    nameSnapshot.docs.forEach(doc => {
-      users.set(doc.id, doc.data() as User);
-    });
+		// Search by name
+		const nameSnapshot = await this.collection
+			.where("name", ">=", searchTerm)
+			.where("name", "<=", searchTerm + "\uf8ff")
+			.limit(limit)
+			.get();
 
-    emailSnapshot.docs.forEach(doc => {
-      users.set(doc.id, doc.data() as User);
-    });
+		// Search by email
+		const emailSnapshot = await this.collection
+			.where("email", ">=", searchTerm)
+			.where("email", "<=", searchTerm + "\uf8ff")
+			.limit(limit)
+			.get();
 
-    return Array.from(users.values()).slice(0, limit);
-  }
+		const users = new Map<string, User>();
 
-  /**
-   * Update user profile
-   */
-  async update(userId: string, updates: Partial<Omit<User, 'userId' | 'createdAt'>>): Promise<User> {
-    const updateData = {
-      ...updates,
-      updatedAt: new Date(),
-    };
+		nameSnapshot.docs.forEach((doc) => {
+			users.set(doc.id, doc.data() as User);
+		});
 
-    await this.collection.doc(userId).update(updateData);
+		emailSnapshot.docs.forEach((doc) => {
+			users.set(doc.id, doc.data() as User);
+		});
 
-    const updated = await this.findById(userId);
-    if (!updated) {
-      throw new Error('User not found after update');
-    }
+		return Array.from(users.values()).slice(0, limit);
+	}
 
-    return updated;
-  }
+	/**
+	 * Update user profile
+	 */
+	async update(
+		userId: string,
+		updates: Partial<Omit<User, "userId" | "createdAt">>,
+	): Promise<User> {
+		const updateData = {
+			...updates,
+			updatedAt: new Date(),
+		};
 
-  /**
-   * Delete user
-   */
-  async delete(userId: string): Promise<void> {
-    await this.collection.doc(userId).delete();
-  }
+		await this.collection.doc(userId).update(updateData);
 
-  /**
-   * Check if email exists
-   */
-  async emailExists(email: string): Promise<boolean> {
-    const user = await this.findByEmail(email);
-    return user !== null;
-  }
+		const updated = await this.findById(userId);
+		if (!updated) {
+			throw new Error("User not found after update");
+		}
 
-  /**
-   * Check if username exists
-   */
-  async usernameExists(username: string): Promise<boolean> {
-    const user = await this.findByUsername(username);
-    return user !== null;
-  }
+		return updated;
+	}
+
+	/**
+	 * Delete user
+	 */
+	async delete(userId: string): Promise<void> {
+		await this.collection.doc(userId).delete();
+	}
+
+	/**
+	 * Check if email exists
+	 */
+	async emailExists(email: string): Promise<boolean> {
+		const user = await this.findByEmail(email);
+		return user !== null;
+	}
+
+	/**
+	 * Check if username exists
+	 */
+	async usernameExists(username: string): Promise<boolean> {
+		const user = await this.findByUsername(username);
+		return user !== null;
+	}
 }
 
 export default new UserRepository();

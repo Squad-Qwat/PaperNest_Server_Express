@@ -1,19 +1,19 @@
-import { Router } from 'express';
-import * as workspaceController from '../controllers/workspaceController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as workspaceController from "../controllers/workspaceController";
+import { authenticate } from "../middlewares/auth";
 import {
-  authorizeWorkspace,
-  authorizeWorkspaceOwner,
-} from '../middlewares/authorization';
+	authorizeWorkspace,
+	authorizeWorkspaceOwner,
+} from "../middlewares/authorization";
+import { validate } from "../middlewares/validation";
 import {
-  createWorkspaceSchema,
-  updateWorkspaceSchema,
-  inviteMemberSchema,
-  updateMemberRoleSchema,
-  updateInvitationStatusSchema,
-  joinWorkspaceSchema,
-} from '../models/validators/workspaceValidator';
+	createWorkspaceSchema,
+	inviteMemberSchema,
+	joinWorkspaceSchema,
+	updateInvitationStatusSchema,
+	updateMemberRoleSchema,
+	updateWorkspaceSchema,
+} from "../models/validators/workspaceValidator";
 
 const router: Router = Router();
 
@@ -23,10 +23,10 @@ const router: Router = Router();
  * @access  Protected
  */
 router.post(
-  '/',
-  authenticate,
-  validate({ body: createWorkspaceSchema }),
-  workspaceController.createWorkspace
+	"/",
+	authenticate,
+	validate({ body: createWorkspaceSchema }),
+	workspaceController.createWorkspace,
 );
 
 /**
@@ -34,11 +34,7 @@ router.post(
  * @desc    Get all workspaces for current user
  * @access  Protected
  */
-router.get(
-  '/',
-  authenticate,
-  workspaceController.getUserWorkspaces
-);
+router.get("/", authenticate, workspaceController.getUserWorkspaces);
 
 /**
  * @route   GET /api/workspaces/:workspaceId
@@ -46,10 +42,10 @@ router.get(
  * @access  Protected (requires workspace access)
  */
 router.get(
-  '/:workspaceId',
-  authenticate,
-  authorizeWorkspace(),
-  workspaceController.getWorkspaceById
+	"/:workspaceId",
+	authenticate,
+	authorizeWorkspace(),
+	workspaceController.getWorkspaceById,
 );
 
 /**
@@ -58,11 +54,11 @@ router.get(
  * @access  Protected (requires editor role or higher)
  */
 router.put(
-  '/:workspaceId',
-  authenticate,
-  authorizeWorkspace('editor'),
-  validate({ body: updateWorkspaceSchema }),
-  workspaceController.updateWorkspace
+	"/:workspaceId",
+	authenticate,
+	authorizeWorkspace("editor"),
+	validate({ body: updateWorkspaceSchema }),
+	workspaceController.updateWorkspace,
 );
 
 /**
@@ -71,10 +67,10 @@ router.put(
  * @access  Protected (owner only)
  */
 router.delete(
-  '/:workspaceId',
-  authenticate,
-  authorizeWorkspaceOwner,
-  workspaceController.deleteWorkspace
+	"/:workspaceId",
+	authenticate,
+	authorizeWorkspaceOwner,
+	workspaceController.deleteWorkspace,
 );
 
 /**
@@ -83,10 +79,10 @@ router.delete(
  * @access  Protected (requires workspace access)
  */
 router.get(
-  '/:workspaceId/members',
-  authenticate,
-  authorizeWorkspace(),
-  workspaceController.getWorkspaceMembers
+	"/:workspaceId/members",
+	authenticate,
+	authorizeWorkspace(),
+	workspaceController.getWorkspaceMembers,
 );
 
 /**
@@ -95,11 +91,11 @@ router.get(
  * @access  Protected (requires editor role or higher)
  */
 router.post(
-  '/:workspaceId/members',
-  authenticate,
-  authorizeWorkspace('editor'),
-  validate({ body: inviteMemberSchema }),
-  workspaceController.inviteMember
+	"/:workspaceId/members",
+	authenticate,
+	authorizeWorkspace("editor"),
+	validate({ body: inviteMemberSchema }),
+	workspaceController.inviteMember,
 );
 
 /**
@@ -108,11 +104,11 @@ router.post(
  * @access  Protected (owner only)
  */
 router.put(
-  '/:workspaceId/members/:userWorkspaceId',
-  authenticate,
-  authorizeWorkspaceOwner,
-  validate({ body: updateMemberRoleSchema }),
-  workspaceController.updateMemberRole
+	"/:workspaceId/members/:userWorkspaceId",
+	authenticate,
+	authorizeWorkspaceOwner,
+	validate({ body: updateMemberRoleSchema }),
+	workspaceController.updateMemberRole,
 );
 
 /**
@@ -121,10 +117,10 @@ router.put(
  * @access  Protected (owner only, or user removing themselves)
  */
 router.delete(
-  '/:workspaceId/members/:userWorkspaceId',
-  authenticate,
-  authorizeWorkspace(),
-  workspaceController.removeMember
+	"/:workspaceId/members/:userWorkspaceId",
+	authenticate,
+	authorizeWorkspace(),
+	workspaceController.removeMember,
 );
 
 /**
@@ -133,10 +129,10 @@ router.delete(
  * @access  Protected
  */
 router.post(
-  '/:workspaceId/join',
-  authenticate,
-  validate({ body: joinWorkspaceSchema }),
-  workspaceController.joinWorkspace
+	"/:workspaceId/join",
+	authenticate,
+	validate({ body: joinWorkspaceSchema }),
+	workspaceController.joinWorkspace,
 );
 
 export default router;

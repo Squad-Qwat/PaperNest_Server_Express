@@ -1,46 +1,54 @@
-import { IAgentProvider } from '../interface'
-import { AgentStreamParams, StreamEvent, ToolResult } from '../../types/agent.types'
-import { createCodeMirrorTools } from '../../tools/schemas'
-import { createRAGTool } from '../../tools/rag.tool'
-import { semanticScholarTool } from '../../tools/semanticScholar.tool'
-import { aiRegistry } from '../../providers/registry'
-import { HumanMessage, AIMessage, ToolMessage } from '@langchain/core/messages'
+import { AIMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
+import { aiRegistry } from "../../providers/registry";
+import { createRAGTool } from "../../tools/rag.tool";
+import { createCodeMirrorTools } from "../../tools/schemas";
+import { semanticScholarTool } from "../../tools/semanticScholar.tool";
+import {
+	type AgentStreamParams,
+	type StreamEvent,
+	ToolResult,
+} from "../../types/agent.types";
+import type { IAgentProvider } from "../interface";
 
 /**
  * DeepAgent Provider
  * Uses the deepagents harness for advanced planning and execution
  */
 export class DeepAgentProvider implements IAgentProvider {
-    public readonly id = 'deep_agent'
+	public readonly id = "deep_agent";
 
-    async *stream(params: AgentStreamParams): AsyncGenerator<StreamEvent> {
-        console.log(`[DeepAgentProvider] Starting stream for thread: ${params.threadId}`)
+	async *stream(params: AgentStreamParams): AsyncGenerator<StreamEvent> {
+		console.log(
+			`[DeepAgentProvider] Starting stream for thread: ${params.threadId}`,
+		);
 
-        // 1. Resolve Model
-        const provider = aiRegistry.getProvider((params.providerId as any) || 'google-genai')
-        const model = provider.createModel({
-            model: params.modelId || 'gemini-2.5-flash-lite',
-            temperature: 0.1,
-            maxTokens: 4096,
-            reasoningEnabled: params.reasoningEnabled,
-            streaming: true
-        })
+		// 1. Resolve Model
+		const provider = aiRegistry.getProvider(
+			(params.providerId as any) || "google-genai",
+		);
+		const model = provider.createModel({
+			model: params.modelId || "gemini-2.5-flash-lite",
+			temperature: 0.1,
+			maxTokens: 4096,
+			reasoningEnabled: params.reasoningEnabled,
+			streaming: true,
+		});
 
-        // 2. Prepare Tools
-        const docId = params.documentId || 'unknown'
-        const tools = [
-            ...createCodeMirrorTools(),
-            createRAGTool(docId),
-            semanticScholarTool
-        ]
+		// 2. Prepare Tools
+		const docId = params.documentId || "unknown";
+		const tools = [
+			...createCodeMirrorTools(),
+			createRAGTool(docId),
+			semanticScholarTool,
+		];
 
-        // 3. Create Deep Agent (Lazy Load library)
-        const { createDeepAgent } = await import('deepagents') as any
+		// 3. Create Deep Agent (Lazy Load library)
+		const { createDeepAgent } = (await import("deepagents")) as any;
 
-        const agent = (createDeepAgent as any)({
-            model: model as any,
-            tools: tools as any,
-            systemPrompt: `You are an expert academic paper writer and LaTeX specialist. 
+		const agent = (createDeepAgent as any)({
+			model: model as any,
+			tools: tools as any,
+			systemPrompt: `You are an expert academic paper writer and LaTeX specialist. 
             You help users write, edit, and organize their LaTeX documents with EXTREME precision.
 
             ### OPERATIONAL PROTOCOL (MANDATORY):
@@ -55,138 +63,157 @@ export class DeepAgentProvider implements IAgentProvider {
             When the user asks about their research, data, or content from reference PDFs, use the 'search_attached_pdfs' tool first to retrieve factual information.
             
             ### ACADEMIC RESEARCH:
-            When the user needs references, citations, or wants to find papers on a specific topic, use the 'search_semantic_scholar' tool. This will return paper titles, authors, abstracts, and direct PDF links if available.`
-        })
+            When the user needs references, citations, or wants to find papers on a specific topic, use the 'search_semantic_scholar' tool. This will return paper titles, authors, abstracts, and direct PDF links if available.`,
+		});
 
-        // 4. Prepare Input
-        const inputMessages = params.conversationHistory.map(msg =>
-            msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content)
-        )
+		// 4. Prepare Input
+		const inputMessages = params.conversationHistory.map((msg) =>
+			msg.role === "user"
+				? new HumanMessage(msg.content)
+				: new AIMessage(msg.content),
+		);
 
-        // Add current document state as context in the last message or system prompt
-        // For DeepAgents, we can just append it to the prompt or messages
-        const lastUserMessage = params.message
-        const enrichedMessage = `Document Context:\n${params.documentContent}\n\nUser Request: ${lastUserMessage}`
+		// Add current document state as context in the last message or system prompt
+		// For DeepAgents, we can just append it to the prompt or messages
+		const lastUserMessage = params.message;
+		const enrichedMessage = `Document Context:\n${params.documentContent}\n\nUser Request: ${lastUserMessage}`;
 
-        // 5. Handle Tool Resumption (if any)
-        const messages: any[] = [...inputMessages, new HumanMessage(enrichedMessage)]
+		// 5. Handle Tool Resumption (if any)
+		const messages: any[] = [
+			...inputMessages,
+			new HumanMessage(enrichedMessage),
+		];
 
-        if (params.toolResults && params.toolResults.length > 0) {
-            // Reconstruct tool call sequence for LangGraph continuation
-            const toolCallId = params.toolResults[0].toolCallId
-            const toolCallMsg = new AIMessage({
-                content: '',
-                tool_calls: params.toolResults.map(r => ({
-                    id: r.toolCallId,
-                    name: r.name,
-                    args: {}
-                }))
-            } as any)
-            const toolResultMsgs = params.toolResults.map(r => new ToolMessage({
-                content: r.result,
-                tool_call_id: r.toolCallId,
-                name: r.name
-            } as any))
-            messages.push(toolCallMsg, ...toolResultMsgs)
-        }
+		if (params.toolResults && params.toolResults.length > 0) {
+			// Reconstruct tool call sequence for LangGraph continuation
+			const toolCallId = params.toolResults[0].toolCallId;
+			const toolCallMsg = new AIMessage({
+				content: "",
+				tool_calls: params.toolResults.map((r) => ({
+					id: r.toolCallId,
+					name: r.name,
+					args: {},
+				})),
+			} as any);
+			const toolResultMsgs = params.toolResults.map(
+				(r) =>
+					new ToolMessage({
+						content: r.result,
+						tool_call_id: r.toolCallId,
+						name: r.name,
+					} as any),
+			);
+			messages.push(toolCallMsg, ...toolResultMsgs);
+		}
 
-        // 6. Stream and Normalize
-        try {
-            console.log('[DeepAgentProvider] Invoking agent.stream with messages:', messages.length)
+		// 6. Stream and Normalize
+		try {
+			console.log(
+				"[DeepAgentProvider] Invoking agent.stream with messages:",
+				messages.length,
+			);
 
-            // deepagents stream returns [namespace, chunk]
-            const stream = await (agent as any).stream(
-                { messages: messages as any },
-                { streamMode: 'updates', subgraphs: true }
-            )
+			// deepagents stream returns [namespace, chunk]
+			const stream = await (agent as any).stream(
+				{ messages: messages as any },
+				{ streamMode: "updates", subgraphs: true },
+			);
 
-            console.log('[DeepAgentProvider] Stream created successfully')
+			console.log("[DeepAgentProvider] Stream created successfully");
 
-            let fullContent = ''
-            let pendingToolCalls: any[] = []
-            let chunkCount = 0
+			let fullContent = "";
+			let pendingToolCalls: any[] = [];
+			const chunkCount = 0;
 
-            for await (const entry of stream) {
-                const [namespace, chunk] = entry as [string[], any]
-                const chunkKeys = Object.keys(chunk)
+			for await (const entry of stream) {
+				const [namespace, chunk] = entry as [string[], any];
+				const chunkKeys = Object.keys(chunk);
 
-                let newMessages: any[] = []
+				let newMessages: any[] = [];
 
-                if (chunk.messages) {
-                    newMessages = chunk.messages
-                } else {
-                    for (const key of chunkKeys) {
-                        if (chunk[key]?.messages) {
-                            newMessages = chunk[key].messages
-                            break
-                        }
-                    }
-                }
+				if (chunk.messages) {
+					newMessages = chunk.messages;
+				} else {
+					for (const key of chunkKeys) {
+						if (chunk[key]?.messages) {
+							newMessages = chunk[key].messages;
+							break;
+						}
+					}
+				}
 
-                if (newMessages.length > 0) {
-                    const lastMsg = newMessages[newMessages.length - 1]
+				if (newMessages.length > 0) {
+					const lastMsg = newMessages[newMessages.length - 1];
 
-                    // Handle Text Content
-                    if (lastMsg.content) {
-                        // Use a safe extraction method for content (string or array)
-                        const text = typeof lastMsg.content === 'string'
-                            ? lastMsg.content
-                            : Array.isArray(lastMsg.content)
-                                ? lastMsg.content.map((c: any) => c.text || '').join('')
-                                : ''
+					// Handle Text Content
+					if (lastMsg.content) {
+						// Use a safe extraction method for content (string or array)
+						const text =
+							typeof lastMsg.content === "string"
+								? lastMsg.content
+								: Array.isArray(lastMsg.content)
+									? lastMsg.content.map((c: any) => c.text || "").join("")
+									: "";
 
-                        // CONSISTENCY FIX: Detect and filter out raw JSON tool calls from text content
-                        const isJson = text.trim().startsWith('{') && text.trim().endsWith('}')
-                        const hasAction = text.includes('"action"') || text.includes('"tool"') || text.includes('"tool_calls"')
+						// CONSISTENCY FIX: Detect and filter out raw JSON tool calls from text content
+						const isJson =
+							text.trim().startsWith("{") && text.trim().endsWith("}");
+						const hasAction =
+							text.includes('"action"') ||
+							text.includes('"tool"') ||
+							text.includes('"tool_calls"');
 
-                        if (text.length > 0 && !(isJson && hasAction)) {
-                            // Only yield if this is NEW content (crude check for incremental streams)
-                            yield { type: 'content', content: text }
-                            fullContent = text // In deepagents, sometimes we get the full accumulated text
-                        }
+						if (text.length > 0 && !(isJson && hasAction)) {
+							// Only yield if this is NEW content (crude check for incremental streams)
+							yield { type: "content", content: text };
+							fullContent = text; // In deepagents, sometimes we get the full accumulated text
+						}
 
-                        // Handle Tool Calls
-                        if (lastMsg.tool_calls && lastMsg.tool_calls.length > 0) {
-                            pendingToolCalls = lastMsg.tool_calls
-                            yield { type: 'tool_calls', toolCalls: lastMsg.tool_calls }
-                        }
-                    }
-                }
+						// Handle Tool Calls
+						if (lastMsg.tool_calls && lastMsg.tool_calls.length > 0) {
+							pendingToolCalls = lastMsg.tool_calls;
+							yield { type: "tool_calls", toolCalls: lastMsg.tool_calls };
+						}
+					}
+				}
 
-                // Handle Reasoning / Thoughts
-                // DeepAgents might use 'planner' or 'thought' keys
-                if (chunk.planner?.plan) {
-                    yield { type: 'plan_update', plan: chunk.planner.plan }
-                }
+				// Handle Reasoning / Thoughts
+				// DeepAgents might use 'planner' or 'thought' keys
+				if (chunk.planner?.plan) {
+					yield { type: "plan_update", plan: chunk.planner.plan };
+				}
 
-                // Subagent / Reasoning log
-                if (namespace.length > 0) {
-                    const subagentName = namespace.join(':')
-                    // If we found messages in a subagent, treat it as reasoning
-                    if (newMessages.length > 0) {
-                        const lastMsg = newMessages[newMessages.length - 1]
-                        const text = typeof lastMsg.content === 'string' ? lastMsg.content : ''
-                        if (text) {
-                            yield {
-                                type: 'reasoning',
-                                content: `[${subagentName}] ${text}`,
-                                phase: 'executor'
-                            }
-                        }
-                    }
-                }
-            }
+				// Subagent / Reasoning log
+				if (namespace.length > 0) {
+					const subagentName = namespace.join(":");
+					// If we found messages in a subagent, treat it as reasoning
+					if (newMessages.length > 0) {
+						const lastMsg = newMessages[newMessages.length - 1];
+						const text =
+							typeof lastMsg.content === "string" ? lastMsg.content : "";
+						if (text) {
+							yield {
+								type: "reasoning",
+								content: `[${subagentName}] ${text}`,
+								phase: "executor",
+							};
+						}
+					}
+				}
+			}
 
-            console.log(`[DeepAgentProvider] Stream finished. Total chunks: ${chunkCount}`)
+			console.log(
+				`[DeepAgentProvider] Stream finished. Total chunks: ${chunkCount}`,
+			);
 
-            yield {
-                type: 'done',
-                fullContent,
-                hasMoreSteps: pendingToolCalls.length > 0
-            }
-        } catch (error: any) {
-            console.error('[DeepAgentProvider] Streaming error:', error)
-            yield { type: 'error', error: error.message }
-        }
-    }
+			yield {
+				type: "done",
+				fullContent,
+				hasMoreSteps: pendingToolCalls.length > 0,
+			};
+		} catch (error: any) {
+			console.error("[DeepAgentProvider] Streaming error:", error);
+			yield { type: "error", error: error.message };
+		}
+	}
 }

@@ -1,16 +1,16 @@
-import { Router } from 'express';
-import * as commentController from '../controllers/commentController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as commentController from "../controllers/commentController";
+import { authenticate } from "../middlewares/auth";
 import {
-  authorizeDocument,
-  authorizeCommentOwner,
-} from '../middlewares/authorization';
+	authorizeCommentOwner,
+	authorizeDocument,
+} from "../middlewares/authorization";
+import { validate } from "../middlewares/validation";
 import {
-  createCommentSchema,
-  updateCommentSchema,
-  filterCommentResolvedSchema,
-} from '../models/validators/commentValidator';
+	createCommentSchema,
+	filterCommentResolvedSchema,
+	updateCommentSchema,
+} from "../models/validators/commentValidator";
 
 const router: Router = Router();
 
@@ -19,11 +19,7 @@ const router: Router = Router();
  * @desc    Get user's comments across all documents
  * @access  Protected
  */
-router.get(
-  '/my-comments',
-  authenticate,
-  commentController.getUserComments
-);
+router.get("/my-comments", authenticate, commentController.getUserComments);
 
 /**
  * Document-specific comment routes
@@ -35,11 +31,11 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.post(
-  '/:documentId/comments',
-  authenticate,
-  authorizeDocument,
-  validate({ body: createCommentSchema }),
-  commentController.createComment
+	"/:documentId/comments",
+	authenticate,
+	authorizeDocument,
+	validate({ body: createCommentSchema }),
+	commentController.createComment,
 );
 
 /**
@@ -48,10 +44,10 @@ router.post(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/comments/root',
-  authenticate,
-  authorizeDocument,
-  commentController.getRootComments
+	"/:documentId/comments/root",
+	authenticate,
+	authorizeDocument,
+	commentController.getRootComments,
 );
 
 /**
@@ -60,10 +56,10 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/comments',
-  authenticate,
-  authorizeDocument,
-  commentController.getDocumentComments
+	"/:documentId/comments",
+	authenticate,
+	authorizeDocument,
+	commentController.getDocumentComments,
 );
 
 /**
@@ -72,10 +68,10 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/comments/:commentId',
-  authenticate,
-  authorizeDocument,
-  commentController.getCommentById
+	"/:documentId/comments/:commentId",
+	authenticate,
+	authorizeDocument,
+	commentController.getCommentById,
 );
 
 /**
@@ -84,10 +80,10 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/comments/:commentId/replies',
-  authenticate,
-  authorizeDocument,
-  commentController.getCommentReplies
+	"/:documentId/comments/:commentId/replies",
+	authenticate,
+	authorizeDocument,
+	commentController.getCommentReplies,
 );
 
 /**
@@ -96,11 +92,11 @@ router.get(
  * @access  Protected (comment owner only)
  */
 router.put(
-  '/:documentId/comments/:commentId',
-  authenticate,
-  authorizeCommentOwner,
-  validate({ body: updateCommentSchema }),
-  commentController.updateComment
+	"/:documentId/comments/:commentId",
+	authenticate,
+	authorizeCommentOwner,
+	validate({ body: updateCommentSchema }),
+	commentController.updateComment,
 );
 
 /**
@@ -109,10 +105,10 @@ router.put(
  * @access  Protected (requires document access)
  */
 router.put(
-  '/:documentId/comments/:commentId/resolve',
-  authenticate,
-  authorizeDocument,
-  commentController.resolveComment
+	"/:documentId/comments/:commentId/resolve",
+	authenticate,
+	authorizeDocument,
+	commentController.resolveComment,
 );
 
 /**
@@ -121,10 +117,10 @@ router.put(
  * @access  Protected (requires document access)
  */
 router.put(
-  '/:documentId/comments/:commentId/unresolve',
-  authenticate,
-  authorizeDocument,
-  commentController.unresolveComment
+	"/:documentId/comments/:commentId/unresolve",
+	authenticate,
+	authorizeDocument,
+	commentController.unresolveComment,
 );
 
 /**
@@ -133,10 +129,10 @@ router.put(
  * @access  Protected (comment owner only)
  */
 router.delete(
-  '/:documentId/comments/:commentId',
-  authenticate,
-  authorizeCommentOwner,
-  commentController.deleteComment
+	"/:documentId/comments/:commentId",
+	authenticate,
+	authorizeCommentOwner,
+	commentController.deleteComment,
 );
 
 export default router;

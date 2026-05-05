@@ -1,372 +1,439 @@
-import { Request, Response, NextFunction } from 'express';
-import { ForbiddenError, NotFoundError, UnauthorizedError } from '../utils/errorTypes';
-import userWorkspaceRepository from '../repositories/userWorkspaceRepository';
-import workspaceRepository from '../repositories/workspaceRepository';
-import documentRepository from '../repositories/documentRepository';
-import commentRepository from '../repositories/commentRepository';
-import reviewRepository from '../repositories/reviewRepository';
-import permissionService from '../services/permissionService';
-import logger from '../utils/logger';
-import type { DocumentPermission } from '../types/Permission.types';
+import type { NextFunction, Request, Response } from "express";
+import commentRepository from "../repositories/commentRepository";
+import documentRepository from "../repositories/documentRepository";
+import reviewRepository from "../repositories/reviewRepository";
+import userWorkspaceRepository from "../repositories/userWorkspaceRepository";
+import workspaceRepository from "../repositories/workspaceRepository";
+import permissionService from "../services/permissionService";
+import type { DocumentPermission } from "../types/Permission.types";
+import {
+	ForbiddenError,
+	NotFoundError,
+	UnauthorizedError,
+} from "../utils/errorTypes";
+import logger from "../utils/logger";
 
 /**
  * Check if user has access to a workspace with minimum role requirement
  */
-export const authorizeWorkspace = (minRole?: 'owner' | 'editor' | 'viewer' | 'reviewer') => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const workspaceId = req.params.workspaceId as string;
-      const userId = req.userId;
+export const authorizeWorkspace = (
+	minRole?: "owner" | "editor" | "viewer" | "reviewer",
+) => {
+	return async (req: Request, res: Response, next: NextFunction) => {
+		try {
+			const workspaceId = req.params.workspaceId as string;
+			const userId = req.userId;
 
-      if (!userId) {
-        throw new UnauthorizedError('Authentication required');
-      }
+			if (!userId) {
+				throw new UnauthorizedError("Authentication required");
+			}
 
-      if (!workspaceId) {
-        throw new Error('Workspace ID is required');
-      }
+			if (!workspaceId) {
+				throw new Error("Workspace ID is required");
+			}
 
-      // Check if workspace exists
-      const workspaceExists = await workspaceRepository.exists(workspaceId);
-      if (!workspaceExists) {
-        throw new NotFoundError('Workspace not found');
-      }
+			// Check if workspace exists
+			const workspaceExists = await workspaceRepository.exists(workspaceId);
+			if (!workspaceExists) {
+				throw new NotFoundError("Workspace not found");
+			}
 
-      // Check if user has access
-      const hasAccess = await userWorkspaceRepository.hasAccess(userId, workspaceId);
-      if (!hasAccess) {
-        throw new ForbiddenError('You do not have access to this workspace');
-      }
+			// Check if user has access
+			const hasAccess = await userWorkspaceRepository.hasAccess(
+				userId,
+				workspaceId,
+			);
+			if (!hasAccess) {
+				throw new ForbiddenError("You do not have access to this workspace");
+			}
 
-      // If minimum role is specified, check role hierarchy
-      if (minRole) {
-        const userRole = await userWorkspaceRepository.getUserRole(userId, workspaceId);
-        
-        const roleHierarchy = {
-          owner: 4,
-          editor: 3,
-          reviewer: 2,
-          viewer: 1,
-        };
+			// If minimum role is specified, check role hierarchy
+			if (minRole) {
+				const userRole = await userWorkspaceRepository.getUserRole(
+					userId,
+					workspaceId,
+				);
 
-        const userRoleLevel = roleHierarchy[userRole as keyof typeof roleHierarchy] || 0;
-        const minRoleLevel = roleHierarchy[minRole] || 0;
+				const roleHierarchy = {
+					owner: 4,
+					editor: 3,
+					reviewer: 2,
+					viewer: 1,
+				};
 
-        if (userRoleLevel < minRoleLevel) {
-          throw new ForbiddenError(`This action requires ${minRole} role or higher`);
-        }
+				const userRoleLevel =
+					roleHierarchy[userRole as keyof typeof roleHierarchy] || 0;
+				const minRoleLevel = roleHierarchy[minRole] || 0;
 
-        // Attach role to request for further use
-        req.user = { ...req.user, workspaceRole: userRole } as any;
-      }
+				if (userRoleLevel < minRoleLevel) {
+					throw new ForbiddenError(
+						`This action requires ${minRole} role or higher`,
+					);
+				}
 
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+				// Attach role to request for further use
+				req.user = { ...req.user, workspaceRole: userRole } as any;
+			}
+
+			next();
+		} catch (error) {
+			next(error);
+		}
+	};
 };
 
 /**
  * Check if user is the workspace owner
  */
-export const authorizeWorkspaceOwner = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const workspaceId = req.params.workspaceId as string;
-    const userId = req.userId;
+export const authorizeWorkspaceOwner = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const workspaceId = req.params.workspaceId as string;
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!workspaceId) {
-      throw new Error('Workspace ID is required');
-    }
+		if (!workspaceId) {
+			throw new Error("Workspace ID is required");
+		}
 
-    const workspace = await workspaceRepository.findById(workspaceId);
-    if (!workspace) {
-      throw new NotFoundError('Workspace not found');
-    }
+		const workspace = await workspaceRepository.findById(workspaceId);
+		if (!workspace) {
+			throw new NotFoundError("Workspace not found");
+		}
 
-    if (workspace.ownerId !== userId) {
-      throw new ForbiddenError('Only workspace owner can perform this action');
-    }
+		if (workspace.ownerId !== userId) {
+			throw new ForbiddenError("Only workspace owner can perform this action");
+		}
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
  * Check if user has access to a document through workspace membership
  */
-export const authorizeDocument = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const documentId = req.params.documentId as string;
-    const userId = req.userId;
+export const authorizeDocument = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const documentId = req.params.documentId as string;
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!documentId) {
-      throw new Error('Document ID is required');
-    }
+		if (!documentId) {
+			throw new Error("Document ID is required");
+		}
 
-    // Get document to find workspace
-    const document = await documentRepository.findById(documentId);
-    if (!document) {
-      throw new NotFoundError('Document not found');
-    }
+		// Get document to find workspace
+		const document = await documentRepository.findById(documentId);
+		if (!document) {
+			throw new NotFoundError("Document not found");
+		}
 
-    // Check workspace access
-    const hasAccess = await userWorkspaceRepository.hasAccess(userId, document.workspaceId);
-    if (!hasAccess) {
-      throw new ForbiddenError('You do not have access to this document');
-    }
+		// Check workspace access
+		const hasAccess = await userWorkspaceRepository.hasAccess(
+			userId,
+			document.workspaceId,
+		);
+		if (!hasAccess) {
+			throw new ForbiddenError("You do not have access to this document");
+		}
 
-    // Attach document and workspace info to request
-    (req as any).document = document;
-    (req as any).workspaceId = document.workspaceId;
+		// Attach document and workspace info to request
+		(req as any).document = document;
+		(req as any).workspaceId = document.workspaceId;
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
  * Check if user can edit a document (must be editor or owner, or document creator)
  */
-export const authorizeDocumentEdit = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const documentId = req.params.documentId as string;
-    const userId = req.userId;
+export const authorizeDocumentEdit = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const documentId = req.params.documentId as string;
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!documentId) {
-      throw new Error('Document ID is required');
-    }
+		if (!documentId) {
+			throw new Error("Document ID is required");
+		}
 
-    const document = await documentRepository.findById(documentId);
-    if (!document) {
-      throw new NotFoundError('Document not found');
-    }
+		const document = await documentRepository.findById(documentId);
+		if (!document) {
+			throw new NotFoundError("Document not found");
+		}
 
-    // Get user's role in workspace
-    const userRole = await userWorkspaceRepository.getUserRole(userId, document.workspaceId);
+		// Get user's role in workspace
+		const userRole = await userWorkspaceRepository.getUserRole(
+			userId,
+			document.workspaceId,
+		);
 
-    // Check if user can edit (owner, editor, or document creator)
-    const canEdit = userRole === 'owner' || userRole === 'editor' || document.createdBy === userId;
+		// Check if user can edit (owner, editor, or document creator)
+		const canEdit =
+			userRole === "owner" ||
+			userRole === "editor" ||
+			document.createdBy === userId;
 
-    if (!canEdit) {
-      throw new ForbiddenError('You do not have permission to edit this document');
-    }
+		if (!canEdit) {
+			throw new ForbiddenError(
+				"You do not have permission to edit this document",
+			);
+		}
 
-    (req as any).document = document;
-    (req as any).workspaceId = document.workspaceId;
+		(req as any).document = document;
+		(req as any).workspaceId = document.workspaceId;
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
  * Check if user owns a comment and has workspace access
  */
-export const authorizeCommentOwner = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const commentId = req.params.commentId as string;
-    const documentId = req.params.documentId as string;
-    const userId = req.userId;
+export const authorizeCommentOwner = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const commentId = req.params.commentId as string;
+		const documentId = req.params.documentId as string;
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!commentId) {
-      throw new Error('Comment ID is required');
-    }
+		if (!commentId) {
+			throw new Error("Comment ID is required");
+		}
 
-    if (!documentId) {
-      throw new Error('Document ID is required');
-    }
+		if (!documentId) {
+			throw new Error("Document ID is required");
+		}
 
-    const comment = await commentRepository.findById(commentId);
-    if (!comment) {
-      throw new NotFoundError('Comment not found');
-    }
+		const comment = await commentRepository.findById(commentId);
+		if (!comment) {
+			throw new NotFoundError("Comment not found");
+		}
 
-    if (comment.userId !== userId) {
-      throw new ForbiddenError('You can only edit or delete your own comments');
-    }
+		if (comment.userId !== userId) {
+			throw new ForbiddenError("You can only edit or delete your own comments");
+		}
 
-    // Get document to verify workspace access
-    const document = await documentRepository.findById(documentId);
-    if (!document) {
-      throw new NotFoundError('Document not found');
-    }
+		// Get document to verify workspace access
+		const document = await documentRepository.findById(documentId);
+		if (!document) {
+			throw new NotFoundError("Document not found");
+		}
 
-    // Verify user still has access to the workspace
-    const hasAccess = await userWorkspaceRepository.hasAccess(userId, document.workspaceId);
-    if (!hasAccess) {
-      throw new ForbiddenError('You do not have access to this workspace');
-    }
+		// Verify user still has access to the workspace
+		const hasAccess = await userWorkspaceRepository.hasAccess(
+			userId,
+			document.workspaceId,
+		);
+		if (!hasAccess) {
+			throw new ForbiddenError("You do not have access to this workspace");
+		}
 
-    (req as any).comment = comment;
-    (req as any).document = document;
-    (req as any).workspaceId = document.workspaceId;
+		(req as any).comment = comment;
+		(req as any).document = document;
+		(req as any).workspaceId = document.workspaceId;
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
  * Check if user is a lecturer (for review operations)
  */
-export const authorizeLecturer = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId;
+export const authorizeLecturer = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!req.user) {
-      throw new Error('User information not found in request');
-    }
+		if (!req.user) {
+			throw new Error("User information not found in request");
+		}
 
-    if (req.user.role !== 'Lecturer') {
-      throw new ForbiddenError('Only lecturers can perform this action');
-    }
+		if (req.user.role !== "Lecturer") {
+			throw new ForbiddenError("Only lecturers can perform this action");
+		}
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
  * Check if user is involved in a review (as lecturer or student)
  */
-export const authorizeReview = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const reviewId = req.params.reviewId as string;
-    const userId = req.userId;
+export const authorizeReview = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const reviewId = req.params.reviewId as string;
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!reviewId) {
-      throw new Error('Review ID is required');
-    }
+		if (!reviewId) {
+			throw new Error("Review ID is required");
+		}
 
-    const review = await reviewRepository.findById(reviewId);
-    if (!review) {
-      throw new NotFoundError('Review not found');
-    }
+		const review = await reviewRepository.findById(reviewId);
+		if (!review) {
+			throw new NotFoundError("Review not found");
+		}
 
-    // Check if user is either the lecturer or student involved
-    const isInvolved = review.lecturerUserId === userId || review.studentUserId === userId;
+		// Check if user is either the lecturer or student involved
+		const isInvolved =
+			review.lecturerUserId === userId || review.studentUserId === userId;
 
-    if (!isInvolved) {
-      throw new ForbiddenError('You do not have access to this review');
-    }
+		if (!isInvolved) {
+			throw new ForbiddenError("You do not have access to this review");
+		}
 
-    (req as any).review = review;
+		(req as any).review = review;
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
  * Check if user is the assigned lecturer for a review
  */
-export const authorizeReviewLecturer = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const reviewId = req.params.reviewId as string;
-    const userId = req.userId;
+export const authorizeReviewLecturer = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const reviewId = req.params.reviewId as string;
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!reviewId) {
-      throw new Error('Review ID is required');
-    }
+		if (!reviewId) {
+			throw new Error("Review ID is required");
+		}
 
-    const review = await reviewRepository.findById(reviewId);
-    if (!review) {
-      throw new NotFoundError('Review not found');
-    }
+		const review = await reviewRepository.findById(reviewId);
+		if (!review) {
+			throw new NotFoundError("Review not found");
+		}
 
-    if (review.lecturerUserId !== userId) {
-      throw new ForbiddenError('Only the assigned lecturer can perform this action');
-    }
+		if (review.lecturerUserId !== userId) {
+			throw new ForbiddenError(
+				"Only the assigned lecturer can perform this action",
+			);
+		}
 
-    (req as any).review = review;
+		(req as any).review = review;
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
  * Check if user is the student who created the review and has workspace access
  */
-export const authorizeReviewStudent = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const reviewId = req.params.reviewId as string;
-    const userId = req.userId;
+export const authorizeReviewStudent = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const reviewId = req.params.reviewId as string;
+		const userId = req.userId;
 
-    if (!userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
 
-    if (!reviewId) {
-      throw new Error('Review ID is required');
-    }
+		if (!reviewId) {
+			throw new Error("Review ID is required");
+		}
 
-    const review = await reviewRepository.findById(reviewId);
-    if (!review) {
-      throw new NotFoundError('Review not found');
-    }
+		const review = await reviewRepository.findById(reviewId);
+		if (!review) {
+			throw new NotFoundError("Review not found");
+		}
 
-    if (review.studentUserId !== userId) {
-      throw new ForbiddenError('You can only delete your own review requests');
-    }
+		if (review.studentUserId !== userId) {
+			throw new ForbiddenError("You can only delete your own review requests");
+		}
 
-    // Get document to verify workspace access
-    const document = await documentRepository.findById(review.documentId);
-    if (!document) {
-      throw new NotFoundError('Document not found');
-    }
+		// Get document to verify workspace access
+		const document = await documentRepository.findById(review.documentId);
+		if (!document) {
+			throw new NotFoundError("Document not found");
+		}
 
-    // Verify user still has access to the workspace
-    const hasAccess = await userWorkspaceRepository.hasAccess(userId, document.workspaceId);
-    if (!hasAccess) {
-      throw new ForbiddenError('You do not have access to this workspace');
-    }
+		// Verify user still has access to the workspace
+		const hasAccess = await userWorkspaceRepository.hasAccess(
+			userId,
+			document.workspaceId,
+		);
+		if (!hasAccess) {
+			throw new ForbiddenError("You do not have access to this workspace");
+		}
 
-    (req as any).review = review;
-    (req as any).document = document;
-    (req as any).workspaceId = document.workspaceId;
+		(req as any).review = review;
+		(req as any).document = document;
+		(req as any).workspaceId = document.workspaceId;
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+		next();
+	} catch (error) {
+		next(error);
+	}
 };
 
 /**
@@ -375,59 +442,59 @@ export const authorizeReviewStudent = async (req: Request, res: Response, next: 
  * Permission levels: 'viewer' (read-only) < 'editor' (write) < 'admin' (full control)
  */
 export const authorizeDocumentPermission = (
-  requiredPermission: DocumentPermission
+	requiredPermission: DocumentPermission,
 ) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const documentId = req.params.documentId as string;
-      const userId = req.userId;
+	return async (req: Request, res: Response, next: NextFunction) => {
+		try {
+			const documentId = req.params.documentId as string;
+			const userId = req.userId;
 
-      if (!userId) {
-        throw new UnauthorizedError('Authentication required');
-      }
+			if (!userId) {
+				throw new UnauthorizedError("Authentication required");
+			}
 
-      if (!documentId) {
-        throw new Error('Document ID is required');
-      }
+			if (!documentId) {
+				throw new Error("Document ID is required");
+			}
 
-      // Verify document exists
-      const document = await documentRepository.findById(documentId);
-      if (!document) {
-        throw new NotFoundError('Document not found');
-      }
+			// Verify document exists
+			const document = await documentRepository.findById(documentId);
+			if (!document) {
+				throw new NotFoundError("Document not found");
+			}
 
-      // Check effective permission (direct or workspace-inherited)
-      const hasPermission = await permissionService.hasMinimumPermission(
-        userId,
-        documentId,
-        requiredPermission
-      );
+			// Check effective permission (direct or workspace-inherited)
+			const hasPermission = await permissionService.hasMinimumPermission(
+				userId,
+				documentId,
+				requiredPermission,
+			);
 
-      if (!hasPermission) {
-        throw new ForbiddenError(
-          `You do not have ${requiredPermission} permission on this document`
-        );
-      }
+			if (!hasPermission) {
+				throw new ForbiddenError(
+					`You do not have ${requiredPermission} permission on this document`,
+				);
+			}
 
-      (req as any).document = document;
-      (req as any).workspaceId = document.workspaceId;
+			(req as any).document = document;
+			(req as any).workspaceId = document.workspaceId;
 
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+			next();
+		} catch (error) {
+			next(error);
+		}
+	};
 };
 
 export default {
-  authorizeWorkspace,
-  authorizeWorkspaceOwner,
-  authorizeDocument,
-  authorizeDocumentEdit,
-  authorizeCommentOwner,
-  authorizeLecturer,
-  authorizeReview,
-  authorizeReviewLecturer,
-  authorizeReviewStudent,
-  authorizeDocumentPermission,
+	authorizeWorkspace,
+	authorizeWorkspaceOwner,
+	authorizeDocument,
+	authorizeDocumentEdit,
+	authorizeCommentOwner,
+	authorizeLecturer,
+	authorizeReview,
+	authorizeReviewLecturer,
+	authorizeReviewStudent,
+	authorizeDocumentPermission,
 };

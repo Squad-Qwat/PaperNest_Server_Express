@@ -5,15 +5,15 @@
  * located in src/lib/ai/graph/index.ts
  */
 
-import { streamAgent as graphStreamAgent } from './graph'
-import { ToolResult } from './types/agent.types'
+import { streamAgent as graphStreamAgent } from "./graph";
+import type { ToolResult } from "./types/agent.types";
 
 /**
  * Re-export types if needed by consumers
  */
-export type { ToolResult }
+export type { ToolResult };
 
 /**
  * Stream the agent using the new StateGraph implementation
  */
-export const streamAgent = graphStreamAgent
+export const streamAgent = graphStreamAgent;

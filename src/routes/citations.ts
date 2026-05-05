@@ -1,17 +1,17 @@
-import { Router } from 'express';
-import * as citationController from '../controllers/citationController';
-import { validate } from '../middlewares/validation';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as citationController from "../controllers/citationController";
+import { authenticate } from "../middlewares/auth";
 import {
-  authorizeDocument,
-  authorizeDocumentEdit,
-} from '../middlewares/authorization';
+	authorizeDocument,
+	authorizeDocumentEdit,
+} from "../middlewares/authorization";
+import { validate } from "../middlewares/validation";
 import {
-  createCitationSchema,
-  updateCitationSchema,
-  searchCitationSchema,
-  filterCitationTypeSchema,
-} from '../models/validators/citationValidator';
+	createCitationSchema,
+	filterCitationTypeSchema,
+	searchCitationSchema,
+	updateCitationSchema,
+} from "../models/validators/citationValidator";
 
 const router: Router = Router();
 
@@ -21,11 +21,11 @@ const router: Router = Router();
  * @access  Protected (requires edit permission)
  */
 router.post(
-  '/:documentId/citations',
-  authenticate,
-  authorizeDocumentEdit,
-  validate({ body: createCitationSchema }),
-  citationController.createCitation
+	"/:documentId/citations",
+	authenticate,
+	authorizeDocumentEdit,
+	validate({ body: createCitationSchema }),
+	citationController.createCitation,
 );
 
 /**
@@ -34,11 +34,11 @@ router.post(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/citations/search',
-  authenticate,
-  authorizeDocument,
-  validate({ query: searchCitationSchema }),
-  citationController.searchCitations
+	"/:documentId/citations/search",
+	authenticate,
+	authorizeDocument,
+	validate({ query: searchCitationSchema }),
+	citationController.searchCitations,
 );
 
 /**
@@ -47,10 +47,10 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/citations/doi/:doi',
-  authenticate,
-  authorizeDocument,
-  citationController.getCitationByDOI
+	"/:documentId/citations/doi/:doi",
+	authenticate,
+	authorizeDocument,
+	citationController.getCitationByDOI,
 );
 
 /**
@@ -59,10 +59,10 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/citations',
-  authenticate,
-  authorizeDocument,
-  citationController.getDocumentCitations
+	"/:documentId/citations",
+	authenticate,
+	authorizeDocument,
+	citationController.getDocumentCitations,
 );
 
 /**
@@ -71,10 +71,10 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-  '/:documentId/citations/:citationId',
-  authenticate,
-  authorizeDocument,
-  citationController.getCitationById
+	"/:documentId/citations/:citationId",
+	authenticate,
+	authorizeDocument,
+	citationController.getCitationById,
 );
 
 /**
@@ -83,11 +83,11 @@ router.get(
  * @access  Protected (requires edit permission)
  */
 router.put(
-  '/:documentId/citations/:citationId',
-  authenticate,
-  authorizeDocumentEdit,
-  validate({ body: updateCitationSchema }),
-  citationController.updateCitation
+	"/:documentId/citations/:citationId",
+	authenticate,
+	authorizeDocumentEdit,
+	validate({ body: updateCitationSchema }),
+	citationController.updateCitation,
 );
 
 /**
@@ -96,10 +96,10 @@ router.put(
  * @access  Protected (requires edit permission)
  */
 router.delete(
-  '/:documentId/citations/:citationId',
-  authenticate,
-  authorizeDocumentEdit,
-  citationController.deleteCitation
+	"/:documentId/citations/:citationId",
+	authenticate,
+	authorizeDocumentEdit,
+	citationController.deleteCitation,
 );
 
 export default router;

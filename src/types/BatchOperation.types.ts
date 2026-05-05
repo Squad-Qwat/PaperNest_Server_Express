@@ -3,7 +3,10 @@
  * Defines the structure for atomic batch operations on documents
  */
 
-export type OperationType = 'save-content' | 'update-metadata' | 'create-checkpoint';
+export type OperationType =
+	| "save-content"
+	| "update-metadata"
+	| "create-checkpoint";
 
 export interface SaveContentPayload {
 	content: string;

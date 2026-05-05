@@ -1,19 +1,19 @@
-import { Router } from 'express';
-import * as authController from '../controllers/authController';
-import { validate } from '../middlewares/validation';
-import { authRateLimiter } from '../middlewares/rateLimiter';
-import { authenticate } from '../middlewares/auth';
+import { Router } from "express";
+import * as authController from "../controllers/authController";
+import { authenticate } from "../middlewares/auth";
+import { authRateLimiter } from "../middlewares/rateLimiter";
+import { validate } from "../middlewares/validation";
 import {
-  registerSchema,
-  loginSchema,
-  loginWithEmailPasswordSchema,
-  refreshTokenSchema,
-  verifyTokenSchema,
-  updateEmailSchema,
-  passwordResetSchema,
-  finalizeRegistrationSchema,
-  checkEmailSchema,
-} from '../models/validators/authValidator';
+	checkEmailSchema,
+	finalizeRegistrationSchema,
+	loginSchema,
+	loginWithEmailPasswordSchema,
+	passwordResetSchema,
+	refreshTokenSchema,
+	registerSchema,
+	updateEmailSchema,
+	verifyTokenSchema,
+} from "../models/validators/authValidator";
 
 const router: Router = Router();
 
@@ -23,9 +23,9 @@ const router: Router = Router();
  * @access  Public
  */
 router.post(
-  '/check-email',
-  validate({ body: checkEmailSchema }),
-  authController.checkEmail
+	"/check-email",
+	validate({ body: checkEmailSchema }),
+	authController.checkEmail,
 );
 
 /**
@@ -34,10 +34,10 @@ router.post(
  * @access  Public
  */
 router.post(
-  '/register',
-  authRateLimiter,
-  validate({ body: registerSchema }),
-  authController.register
+	"/register",
+	authRateLimiter,
+	validate({ body: registerSchema }),
+	authController.register,
 );
 
 /**
@@ -46,10 +46,10 @@ router.post(
  * @access  Public
  */
 router.post(
-  '/register/finalize',
-  authRateLimiter,
-  validate({ body: finalizeRegistrationSchema }),
-  authController.finalizeRegistration
+	"/register/finalize",
+	authRateLimiter,
+	validate({ body: finalizeRegistrationSchema }),
+	authController.finalizeRegistration,
 );
 
 /**
@@ -57,11 +57,7 @@ router.post(
  * @desc    Login with Firebase token (Standard)
  * @access  Public
  */
-router.post(
-  '/login',
-  validate({ body: loginSchema }),
-  authController.login
-);
+router.post("/login", validate({ body: loginSchema }), authController.login);
 
 /**
  * @route   POST /api/auth/social
@@ -69,9 +65,9 @@ router.post(
  * @access  Public
  */
 router.post(
-  '/social',
-  validate({ body: loginSchema }),
-  authController.socialLogin
+	"/social",
+	validate({ body: loginSchema }),
+	authController.socialLogin,
 );
 
 /**
@@ -79,10 +75,7 @@ router.post(
  * @desc    Complete social registration (Onboarding)
  * @access  Public
  */
-router.post(
-  '/social/complete',
-  authController.completeSocialRegistration
-);
+router.post("/social/complete", authController.completeSocialRegistration);
 
 /**
  * @route   POST /api/auth/refresh
@@ -90,9 +83,9 @@ router.post(
  * @access  Public (requires valid refresh token)
  */
 router.post(
-  '/refresh',
-  validate({ body: refreshTokenSchema }),
-  authController.refreshToken
+	"/refresh",
+	validate({ body: refreshTokenSchema }),
+	authController.refreshToken,
 );
 
 /**
@@ -101,9 +94,9 @@ router.post(
  * @access  Public
  */
 router.post(
-  '/verify',
-  validate({ body: verifyTokenSchema }),
-  authController.verifyToken
+	"/verify",
+	validate({ body: verifyTokenSchema }),
+	authController.verifyToken,
 );
 
 /**
@@ -111,22 +104,14 @@ router.post(
  * @desc    Get current authenticated user
  * @access  Protected
  */
-router.get(
-  '/me',
-  authenticate,
-  authController.getCurrentUser
-);
+router.get("/me", authenticate, authController.getCurrentUser);
 
 /**
  * @route   DELETE /api/auth/account
  * @desc    Delete user account
  * @access  Protected
  */
-router.delete(
-  '/account',
-  authenticate,
-  authController.deleteAccount
-);
+router.delete("/account", authenticate, authController.deleteAccount);
 
 /**
  * @route   PUT /api/auth/email
@@ -134,10 +119,10 @@ router.delete(
  * @access  Protected
  */
 router.put(
-  '/email',
-  authenticate,
-  validate({ body: updateEmailSchema }),
-  authController.updateEmail
+	"/email",
+	authenticate,
+	validate({ body: updateEmailSchema }),
+	authController.updateEmail,
 );
 
 /**
@@ -146,10 +131,10 @@ router.put(
  * @access  Public
  */
 router.post(
-  '/password/reset',
-  authRateLimiter,
-  validate({ body: passwordResetSchema }),
-  authController.sendPasswordReset
+	"/password/reset",
+	authRateLimiter,
+	validate({ body: passwordResetSchema }),
+	authController.sendPasswordReset,
 );
 
 export default router;
