@@ -82,6 +82,7 @@ app.get("/api", (_req, res) => {
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/templates", templateRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api", documentRoutes); // Handles /api/documents/* and /api/workspaces/:workspaceId/documents/*
@@ -93,7 +94,6 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/latex", latexRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/semantic-scholar", semanticScholarRoutes);
-app.use("/api/templates", templateRoutes);
 
 // Socket.IO Diagnostic Route (to identify the source of the 404s)
 app.all("/socket.io/", (req, res) => {
