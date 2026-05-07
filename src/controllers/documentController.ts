@@ -74,7 +74,9 @@ export const createDocument = asyncHandler(
 		if (templateId) {
 			try {
 				const assets = await templateService.getTemplateAssets(templateId);
-				for (const asset of assets) {
+				
+				// Upload assets in parallel to avoid timeouts
+				await Promise.all(assets.map(async (asset) => {
 					const buffer = await fs.readFile(asset.path);
 					const fileExtension = path.extname(asset.name).toLowerCase();
 					
@@ -103,7 +105,7 @@ export const createDocument = asyncHandler(
 					});
 					
 					logger.info(`Template asset ${asset.name} uploaded for document ${document.documentId}`);
-				}
+				}));
 			} catch (assetError) {
 				logger.error(`Error uploading template assets for ${templateId}:`, assetError);
 				// We don't fail document creation if assets fail, but it will affect compilation
