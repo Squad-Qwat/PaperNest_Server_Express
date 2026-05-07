@@ -82,7 +82,7 @@ app.get("/api", (_req, res) => {
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/templates", templateRoutes);
+app.use("/api", templateRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api", documentRoutes); // Handles /api/documents/* and /api/workspaces/:workspaceId/documents/*

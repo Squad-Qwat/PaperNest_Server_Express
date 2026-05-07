@@ -92,7 +92,7 @@ export const getCurrentUser = asyncHandler(
 		// User is already attached to request by authenticate middleware
 		return successResponse(
 			res,
-			{ user: req.user },
+			{ user: req.user ? { ...req.user } : null },
 			"User retrieved successfully",
 		);
 	},

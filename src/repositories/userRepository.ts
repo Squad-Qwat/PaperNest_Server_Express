@@ -34,7 +34,7 @@ export class UserRepository {
 			return null;
 		}
 
-		return doc.data() as User;
+		return { ...doc.data() } as User;
 	}
 
 	/**

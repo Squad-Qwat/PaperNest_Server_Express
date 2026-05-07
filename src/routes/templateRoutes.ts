@@ -7,7 +7,7 @@ const router: Router = Router();
 // All template routes require authentication
 router.use(authenticate);
 
-router.get("/", templateController.getTemplates);
-router.get("/:templateId", templateController.getTemplateById);
+router.get("/templates", templateController.getTemplates);
+router.get("/templates/:templateId", templateController.getTemplateById);
 
 export default router;
