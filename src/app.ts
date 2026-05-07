@@ -23,11 +23,13 @@ import userRoutes from "./routes/users";
 import webhookRoutes from "./routes/webhooks";
 import workspaceRoutes from "./routes/workspaces";
 import logger from "./utils/logger";
+import { validate } from "./middlewares/validation";
+import { templateValidator } from "./models/validators/templateValidator";
+import rateLimit from "express-rate-limit";
+import { RATE_LIMIT_CONFIG } from "./config/constants";
 
-// Create Express app
 const app: Application = express();
 
-// Security middleware
 app.use(helmet());
 app.use(
 	cors({
@@ -36,11 +38,9 @@ app.use(
 	}),
 );
 
-// Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Request logging
 if (env.NODE_ENV === "development") {
 	app.use(morgan("dev"));
 } else {
@@ -53,16 +53,10 @@ if (env.NODE_ENV === "development") {
 	);
 }
 
-// Sanitize input
 app.use(sanitize);
 
-// Webhook routes (before rate limiting and auth)
 app.use("/api/webhooks", webhookRoutes);
 
-// Global rate limiting
-// app.use('/api', globalRateLimiter);
-
-// Health check endpoint
 app.get("/health", (_req, res) => {
 	res.json({
 		status: "ok",
@@ -71,7 +65,6 @@ app.get("/health", (_req, res) => {
 	});
 });
 
-// Test route for API root
 app.get("/api", (_req, res) => {
 	res.json({
 		message: "PaperNest API",
@@ -80,17 +73,25 @@ app.get("/api", (_req, res) => {
 	});
 });
 
-// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.get("/api/templates", authenticate, templateController.getTemplates);
-app.get("/api/templates/:templateId", authenticate, templateController.getTemplateById);
+
+const templateLimiter = rateLimit(RATE_LIMIT_CONFIG.templates);
+app.get("/api/templates", authenticate, templateLimiter, templateController.getTemplates);
+app.get(
+	"/api/templates/:templateId",
+	authenticate,
+	templateLimiter,
+	validate({ params: templateValidator.getTemplateById.params }),
+	templateController.getTemplateById
+);
+
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/invitations", invitationRoutes);
-app.use("/api", documentRoutes); // Handles /api/documents/* and /api/workspaces/:workspaceId/documents/*
-app.use("/api/documents", citationRoutes); // Handles /api/documents/:documentId/citations/*
-app.use("/api", commentRoutes); // Handles /api/comments/* and /api/documents/:documentId/comments/*
-app.use("/api", reviewRoutes); // Handles /api/reviews/* and /api/documents/:documentId/versions/:documentBodyId/reviews
+app.use("/api", documentRoutes);
+app.use("/api/documents", citationRoutes);
+app.use("/api", commentRoutes);
+app.use("/api", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/latex", latexRoutes);

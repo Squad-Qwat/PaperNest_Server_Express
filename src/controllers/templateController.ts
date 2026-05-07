@@ -4,10 +4,6 @@ import { templateService } from "../services/templateService";
 import logger from "../utils/logger";
 import { successResponse } from "../utils/responseFormatter";
 
-/**
- * Get all available LaTeX templates
- * GET /api/templates
- */
 export const getTemplates = asyncHandler(async (req: Request, res: Response) => {
 	logger.info("Get templates request");
 	const templates = await templateService.listTemplates();
@@ -18,10 +14,6 @@ export const getTemplates = asyncHandler(async (req: Request, res: Response) => 
 	);
 });
 
-/**
- * Get template by ID
- * GET /api/templates/:templateId
- */
 export const getTemplateById = asyncHandler(async (req: Request, res: Response) => {
 	const templateId = req.params.templateId as string;
 	logger.info(`Get template request: ${templateId}`);
@@ -30,7 +22,11 @@ export const getTemplateById = asyncHandler(async (req: Request, res: Response) 
 	const metadata = templates.find(t => t.id === templateId);
 	
 	if (!metadata) {
-		return res.status(404).json({ error: "Template not found" });
+		return res.status(404).json({
+			success: false,
+			error: "Template not found",
+			code: "TEMPLATE_NOT_FOUND",
+		});
 	}
 
 	const content = await templateService.getTemplateContent(templateId);

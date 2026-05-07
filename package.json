@@ -5,7 +5,7 @@
 	"scripts": {
 		"start": "npx ts-node dist/server.js",
 		"dev": "nodemon",
-		"build": "tsc",
+		"build": "tsc && node scripts/copy-templates.js",
 		"clean": "rimraf dist",
 		"prebuild": "pnpm run clean",
 		"test": "jest",

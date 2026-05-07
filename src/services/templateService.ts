@@ -2,17 +2,14 @@ import fs from "fs/promises";
 import path from "path";
 import type { TemplateMetadata } from "../types";
 import logger from "../utils/logger";
+import { getTemplatesDir } from "../utils/paths";
+import { TEMPLATE_LIMITS } from "../config/constants";
 
 export class TemplateService {
-	private templatesDir = path.join(__dirname, "..", "templates", "files");
+	private templatesDir = getTemplatesDir();
 
-	/**
-	 * Lists all available templates by scanning the templates directory.
-	 * This makes the system modular: just add a folder with meta.json to add a template.
-	 */
 	async listTemplates(): Promise<TemplateMetadata[]> {
 		try {
-			// Ensure directory exists
 			await fs.mkdir(this.templatesDir, { recursive: true });
 			
 			const folders = await fs.readdir(this.templatesDir);
@@ -31,7 +28,6 @@ export class TemplateService {
 						});
 					}
 				} catch (e) {
-					// Skip folders without valid meta.json or other errors
 					logger.debug(`Skipping folder ${folder} in templates: No valid meta.json found`);
 				}
 			}
@@ -42,9 +38,6 @@ export class TemplateService {
 		}
 	}
 
-	/**
-	 * Gets the content of a specific template's main LaTeX file.
-	 */
 	async getTemplateContent(id: string): Promise<string> {
 		const templates = await this.listTemplates();
 		const metadata = templates.find((t) => t.id === id);
@@ -62,10 +55,6 @@ export class TemplateService {
 		}
 	}
 
-	/**
-	 * Gets all secondary files (assets like .cls, .sty, .bib) for a template.
-	 * Excludes meta.json and the main template file.
-	 */
 	async getTemplateAssets(id: string): Promise<{ name: string; path: string }[]> {
 		const templates = await this.listTemplates();
 		const metadata = templates.find((t) => t.id === id);
@@ -77,6 +66,8 @@ export class TemplateService {
 		const templateFolderPath = path.join(this.templatesDir, id);
 		try {
 			const assets: { name: string; path: string }[] = [];
+			let totalSize = 0;
+			let assetCount = 0;
 
 			const walk = async (currentPath: string) => {
 				const entries = await fs.readdir(currentPath, { withFileTypes: true });
@@ -89,13 +80,31 @@ export class TemplateService {
 						continue;
 					}
 
-					// Exclude metadata, main template file, and thumbnails
+					assetCount++;
+					if (assetCount > TEMPLATE_LIMITS.MAX_ASSETS_COUNT) {
+						logger.warn(`Template ${id} exceeds max asset count (${TEMPLATE_LIMITS.MAX_ASSETS_COUNT})`);
+						continue;
+					}
+
 					if (
 						entry.name === "meta.json" ||
 						entry.name === metadata.mainFile ||
 						entry.name === "thumbnail.png" ||
 						entry.name === "thumbnail.jpg"
 					) {
+						continue;
+					}
+
+					const stat = await fs.stat(entryPath);
+					
+					if (stat.size > TEMPLATE_LIMITS.MAX_ASSET_SIZE) {
+						logger.warn(`Asset ${entry.name} exceeds size limit (${stat.size} > ${TEMPLATE_LIMITS.MAX_ASSET_SIZE})`);
+						continue;
+					}
+
+					totalSize += stat.size;
+					if (totalSize > TEMPLATE_LIMITS.MAX_TEMPLATE_SIZE) {
+						logger.warn(`Template ${id} total size exceeds limit (${totalSize} > ${TEMPLATE_LIMITS.MAX_TEMPLATE_SIZE})`);
 						continue;
 					}
 
