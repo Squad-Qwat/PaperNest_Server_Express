@@ -26,7 +26,8 @@ export function getProjectRoot(): string {
  */
 export function getTemplatesDir(): string {
 	const projectRoot = getProjectRoot();
-	return path.join(projectRoot, "src", "templates", "files");
+	const baseDir = (env.NODE_ENV === "production" || process.env.npm_lifecycle_event === "start") ? "dist" : "src";
+	return path.join(projectRoot, baseDir, "templates", "files");
 }
 
 export default {

@@ -2,8 +2,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const srcTemplates = path.join(__dirname, "src", "templates");
-const distTemplates = path.join(__dirname, "dist", "templates");
+const srcTemplates = path.join(__dirname, "..", "src", "templates");
+const distTemplates = path.join(__dirname, "..", "dist", "templates");
 
 // Copy function
 function copyRecursive(src, dest) {
