@@ -18,6 +18,8 @@ export const createDocumentSchema = Joi.object({
 	message: Joi.string().max(500).default("Initial version").messages({
 		"string.max": "Version message cannot exceed 500 characters",
 	}),
+	templateId: Joi.string().allow("", null),
+	savedContent: Joi.any().allow(null),
 });
 
 /**

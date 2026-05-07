@@ -179,6 +179,30 @@ export interface UserEnteredEvent extends LiveblocksWebhookEvent {
 	};
 }
 
+export interface TemplateMetadata {
+	id: string;
+	name: string;
+	description: string;
+	thumbnail?: string;
+	mainFile: string;
+	category: string;
+}
+
+export interface Template extends TemplateMetadata {
+	content: string;
+}
+
+export interface DocumentFile {
+	fileId: string;
+	name: string;
+	type: string;
+	url: string;
+	r2Key: string;
+	size?: number;
+	createdAt: Date;
+	updatedAt: Date;
+}
+
 export interface RoomCleanupResult {
 	action: "keep_room" | "deleted" | "already_deleted" | "room_not_found";
 	roomId?: string;

@@ -301,15 +301,11 @@ export const removeMember = asyncHandler(
 
 		logger.info("Remove member request", { workspaceId, userWorkspaceId });
 
-		const userWorkspace = await userWorkspaceRepository.findByUserAndWorkspace(
-			"",
-			workspaceId as string,
-		);
 		// Find the actual userWorkspace by ID
 		const allMembers = await userWorkspaceRepository.findMembersByWorkspace(
 			workspaceId as string,
 		);
-		const userWorkspaceFound = allMembers.find(
+		const userWorkspace = allMembers.find(
 			(uw) => uw.userWorkspaceId === userWorkspaceId,
 		);
 

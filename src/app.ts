@@ -17,6 +17,7 @@ import notificationRoutes from "./routes/notifications";
 import reviewRoutes from "./routes/reviews";
 import semanticScholarRoutes from "./routes/semanticScholar";
 import uploadRoutes from "./routes/uploadRoutes";
+import templateRoutes from "./routes/templateRoutes";
 import userRoutes from "./routes/users";
 import webhookRoutes from "./routes/webhooks";
 import workspaceRoutes from "./routes/workspaces";
@@ -92,6 +93,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/latex", latexRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/semantic-scholar", semanticScholarRoutes);
+app.use("/api/templates", templateRoutes);
 
 // Socket.IO Diagnostic Route (to identify the source of the 404s)
 app.all("/socket.io/", (req, res) => {

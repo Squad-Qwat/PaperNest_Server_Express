@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { latexService } from "../services/latexService";
+import documentFileRepository from "../repositories/documentFileRepository";
 import logger from "../utils/logger";
 
 /**
@@ -10,7 +11,7 @@ export const compileLatex = async (
 	res: Response,
 	NextFunction: NextFunction,
 ) => {
-	const { content, mainFileName, assets, engine } = req.body;
+	const { content, mainFileName, assets, engine, documentId } = req.body;
 
 	if (!content) {
 		return res.status(400).json({ error: "LaTeX content is required" });
@@ -21,10 +22,29 @@ export const compileLatex = async (
 			`[LatexController] Compilation request received for: ${mainFileName || "main.tex"}`,
 		);
 
+		let resolvedAssets = assets || [];
+
+		if (documentId) {
+			try {
+				const dbFiles = await documentFileRepository.findByDocument(documentId);
+				resolvedAssets = dbFiles.map((file) => ({
+					name: file.name,
+					url: file.url,
+				}));
+				logger.info(
+					`[LatexController] Fetched ${resolvedAssets.length} assets from Firestore for document ${documentId}`,
+				);
+			} catch (dbError: any) {
+				logger.warn(
+					`[LatexController] Failed to fetch assets from Firestore: ${dbError.message}`,
+				);
+			}
+		}
+
 		const result = await latexService.compile({
 			content,
 			mainFileName,
-			assets,
+			assets: resolvedAssets,
 			engine,
 		});
 

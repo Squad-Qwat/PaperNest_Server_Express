@@ -83,4 +83,30 @@ export class StorageService {
 			throw new Error("Could not generate pre-signed URL");
 		}
 	}
+
+	/**
+	 * Uploads a buffer directly to R2
+	 * @param buffer The file content as a Buffer
+	 * @param key The destination key in the bucket
+	 * @param contentType MIME type of the file
+	 * @returns The final public URL of the uploaded object
+	 */
+	static async uploadBuffer(buffer: Buffer, key: string, contentType: string) {
+		const command = new PutObjectCommand({
+			Bucket: process.env.R2_BUCKET_NAME,
+			Key: key,
+			Body: buffer,
+			ContentType: contentType,
+		});
+
+		try {
+			await r2.send(command);
+			const publicUrl = `https://${process.env.R2_PUBLIC_DOMAIN}/${key}`;
+			console.log(`[StorageService] Buffer uploaded to R2: ${key}`);
+			return publicUrl;
+		} catch (error) {
+			console.error("Error uploading buffer to R2:", error);
+			throw error;
+		}
+	}
 }

@@ -1,0 +1,7 @@
+{
+  "name": "Elsevier CAS Double Column",
+  "description": "Standard Elsevier template for double column articles.",
+  "mainFile": "template.tex",
+  "category": "Journal",
+  "thumbnail": "https://raw.githubusercontent.com/elsevier/elsevier-cas-templates/master/cas-dc-sample.png"
+}
