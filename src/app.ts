@@ -17,7 +17,8 @@ import notificationRoutes from "./routes/notifications";
 import reviewRoutes from "./routes/reviews";
 import semanticScholarRoutes from "./routes/semanticScholar";
 import uploadRoutes from "./routes/uploadRoutes";
-import templateRoutes from "./routes/templateRoutes";
+import templateController from "./controllers/templateController";
+import { authenticate } from "./middlewares/auth";
 import userRoutes from "./routes/users";
 import webhookRoutes from "./routes/webhooks";
 import workspaceRoutes from "./routes/workspaces";
@@ -82,7 +83,8 @@ app.get("/api", (_req, res) => {
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api", templateRoutes);
+app.get("/api/templates", authenticate, templateController.getTemplates);
+app.get("/api/templates/:templateId", authenticate, templateController.getTemplateById);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api", documentRoutes); // Handles /api/documents/* and /api/workspaces/:workspaceId/documents/*
