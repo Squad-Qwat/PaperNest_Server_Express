@@ -2,6 +2,7 @@ import axios from "axios";
 import type { Request, Response } from "express";
 import { db } from "../config/firebase";
 import { StorageService } from "../services/StorageService";
+import { FileManagementService } from "../services/FileManagementService";
 
 export const getPresignedUrl = async (
 	req: Request,
@@ -139,23 +140,9 @@ export const deleteFile = async (
 			`[DeleteFile] Request to delete file ${fileId} from document ${documentId}`,
 		);
 
-		// 1. Get file metadata from Firestore to get the R2 key
-		const fileRef = db
-			.collection("documents")
-			.doc(documentId)
-			.collection("files")
-			.doc(fileId);
-		const fileSnap = await fileRef.get();
-
-		if (!fileSnap.exists) {
-			res
-				.status(404)
-				.json({ success: false, message: "File not found in Firestore" });
-			return;
-		}
-
-		const fileData = fileSnap.data();
-		const r2Key = fileData?.r2Key;
+		// 1. Get file metadata & delete from Firestore using Service
+		const result = await FileManagementService.deleteFileMetadata(documentId, fileId);
+		const r2Key = result.r2Key;
 
 		if (r2Key) {
 			// 2. Delete from R2
@@ -167,14 +154,7 @@ export const deleteFile = async (
 					r2Error,
 				);
 			}
-		} else {
-			console.warn(
-				`[DeleteFile] No r2Key found for file ${fileId}, skipping R2 deletion.`,
-			);
 		}
-
-		// 3. Delete from Firestore
-		await fileRef.delete();
 
 		res.json({
 			success: true,
@@ -185,6 +165,42 @@ export const deleteFile = async (
 		res.status(500).json({
 			success: false,
 			message: "Failed to delete file",
+		});
+	}
+};
+
+export const renameFile = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const documentId = req.params.documentId as string;
+		const fileId = req.params.fileId as string;
+		const { newName } = req.body;
+
+		if (!documentId || !fileId || !newName) {
+			res.status(400).json({
+				success: false,
+				message: "Document ID, File ID, and New Name are required",
+			});
+			return;
+		}
+
+		console.log(
+			`[RenameFile] Request to rename file ${fileId} in document ${documentId} to ${newName}`,
+		);
+
+		await FileManagementService.updateFileName(documentId, fileId, newName);
+
+		res.json({
+			success: true,
+			message: "File renamed successfully",
+		});
+	} catch (error: any) {
+		console.error(`[RenameFile] Error:`, error.message);
+		res.status(500).json({
+			success: false,
+			message: "Failed to rename file",
 		});
 	}
 };
