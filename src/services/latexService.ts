@@ -48,7 +48,7 @@ export class LatexService {
 			await fs.writeFile(mainPath, content);
 
 			if (assets.length > 0) {
-				const { StorageService } = await import("./StorageService.js");
+				const { StorageService } = await import("./StorageService");
 				await Promise.all(
 					assets.map(async (asset) => {
 						try {

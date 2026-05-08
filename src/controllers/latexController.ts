@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import documentFileRepository from "../repositories/documentFileRepository";
-import permissionService from "../services/permissionService.js";
+import permissionService from "../services/permissionService";
 import { latexService } from "../services/latexService";
 import logger from "../utils/logger";
 

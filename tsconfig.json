@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"module": "NodeNext",
+		"module": "CommonJS",
 		"lib": ["ES2022"],
 		"outDir": "./dist",
 		"rootDir": "./src",
@@ -10,8 +10,11 @@
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
-		"moduleResolution": "NodeNext",
+		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
+		"paths": {
+			"@langchain/langgraph/prebuilt": ["./node_modules/@langchain/langgraph/dist/prebuilt/index.d.ts"]
+		},
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
