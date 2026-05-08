@@ -10,7 +10,7 @@ import logger from "../utils/logger";
 export interface LatexCompileOptions {
 	content: string;
 	mainFileName?: string;
-	assets?: Array<{ name: string; url: string }>;
+	assets?: Array<{ name: string; url: string; r2Key?: string }>;
 	engine?: "tectonic" | "pdflatex";
 }
 
@@ -39,38 +39,65 @@ export class LatexService {
 			engine = "pdflatex",
 		} = options;
 
-		// Use a project-local temp directory to avoid Snap/Flatpak permission issues on Linux/GCP
 		const tempRoot = path.join(process.cwd(), "temp");
 		const workDir = path.join(tempRoot, `papernest-latex-${uuidv4()}`);
 
 		try {
-			// 1. Create temporary workspace (ensure parent tempRoot exists too)
 			await fs.mkdir(tempRoot, { recursive: true });
 			await fs.mkdir(workDir, { recursive: true });
 			logger.info(`[LatexService] Created work directory: ${workDir}`);
 
-			// 2. Write main .tex file
 			const mainPath = path.join(workDir, mainFileName);
 			await fs.writeFile(mainPath, content);
 
-			// 3. Download and place assets
 			if (assets.length > 0) {
+				const { StorageService } = await import("./StorageService.js");
 				await Promise.all(
 					assets.map(async (asset) => {
 						try {
-							const assetPath = path.join(workDir, asset.name);
+							// Sanitize name to prevent path traversal (e.g. ../../../etc/passwd)
+							const safeName = asset.name.replace(/\.\.+/g, ".").replace(/^[\/\\]+/, "");
+							const assetPath = path.join(workDir, safeName);
 							const assetDir = path.dirname(assetPath);
+
+							// Safety check: ensure assetPath is actually inside workDir
+							if (!assetPath.startsWith(workDir)) {
+								throw new Error(`Invalid asset path: ${asset.name}`);
+							}
 
 							// Ensure subdirectories exist for assets (e.g. images/logo.png)
 							if (assetDir !== workDir) {
 								await fs.mkdir(assetDir, { recursive: true });
 							}
 
-							const response = await axios.get(asset.url, {
-								responseType: "arraybuffer",
-							});
-							await fs.writeFile(assetPath, Buffer.from(response.data));
-							logger.debug(`[LatexService] Downloaded asset: ${asset.name}`);
+							let fileData: Buffer;
+
+							if (asset.r2Key) {
+								// Prefer direct R2 download to avoid 403 Forbidden on public URLs
+								logger.debug(
+									`[LatexService] Fetching asset via R2 Key: ${asset.r2Key}`,
+								);
+								const response = await StorageService.getObject(asset.r2Key);
+								const streamToBuffer = async (stream: any): Promise<Buffer> => {
+									return new Promise((resolve, reject) => {
+										const chunks: any[] = [];
+										stream.on("data", (chunk: any) => chunks.push(chunk));
+										stream.on("error", reject);
+										stream.on("end", () => resolve(Buffer.concat(chunks)));
+									});
+								};
+								fileData = await streamToBuffer(response.Body);
+							} else {
+								// Fallback to public URL (might fail with 403 if bucket is private)
+								logger.debug(`[LatexService] Downloading asset via URL: ${asset.url}`);
+								const response = await axios.get(asset.url, {
+									responseType: "arraybuffer",
+								});
+								fileData = Buffer.from(response.data);
+							}
+
+							await fs.writeFile(assetPath, fileData);
+							logger.debug(`[LatexService] Saved asset: ${asset.name}`);
 						} catch (error: any) {
 							logger.error(
 								`[LatexService] Failed to download asset ${asset.name}: ${error.message}`,

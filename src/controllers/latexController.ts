@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import documentFileRepository from "../repositories/documentFileRepository";
+import permissionService from "../services/permissionService.js";
 import { latexService } from "../services/latexService";
 import logger from "../utils/logger";
 
@@ -18,18 +19,38 @@ export const compileLatex = async (
 	}
 
 	try {
+		const userId = (req as any).user?.uid;
+
 		logger.info(
-			`[LatexController] Compilation request received for: ${mainFileName || "main.tex"}`,
+			`[LatexController] Compilation request received for: ${mainFileName || "main.tex"} by user: ${userId}`,
 		);
 
-		let resolvedAssets = assets || [];
+		let resolvedAssets = (assets || []).map((a: any) => ({
+			name: a.name,
+			url: a.url,
+			// Strip r2Key from user input for security - only system can provide it
+		}));
 
 		if (documentId) {
+			const hasAccess = await permissionService.hasMinimumPermission(
+				userId,
+				documentId,
+				"viewer",
+			);
+
+			if (!hasAccess) {
+				logger.warn(
+					`[LatexController] User ${userId} unauthorized for document ${documentId}`,
+				);
+				return res.status(403).json({ error: "Unauthorized access to document" });
+			}
+
 			try {
 				const dbFiles = await documentFileRepository.findByDocument(documentId);
 				resolvedAssets = dbFiles.map((file) => ({
 					name: file.name,
 					url: file.url,
+					r2Key: file.r2Key,
 				}));
 				logger.info(
 					`[LatexController] Fetched ${resolvedAssets.length} assets from Firestore for document ${documentId}`,
