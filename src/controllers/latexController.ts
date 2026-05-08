@@ -19,7 +19,7 @@ export const compileLatex = async (
 	}
 
 	try {
-		const userId = (req as any).user?.uid;
+		const userId = (req as any).userId;
 
 		logger.info(
 			`[LatexController] Compilation request received for: ${mainFileName || "main.tex"} by user: ${userId}`,
