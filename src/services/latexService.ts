@@ -27,9 +27,6 @@ export interface LatexCompileResult {
 export class LatexService {
 	/**
 	 * Compiles LaTeX content into a PDF.
-	 *
-	 * @param options - Compilation options including .tex content and assets
-	 * @returns The compiled PDF buffer and logs
 	 */
 	async compile(options: LatexCompileOptions): Promise<LatexCompileResult> {
 		const {
@@ -55,17 +52,14 @@ export class LatexService {
 				await Promise.all(
 					assets.map(async (asset) => {
 						try {
-							// Sanitize name to prevent path traversal (e.g. ../../../etc/passwd)
 							const safeName = asset.name.replace(/\.\.+/g, ".").replace(/^[\/\\]+/, "");
 							const assetPath = path.join(workDir, safeName);
 							const assetDir = path.dirname(assetPath);
 
-							// Safety check: ensure assetPath is actually inside workDir
 							if (!assetPath.startsWith(workDir)) {
 								throw new Error(`Invalid asset path: ${asset.name}`);
 							}
 
-							// Ensure subdirectories exist for assets (e.g. images/logo.png)
 							if (assetDir !== workDir) {
 								await fs.mkdir(assetDir, { recursive: true });
 							}
@@ -73,22 +67,15 @@ export class LatexService {
 							let fileData: Buffer;
 
 							if (asset.r2Key) {
-								// Prefer direct R2 download to avoid 403 Forbidden on public URLs
-								logger.debug(
-									`[LatexService] Fetching asset via R2 Key: ${asset.r2Key}`,
-								);
+								logger.debug(`[LatexService] Fetching asset via R2 Key: ${asset.r2Key}`);
 								const response = await StorageService.getObject(asset.r2Key);
-								const streamToBuffer = async (stream: any): Promise<Buffer> => {
-									return new Promise((resolve, reject) => {
-										const chunks: any[] = [];
-										stream.on("data", (chunk: any) => chunks.push(chunk));
-										stream.on("error", reject);
-										stream.on("end", () => resolve(Buffer.concat(chunks)));
-									});
-								};
-								fileData = await streamToBuffer(response.Body);
+								const chunks: any[] = [];
+								const stream = response.Body as any;
+								for await (const chunk of stream) {
+									chunks.push(chunk);
+								}
+								fileData = Buffer.concat(chunks);
 							} else {
-								// Fallback to public URL (might fail with 403 if bucket is private)
 								logger.debug(`[LatexService] Downloading asset via URL: ${asset.url}`);
 								const response = await axios.get(asset.url, {
 									responseType: "arraybuffer",
@@ -102,103 +89,98 @@ export class LatexService {
 							logger.error(
 								`[LatexService] Failed to download asset ${asset.name}: ${error.message}`,
 							);
-							// We continue even if an asset fails, Tectonic will report the error if it's critical
 						}
 					}),
 				);
 			}
 
-			// 4. Execute Compiler
-			let binaryPath = "tectonic";
-			let args = [mainPath, "--outdir", workDir];
+			let log = "";
+			let status = 0;
+			const hasBibFile = assets.some((a) => a.name.toLowerCase().endsWith(".bib"));
 
 			if (engine === "pdflatex") {
-				binaryPath = "pdflatex";
-				args = [
+				const pdflatexArgs = [
 					"-interaction=nonstopmode",
 					`-output-directory=${workDir}`,
 					mainPath,
 				];
+
+				// Pass 1: Initial compilation
+				const res1 = await this.executeCommand("pdflatex", pdflatexArgs, workDir);
+				log += res1.output;
+				status = res1.status;
+
+				if (hasBibFile && status === 0) {
+					const auxName = mainFileName.replace(/\.(tex|ltx)$/i, "");
+					
+					// BibTeX pass
+					const resBib = await this.executeCommand("bibtex", [auxName], workDir);
+					log += "\n--- BibTeX Log ---\n" + resBib.output;
+
+					// Pass 2 & 3: Resolve citations and references
+					const res2 = await this.executeCommand("pdflatex", pdflatexArgs, workDir);
+					log += "\n--- Pass 2 Log ---\n" + res2.output;
+					
+					const res3 = await this.executeCommand("pdflatex", pdflatexArgs, workDir);
+					log += "\n--- Pass 3 Log ---\n" + res3.output;
+					status = res3.status;
+				}
+			} else {
+				// Tectonic handles multiple passes internally
+				const tectonicArgs = [mainPath, "--outdir", workDir];
+				const res = await this.executeCommand("tectonic", tectonicArgs, workDir);
+				log = res.output;
+				status = res.status;
 			}
 
-			logger.info(
-				`[LatexService] Executing: "${binaryPath}" ${args.join(" ")}`,
-			);
-
-			let log = "";
-			let status = 0;
-
-			// Wrap spawn in a promise
-			await new Promise<void>((resolve) => {
-				// We use shell: false (default) to avoid CMD quoting issues with spaces
-				const compilerProcess = spawn(binaryPath, args, {
-					cwd: workDir,
-					env: process.env, // Inherit current environment
-				});
-
-				compilerProcess.stdout.on("data", (data: Buffer) => {
-					const chunk = data.toString();
-					log += chunk;
-				});
-
-				compilerProcess.stderr.on("data", (data: Buffer) => {
-					const chunk = data.toString();
-					log += chunk;
-				});
-
-				compilerProcess.on("close", (code: number | null) => {
-					status = code || 0;
-					if (status !== 0) {
-						// We log but don't resolve as fail yet - we'll check if a PDF was produced anyway
-						logger.warn(
-							`[LatexService] ${binaryPath} exited with code ${status}. Checking for output PDF...`,
-						);
-					}
-					resolve();
-				});
-
-				compilerProcess.on("error", (err: Error) => {
-					status = -1;
-					log += `Error spawning ${binaryPath}: ${err.message}\n`;
-					log += `Path attempted: ${binaryPath}\n`;
-					logger.error(`[LatexService] Spawn error: ${err.message}`);
-					resolve();
-				});
-			});
-
-			// 5. Read resulting PDF
 			const pdfFileName = mainFileName.replace(/\.(tex|ltx)$/i, "") + ".pdf";
 			const pdfPath = path.join(workDir, pdfFileName);
 
 			let pdfBuffer: Buffer | undefined;
 			try {
 				pdfBuffer = await fs.readFile(pdfPath);
-				logger.info(
-					`[LatexService] PDF generated successfully: ${pdfFileName}`,
-				);
+				logger.info(`[LatexService] PDF generated successfully: ${pdfFileName}`);
 			} catch (e) {
-				logger.error(
-					`[LatexService] PDF not found after compilation: ${pdfPath}`,
-				);
+				logger.error(`[LatexService] PDF not found after compilation: ${pdfPath}`);
 			}
 
-			return {
-				pdf: pdfBuffer,
-				log,
-				status,
-			};
+			return { pdf: pdfBuffer, log, status };
 		} finally {
-			// 6. Cleanup
 			try {
 				await fs.rm(workDir, { recursive: true, force: true });
 				logger.info(`[LatexService] Cleaned up work directory: ${workDir}`);
 			} catch (cleanupError) {
-				logger.error(
-					`[LatexService] Cleanup failed for ${workDir}:`,
-					cleanupError,
-				);
+				logger.error(`[LatexService] Cleanup failed for ${workDir}:`, cleanupError);
 			}
 		}
+	}
+
+	/**
+	 * Executes a command and captures its output.
+	 */
+	private async executeCommand(
+		binary: string,
+		args: string[],
+		cwd: string,
+	): Promise<{ output: string; status: number }> {
+		logger.info(`[LatexService] Executing: "${binary}" ${args.join(" ")}`);
+
+		return new Promise((resolve) => {
+			let output = "";
+			const proc = spawn(binary, args, { cwd, env: process.env });
+
+			proc.stdout.on("data", (data) => (output += data.toString()));
+			proc.stderr.on("data", (data) => (output += data.toString()));
+
+			proc.on("close", (code) => {
+				resolve({ output, status: code || 0 });
+			});
+
+			proc.on("error", (err) => {
+				logger.error(`[LatexService] Failed to start ${binary}: ${err.message}`);
+				resolve({ output: `Error: ${err.message}\n` + output, status: -1 });
+			});
+		});
 	}
 }
 
