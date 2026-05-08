@@ -21,7 +21,7 @@ describe("WorkspaceRepository", () => {
 	describe("create", () => {
 		it("should create a new workspace successfully", async () => {
 			const collection = __mockFirestore.collection("workspaces");
-			
+
 			const result = await workspaceRepository.create(mockWorkspaceData);
 
 			expect(result).toMatchObject(mockWorkspaceData);
@@ -32,7 +32,9 @@ describe("WorkspaceRepository", () => {
 
 	describe("findById", () => {
 		it("should return workspace when found", async () => {
-			const docRef = __mockFirestore.collection("workspaces").doc(mockWorkspaceId);
+			const docRef = __mockFirestore
+				.collection("workspaces")
+				.doc(mockWorkspaceId);
 			await docRef.set({ ...mockWorkspaceData, workspaceId: mockWorkspaceId });
 
 			const result = await workspaceRepository.findById(mockWorkspaceId);
@@ -49,7 +51,9 @@ describe("WorkspaceRepository", () => {
 
 	describe("update", () => {
 		it("should update workspace successfully", async () => {
-			const docRef = __mockFirestore.collection("workspaces").doc(mockWorkspaceId);
+			const docRef = __mockFirestore
+				.collection("workspaces")
+				.doc(mockWorkspaceId);
 			await docRef.set({ ...mockWorkspaceData, workspaceId: mockWorkspaceId });
 
 			const updates = { title: "Updated Title" };
@@ -62,7 +66,9 @@ describe("WorkspaceRepository", () => {
 
 	describe("delete", () => {
 		it("should delete workspace successfully", async () => {
-			const docRef = __mockFirestore.collection("workspaces").doc(mockWorkspaceId);
+			const docRef = __mockFirestore
+				.collection("workspaces")
+				.doc(mockWorkspaceId);
 			await docRef.set({ ...mockWorkspaceData, workspaceId: mockWorkspaceId });
 
 			await workspaceRepository.delete(mockWorkspaceId);

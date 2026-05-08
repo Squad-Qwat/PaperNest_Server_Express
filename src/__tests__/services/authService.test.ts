@@ -7,11 +7,11 @@ jest.mock("../../middlewares/auth");
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import axios from "axios";
 import { __mockAuth } from "../../../__mocks__/firebase-admin";
-import authService from "../../services/authService";
+import * as authMiddleware from "../../middlewares/auth";
 import userRepository from "../../repositories/userRepository";
+import authService from "../../services/authService";
 import registrationService from "../../services/registrationService";
 import { mockUser } from "../../tests/fixtures";
-import * as authMiddleware from "../../middlewares/auth";
 
 jest.mock("axios");
 jest.mock("../../repositories/userRepository");
@@ -50,7 +50,9 @@ describe("AuthService", () => {
 
 		it("should throw error if email already exists", async () => {
 			jest.mocked(userRepository.emailExists).mockResolvedValue(true);
-			await expect(authService.register({ email: "existing@example.com" } as any)).rejects.toThrow("Email already exists");
+			await expect(
+				authService.register({ email: "existing@example.com" } as any),
+			).rejects.toThrow("Email already exists");
 		});
 	});
 
@@ -66,7 +68,9 @@ describe("AuthService", () => {
 			jest.mocked(userRepository.findByLinkedUid).mockResolvedValue(null);
 			jest.mocked(registrationService.finalize).mockResolvedValue(mockUser);
 			jest.mocked(authMiddleware.generateToken).mockReturnValue("mock-token");
-			jest.mocked(authMiddleware.generateRefreshToken).mockReturnValue("mock-refresh-token");
+			jest
+				.mocked(authMiddleware.generateRefreshToken)
+				.mockReturnValue("mock-refresh-token");
 
 			const result = await authService.finalizeRegistration(firebaseToken);
 
@@ -80,7 +84,9 @@ describe("AuthService", () => {
 				email_verified: false,
 			} as any);
 
-			await expect(authService.finalizeRegistration("token")).rejects.toThrow("EMAIL_NOT_VERIFIED");
+			await expect(authService.finalizeRegistration("token")).rejects.toThrow(
+				"EMAIL_NOT_VERIFIED",
+			);
 		});
 	});
 
@@ -92,7 +98,9 @@ describe("AuthService", () => {
 			} as any);
 			jest.mocked(userRepository.findById).mockResolvedValue(mockUser);
 			jest.mocked(authMiddleware.generateToken).mockReturnValue("mock-token");
-			jest.mocked(authMiddleware.generateRefreshToken).mockReturnValue("mock-refresh-token");
+			jest
+				.mocked(authMiddleware.generateRefreshToken)
+				.mockReturnValue("mock-refresh-token");
 
 			const result = await authService.login("token");
 
@@ -122,7 +130,9 @@ describe("AuthService", () => {
 			jest.mocked(userRepository.findByLinkedUid).mockResolvedValue(null);
 			jest.mocked(userRepository.findByEmail).mockResolvedValue(null);
 			jest.mocked(authMiddleware.generateToken).mockReturnValue("mock-token");
-			jest.mocked(authMiddleware.generateRefreshToken).mockReturnValue("mock-refresh-token");
+			jest
+				.mocked(authMiddleware.generateRefreshToken)
+				.mockReturnValue("mock-refresh-token");
 
 			const result = await authService.handleSocialLogin("token");
 
@@ -139,7 +149,9 @@ describe("AuthService", () => {
 			jest.mocked(userRepository.findByLinkedUid).mockResolvedValue(null);
 			jest.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
 			jest.mocked(authMiddleware.generateToken).mockReturnValue("mock-token");
-			jest.mocked(authMiddleware.generateRefreshToken).mockReturnValue("mock-refresh-token");
+			jest
+				.mocked(authMiddleware.generateRefreshToken)
+				.mockReturnValue("mock-refresh-token");
 
 			const result = await authService.handleSocialLogin("token");
 

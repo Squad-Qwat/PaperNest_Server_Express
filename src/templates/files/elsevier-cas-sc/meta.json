@@ -1,7 +1,7 @@
 {
-  "name": "Elsevier CAS Single Column",
-  "description": "Standard Elsevier template for single column articles.",
-  "mainFile": "template.tex",
-  "category": "Journal",
-  "thumbnail": "/templates/thumbnails/cas-sc.png"
+	"name": "Elsevier CAS Single Column",
+	"description": "Standard Elsevier template for single column articles.",
+	"mainFile": "template.tex",
+	"category": "Journal",
+	"thumbnail": "/templates/thumbnails/cas-sc.png"
 }

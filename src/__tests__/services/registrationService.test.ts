@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+
 jest.mock("../../config/firebase", () => ({
 	db: require("../../../__mocks__/firebase-admin").__mockFirestore,
 	auth: require("../../../__mocks__/firebase-admin").__mockAuth,
 }));
 
-import registrationService from "../../services/registrationService";
 import { db } from "../../config/firebase";
+import registrationService from "../../services/registrationService";
 import { mockUser } from "../../tests/fixtures";
 
 describe("RegistrationService", () => {
@@ -40,13 +41,17 @@ describe("RegistrationService", () => {
 		it("should return pending data if it exists", async () => {
 			const collection = db.collection("pending_registrations");
 			const docRef = collection.doc(mockUid);
-			const pendingData = { ...mockRegistrationData, uid: mockUid, createdAt: new Date() };
-			
+			const pendingData = {
+				...mockRegistrationData,
+				uid: mockUid,
+				createdAt: new Date(),
+			};
+
 			jest.spyOn(docRef, "get").mockResolvedValue({
 				exists: true,
 				data: () => pendingData,
 			} as any);
-			
+
 			jest.spyOn(collection, "doc").mockReturnValue(docRef as any);
 
 			const result = await registrationService.getPending(mockUid);
@@ -57,11 +62,11 @@ describe("RegistrationService", () => {
 		it("should return null if pending data does not exist", async () => {
 			const collection = db.collection("pending_registrations");
 			const docRef = collection.doc(mockUid);
-			
+
 			jest.spyOn(docRef, "get").mockResolvedValue({
 				exists: false,
 			} as any);
-			
+
 			jest.spyOn(collection, "doc").mockReturnValue(docRef as any);
 
 			const result = await registrationService.getPending(mockUid);
@@ -72,8 +77,12 @@ describe("RegistrationService", () => {
 
 	describe("finalize", () => {
 		it("should finalize registration successfully with workspace creation", async () => {
-			const pendingData = { ...mockRegistrationData, uid: mockUid, createdAt: new Date() };
-			
+			const pendingData = {
+				...mockRegistrationData,
+				uid: mockUid,
+				createdAt: new Date(),
+			};
+
 			const pendingRef = db.collection("pending_registrations").doc(mockUid);
 			await pendingRef.set(pendingData);
 
@@ -98,7 +107,7 @@ describe("RegistrationService", () => {
 				},
 				createdAt: new Date(),
 			};
-			
+
 			const pendingRef = db.collection("pending_registrations").doc(mockUid);
 			await pendingRef.set(pendingData);
 
@@ -111,7 +120,9 @@ describe("RegistrationService", () => {
 			const pendingRef = db.collection("pending_registrations").doc(mockUid);
 			await pendingRef.delete();
 
-			await expect(registrationService.finalize(mockUid)).rejects.toThrow("No pending registration found for this user");
+			await expect(registrationService.finalize(mockUid)).rejects.toThrow(
+				"No pending registration found for this user",
+			);
 		});
 	});
 });

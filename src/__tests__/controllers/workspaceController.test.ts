@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import workspaceController from "../../controllers/workspaceController";
-import workspaceRepository from "../../repositories/workspaceRepository";
-import userWorkspaceRepository from "../../repositories/userWorkspaceRepository";
-import userRepository from "../../repositories/userRepository";
 import notificationRepository from "../../repositories/notificationRepository";
+import userRepository from "../../repositories/userRepository";
+import userWorkspaceRepository from "../../repositories/userWorkspaceRepository";
+import workspaceRepository from "../../repositories/workspaceRepository";
 import { mockUser, mockWorkspace } from "../../tests/fixtures";
 
 jest.mock("../../config/firebase", () => ({
@@ -16,7 +16,11 @@ jest.mock("../../repositories/userRepository");
 jest.mock("../../repositories/notificationRepository");
 jest.mock("../../utils/logger");
 
-import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errorTypes";
+import {
+	ConflictError,
+	ForbiddenError,
+	NotFoundError,
+} from "../../utils/errorTypes";
 
 describe("WorkspaceController", () => {
 	let mockReq: any;
@@ -49,10 +53,12 @@ describe("WorkspaceController", () => {
 
 			expect(mockRes.status).toHaveBeenCalledWith(201);
 			expect(workspaceRepository.create).toHaveBeenCalled();
-			expect(userWorkspaceRepository.create).toHaveBeenCalledWith(expect.objectContaining({
-				role: "owner",
-				invitationStatus: "accepted",
-			}));
+			expect(userWorkspaceRepository.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					role: "owner",
+					invitationStatus: "accepted",
+				}),
+			);
 		});
 	});
 
@@ -60,29 +66,45 @@ describe("WorkspaceController", () => {
 		it("should invite a user and create a notification", async () => {
 			mockReq.params = { workspaceId: "workspace-123" };
 			mockReq.body = { userId: "invited-user", role: "editor" };
-			
-			jest.mocked(userRepository.findById).mockResolvedValue({ userId: "invited-user" } as any);
-			jest.mocked(userWorkspaceRepository.findByUserAndWorkspace).mockResolvedValue(null);
-			jest.mocked(userWorkspaceRepository.create).mockResolvedValue({ userWorkspaceId: "uw-123" } as any);
-			jest.mocked(workspaceRepository.findById).mockResolvedValue(mockWorkspace);
+
+			jest
+				.mocked(userRepository.findById)
+				.mockResolvedValue({ userId: "invited-user" } as any);
+			jest
+				.mocked(userWorkspaceRepository.findByUserAndWorkspace)
+				.mockResolvedValue(null);
+			jest
+				.mocked(userWorkspaceRepository.create)
+				.mockResolvedValue({ userWorkspaceId: "uw-123" } as any);
+			jest
+				.mocked(workspaceRepository.findById)
+				.mockResolvedValue(mockWorkspace);
 
 			await workspaceController.inviteMember(mockReq, mockRes, next);
 
 			expect(mockRes.status).toHaveBeenCalledWith(201);
-			expect(userWorkspaceRepository.create).toHaveBeenCalledWith(expect.objectContaining({
-				invitationStatus: "pending",
-			}));
-			expect(notificationRepository.create).toHaveBeenCalledWith(expect.objectContaining({
-				type: "invitation",
-			}));
+			expect(userWorkspaceRepository.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					invitationStatus: "pending",
+				}),
+			);
+			expect(notificationRepository.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "invitation",
+				}),
+			);
 		});
 
 		it("should throw ConflictError if user is already a member", async () => {
 			mockReq.params = { workspaceId: "workspace-123" };
 			mockReq.body = { userId: "invited-user" };
-			
-			jest.mocked(userRepository.findById).mockResolvedValue({ userId: "invited-user" } as any);
-			jest.mocked(userWorkspaceRepository.findByUserAndWorkspace).mockResolvedValue({} as any);
+
+			jest
+				.mocked(userRepository.findById)
+				.mockResolvedValue({ userId: "invited-user" } as any);
+			jest
+				.mocked(userWorkspaceRepository.findByUserAndWorkspace)
+				.mockResolvedValue({} as any);
 
 			await workspaceController.inviteMember(mockReq, mockRes, next);
 
@@ -92,18 +114,30 @@ describe("WorkspaceController", () => {
 
 	describe("getPendingInvitations", () => {
 		it("should return pending invitations for user", async () => {
-			const mockPending = [{ workspaceId: "workspace-123", invitedBy: "admin", userWorkspaceId: "uw-1" }];
-			jest.mocked(userWorkspaceRepository.findPendingInvitations).mockResolvedValue(mockPending as any);
-			jest.mocked(workspaceRepository.findById).mockResolvedValue(mockWorkspace);
+			const mockPending = [
+				{
+					workspaceId: "workspace-123",
+					invitedBy: "admin",
+					userWorkspaceId: "uw-1",
+				},
+			];
+			jest
+				.mocked(userWorkspaceRepository.findPendingInvitations)
+				.mockResolvedValue(mockPending as any);
+			jest
+				.mocked(workspaceRepository.findById)
+				.mockResolvedValue(mockWorkspace);
 			jest.mocked(userRepository.findById).mockResolvedValue(mockUser);
 
 			await workspaceController.getPendingInvitations(mockReq, mockRes, next);
 
 			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-				success: true,
-				data: expect.objectContaining({ count: 1 }),
-			}));
+			expect(mockRes.json).toHaveBeenCalledWith(
+				expect.objectContaining({
+					success: true,
+					data: expect.objectContaining({ count: 1 }),
+				}),
+			);
 		});
 	});
 
@@ -111,20 +145,28 @@ describe("WorkspaceController", () => {
 		it("should accept invitation successfully", async () => {
 			mockReq.params = { userWorkspaceId: "uw-1" };
 			mockReq.body = { status: "accepted" };
-			
+
 			const mockPending = [{ userWorkspaceId: "uw-1", userId: "user-123" }];
-			jest.mocked(userWorkspaceRepository.findPendingInvitations).mockResolvedValue(mockPending as any);
-			jest.mocked(userWorkspaceRepository.updateInvitationStatus).mockResolvedValue({} as any);
+			jest
+				.mocked(userWorkspaceRepository.findPendingInvitations)
+				.mockResolvedValue(mockPending as any);
+			jest
+				.mocked(userWorkspaceRepository.updateInvitationStatus)
+				.mockResolvedValue({} as any);
 
 			await workspaceController.updateInvitationStatus(mockReq, mockRes, next);
 
 			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(userWorkspaceRepository.updateInvitationStatus).toHaveBeenCalledWith("uw-1", "accepted");
+			expect(
+				userWorkspaceRepository.updateInvitationStatus,
+			).toHaveBeenCalledWith("uw-1", "accepted");
 		});
 
 		it("should throw NotFoundError if invitation not found", async () => {
 			mockReq.params = { userWorkspaceId: "non-existent" };
-			jest.mocked(userWorkspaceRepository.findPendingInvitations).mockResolvedValue([]);
+			jest
+				.mocked(userWorkspaceRepository.findPendingInvitations)
+				.mockResolvedValue([]);
 
 			await workspaceController.updateInvitationStatus(mockReq, mockRes, next);
 
@@ -134,13 +176,26 @@ describe("WorkspaceController", () => {
 
 	describe("removeMember", () => {
 		it("should remove a member successfully", async () => {
-			mockReq.params = { workspaceId: "workspace-123", userWorkspaceId: "uw-1" };
+			mockReq.params = {
+				workspaceId: "workspace-123",
+				userWorkspaceId: "uw-1",
+			};
 			mockReq.userId = "owner-id"; // Set current user as owner
 
-			const mockMember = { userWorkspaceId: "uw-1", userId: "member-id", role: "editor" };
-			jest.mocked(userWorkspaceRepository.findMembersByWorkspace).mockResolvedValue([mockMember] as any);
-			jest.mocked(workspaceRepository.findById).mockResolvedValue({ ...mockWorkspace, ownerId: "owner-id" });
-			jest.mocked(userWorkspaceRepository.delete).mockResolvedValue(undefined as any);
+			const mockMember = {
+				userWorkspaceId: "uw-1",
+				userId: "member-id",
+				role: "editor",
+			};
+			jest
+				.mocked(userWorkspaceRepository.findMembersByWorkspace)
+				.mockResolvedValue([mockMember] as any);
+			jest
+				.mocked(workspaceRepository.findById)
+				.mockResolvedValue({ ...mockWorkspace, ownerId: "owner-id" });
+			jest
+				.mocked(userWorkspaceRepository.delete)
+				.mockResolvedValue(undefined as any);
 
 			await workspaceController.removeMember(mockReq, mockRes, next);
 
@@ -149,12 +204,23 @@ describe("WorkspaceController", () => {
 		});
 
 		it("should throw ForbiddenError if non-owner tries to remove another member", async () => {
-			mockReq.params = { workspaceId: "workspace-123", userWorkspaceId: "uw-1" };
+			mockReq.params = {
+				workspaceId: "workspace-123",
+				userWorkspaceId: "uw-1",
+			};
 			mockReq.userId = "non-owner-id";
 
-			const mockMember = { userWorkspaceId: "uw-1", userId: "member-id", role: "editor" };
-			jest.mocked(userWorkspaceRepository.findMembersByWorkspace).mockResolvedValue([mockMember] as any);
-			jest.mocked(workspaceRepository.findById).mockResolvedValue({ ...mockWorkspace, ownerId: "owner-id" });
+			const mockMember = {
+				userWorkspaceId: "uw-1",
+				userId: "member-id",
+				role: "editor",
+			};
+			jest
+				.mocked(userWorkspaceRepository.findMembersByWorkspace)
+				.mockResolvedValue([mockMember] as any);
+			jest
+				.mocked(workspaceRepository.findById)
+				.mockResolvedValue({ ...mockWorkspace, ownerId: "owner-id" });
 
 			await workspaceController.removeMember(mockReq, mockRes, next);
 

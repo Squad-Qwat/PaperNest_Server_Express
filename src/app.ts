@@ -1,11 +1,16 @@
 import cors from "cors";
 import express, { type Application } from "express";
+import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
+import { RATE_LIMIT_CONFIG } from "./config/constants";
 import { env } from "./config/env";
+import templateController from "./controllers/templateController";
+import { authenticate } from "./middlewares/auth";
 import { errorHandler, notFound } from "./middlewares/errorHandler";
 import { globalRateLimiter } from "./middlewares/rateLimiter";
-import { sanitize } from "./middlewares/validation";
+import { sanitize, validate } from "./middlewares/validation";
+import { templateValidator } from "./models/validators/templateValidator";
 import aiRoutes from "./routes/ai.routes";
 import authRoutes from "./routes/auth";
 import citationRoutes from "./routes/citations";
@@ -17,16 +22,10 @@ import notificationRoutes from "./routes/notifications";
 import reviewRoutes from "./routes/reviews";
 import semanticScholarRoutes from "./routes/semanticScholar";
 import uploadRoutes from "./routes/uploadRoutes";
-import templateController from "./controllers/templateController";
-import { authenticate } from "./middlewares/auth";
 import userRoutes from "./routes/users";
 import webhookRoutes from "./routes/webhooks";
 import workspaceRoutes from "./routes/workspaces";
 import logger from "./utils/logger";
-import { validate } from "./middlewares/validation";
-import { templateValidator } from "./models/validators/templateValidator";
-import rateLimit from "express-rate-limit";
-import { RATE_LIMIT_CONFIG } from "./config/constants";
 
 const app: Application = express();
 app.set("trust proxy", 1);
@@ -78,13 +77,18 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 
 const templateLimiter = rateLimit(RATE_LIMIT_CONFIG.templates);
-app.get("/api/templates", authenticate, templateLimiter, templateController.getTemplates);
+app.get(
+	"/api/templates",
+	authenticate,
+	templateLimiter,
+	templateController.getTemplates,
+);
 app.get(
 	"/api/templates/:templateId",
 	authenticate,
 	templateLimiter,
 	validate({ params: templateValidator.getTemplateById.params }),
-	templateController.getTemplateById
+	templateController.getTemplateById,
 );
 
 app.use("/api/workspaces", workspaceRoutes);

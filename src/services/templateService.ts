@@ -1,9 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
+import { TEMPLATE_LIMITS } from "../config/constants";
 import type { TemplateMetadata } from "../types";
 import logger from "../utils/logger";
 import { getTemplatesDir } from "../utils/paths";
-import { TEMPLATE_LIMITS } from "../config/constants";
 
 export class TemplateService {
 	private templatesDir = getTemplatesDir();
@@ -11,7 +11,7 @@ export class TemplateService {
 	async listTemplates(): Promise<TemplateMetadata[]> {
 		try {
 			await fs.mkdir(this.templatesDir, { recursive: true });
-			
+
 			const folders = await fs.readdir(this.templatesDir);
 			const templates: TemplateMetadata[] = [];
 
@@ -28,7 +28,9 @@ export class TemplateService {
 						});
 					}
 				} catch (e) {
-					logger.debug(`Skipping folder ${folder} in templates: No valid meta.json found`);
+					logger.debug(
+						`Skipping folder ${folder} in templates: No valid meta.json found`,
+					);
 				}
 			}
 			return templates;
@@ -41,7 +43,7 @@ export class TemplateService {
 	async getTemplateContent(id: string): Promise<string> {
 		const templates = await this.listTemplates();
 		const metadata = templates.find((t) => t.id === id);
-		
+
 		if (!metadata) {
 			throw new Error(`Template with id ${id} not found`);
 		}
@@ -55,10 +57,12 @@ export class TemplateService {
 		}
 	}
 
-	async getTemplateAssets(id: string): Promise<{ name: string; path: string }[]> {
+	async getTemplateAssets(
+		id: string,
+	): Promise<{ name: string; path: string }[]> {
 		const templates = await this.listTemplates();
 		const metadata = templates.find((t) => t.id === id);
-		
+
 		if (!metadata) {
 			throw new Error(`Template with id ${id} not found`);
 		}
@@ -82,7 +86,9 @@ export class TemplateService {
 
 					assetCount++;
 					if (assetCount > TEMPLATE_LIMITS.MAX_ASSETS_COUNT) {
-						logger.warn(`Template ${id} exceeds max asset count (${TEMPLATE_LIMITS.MAX_ASSETS_COUNT})`);
+						logger.warn(
+							`Template ${id} exceeds max asset count (${TEMPLATE_LIMITS.MAX_ASSETS_COUNT})`,
+						);
 						continue;
 					}
 
@@ -96,15 +102,19 @@ export class TemplateService {
 					}
 
 					const stat = await fs.stat(entryPath);
-					
+
 					if (stat.size > TEMPLATE_LIMITS.MAX_ASSET_SIZE) {
-						logger.warn(`Asset ${entry.name} exceeds size limit (${stat.size} > ${TEMPLATE_LIMITS.MAX_ASSET_SIZE})`);
+						logger.warn(
+							`Asset ${entry.name} exceeds size limit (${stat.size} > ${TEMPLATE_LIMITS.MAX_ASSET_SIZE})`,
+						);
 						continue;
 					}
 
 					totalSize += stat.size;
 					if (totalSize > TEMPLATE_LIMITS.MAX_TEMPLATE_SIZE) {
-						logger.warn(`Template ${id} total size exceeds limit (${totalSize} > ${TEMPLATE_LIMITS.MAX_TEMPLATE_SIZE})`);
+						logger.warn(
+							`Template ${id} total size exceeds limit (${totalSize} > ${TEMPLATE_LIMITS.MAX_TEMPLATE_SIZE})`,
+						);
 						continue;
 					}
 

@@ -10,7 +10,10 @@ export function getProjectRoot(): string {
 	// In production, this file is at dist/utils/paths.js
 	// __dirname will be {projectRoot}/dist/utils
 	// Going up 2 levels gets us to projectRoot
-	if (env.NODE_ENV === "production" || process.env.npm_lifecycle_event === "start") {
+	if (
+		env.NODE_ENV === "production" ||
+		process.env.npm_lifecycle_event === "start"
+	) {
 		// We're running from dist
 		return path.join(__dirname, "..", "..");
 	}
@@ -26,7 +29,10 @@ export function getProjectRoot(): string {
  */
 export function getTemplatesDir(): string {
 	const projectRoot = getProjectRoot();
-	const baseDir = (env.NODE_ENV === "production" || process.env.npm_lifecycle_event === "start") ? "dist" : "src";
+	const baseDir =
+		env.NODE_ENV === "production" || process.env.npm_lifecycle_event === "start"
+			? "dist"
+			: "src";
 	return path.join(projectRoot, baseDir, "templates", "files");
 }
 

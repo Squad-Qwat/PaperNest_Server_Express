@@ -33,9 +33,14 @@ describe("UserWorkspaceRepository", () => {
 	describe("findWorkspacesByUser", () => {
 		it("should return workspaces for a user with specific status", async () => {
 			const collection = __mockFirestore.collection("userWorkspaces");
-			collection.setMockDocs([{ ...mockData, userWorkspaceId: mockUserWorkspaceId }]);
+			collection.setMockDocs([
+				{ ...mockData, userWorkspaceId: mockUserWorkspaceId },
+			]);
 
-			const result = await userWorkspaceRepository.findWorkspacesByUser("user-123", "accepted");
+			const result = await userWorkspaceRepository.findWorkspacesByUser(
+				"user-123",
+				"accepted",
+			);
 
 			expect(result).toHaveLength(1);
 			expect(result[0].workspaceId).toBe("workspace-123");
@@ -45,9 +50,16 @@ describe("UserWorkspaceRepository", () => {
 	describe("findPendingInvitations", () => {
 		it("should return pending invitations for a user", async () => {
 			const collection = __mockFirestore.collection("userWorkspaces");
-			collection.setMockDocs([{ ...mockData, invitationStatus: "pending", userWorkspaceId: "inv-123" }]);
+			collection.setMockDocs([
+				{
+					...mockData,
+					invitationStatus: "pending",
+					userWorkspaceId: "inv-123",
+				},
+			]);
 
-			const result = await userWorkspaceRepository.findPendingInvitations("user-123");
+			const result =
+				await userWorkspaceRepository.findPendingInvitations("user-123");
 
 			expect(result).toHaveLength(1);
 			expect(result[0].invitationStatus).toBe("pending");
@@ -56,10 +68,19 @@ describe("UserWorkspaceRepository", () => {
 
 	describe("updateInvitationStatus", () => {
 		it("should update invitation status successfully", async () => {
-			const docRef = __mockFirestore.collection("userWorkspaces").doc(mockUserWorkspaceId);
-			await docRef.set({ ...mockData, invitationStatus: "pending", userWorkspaceId: mockUserWorkspaceId });
+			const docRef = __mockFirestore
+				.collection("userWorkspaces")
+				.doc(mockUserWorkspaceId);
+			await docRef.set({
+				...mockData,
+				invitationStatus: "pending",
+				userWorkspaceId: mockUserWorkspaceId,
+			});
 
-			const result = await userWorkspaceRepository.updateInvitationStatus(mockUserWorkspaceId, "accepted");
+			const result = await userWorkspaceRepository.updateInvitationStatus(
+				mockUserWorkspaceId,
+				"accepted",
+			);
 
 			expect(result.invitationStatus).toBe("accepted");
 		});
@@ -67,10 +88,15 @@ describe("UserWorkspaceRepository", () => {
 
 	describe("updateRole", () => {
 		it("should update user role in workspace", async () => {
-			const docRef = __mockFirestore.collection("userWorkspaces").doc(mockUserWorkspaceId);
+			const docRef = __mockFirestore
+				.collection("userWorkspaces")
+				.doc(mockUserWorkspaceId);
 			await docRef.set({ ...mockData, userWorkspaceId: mockUserWorkspaceId });
 
-			const result = await userWorkspaceRepository.updateRole(mockUserWorkspaceId, "owner");
+			const result = await userWorkspaceRepository.updateRole(
+				mockUserWorkspaceId,
+				"owner",
+			);
 
 			expect(result.role).toBe("owner");
 		});
@@ -79,15 +105,23 @@ describe("UserWorkspaceRepository", () => {
 	describe("getUserRole", () => {
 		it("should return the user's role in a workspace", async () => {
 			const collection = __mockFirestore.collection("userWorkspaces");
-			collection.setMockDocs([{ ...mockData, userWorkspaceId: mockUserWorkspaceId }]);
+			collection.setMockDocs([
+				{ ...mockData, userWorkspaceId: mockUserWorkspaceId },
+			]);
 
-			const role = await userWorkspaceRepository.getUserRole("user-123", "workspace-123");
+			const role = await userWorkspaceRepository.getUserRole(
+				"user-123",
+				"workspace-123",
+			);
 
 			expect(role).toBe("editor");
 		});
 
 		it("should return null if user is not in workspace", async () => {
-			const role = await userWorkspaceRepository.getUserRole("other", "workspace-123");
+			const role = await userWorkspaceRepository.getUserRole(
+				"other",
+				"workspace-123",
+			);
 			expect(role).toBeNull();
 		});
 	});

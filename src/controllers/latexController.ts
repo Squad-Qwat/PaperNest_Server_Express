@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import { latexService } from "../services/latexService";
 import documentFileRepository from "../repositories/documentFileRepository";
+import { latexService } from "../services/latexService";
 import logger from "../utils/logger";
 
 /**

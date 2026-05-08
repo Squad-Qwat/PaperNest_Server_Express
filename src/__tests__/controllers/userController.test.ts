@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import userController from "../../controllers/userController";
 import userRepository from "../../repositories/userRepository";
 import { mockUser, mockUsers } from "../../tests/fixtures";
@@ -42,20 +42,30 @@ describe("UserController", () => {
 			jest.mocked(userRepository.findById).mockResolvedValue(mockUser);
 			mockReq.params = { userId: "user-123" };
 
-			await userController.getUserById(mockReq as Request, mockRes as Response, next);
+			await userController.getUserById(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
 
 			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-				success: true,
-				data: { user: mockUser },
-			}));
+			expect(mockRes.json).toHaveBeenCalledWith(
+				expect.objectContaining({
+					success: true,
+					data: { user: mockUser },
+				}),
+			);
 		});
 
 		it("should throw NotFoundError if user not found", async () => {
 			jest.mocked(userRepository.findById).mockResolvedValue(null);
 			mockReq.params = { userId: "non-existent" };
 
-			await userController.getUserById(mockReq as Request, mockRes as Response, next);
+			await userController.getUserById(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
 
 			expect(next).toHaveBeenCalledWith(expect.any(Error));
 			const error = next.mock.calls[0][0] as any;
@@ -68,16 +78,22 @@ describe("UserController", () => {
 			jest.mocked(userRepository.search).mockResolvedValue(mockUsers);
 			mockReq.query = { q: "john" };
 
-			await userController.searchUsers(mockReq as Request, mockRes as Response, next);
+			await userController.searchUsers(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
 
 			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-				success: true,
-				data: expect.objectContaining({
-					users: mockUsers,
-					count: mockUsers.length,
+			expect(mockRes.json).toHaveBeenCalledWith(
+				expect.objectContaining({
+					success: true,
+					data: expect.objectContaining({
+						users: mockUsers,
+						count: mockUsers.length,
+					}),
 				}),
-			}));
+			);
 		});
 	});
 
@@ -91,20 +107,30 @@ describe("UserController", () => {
 			mockReq.userId = "user-123";
 			mockReq.body = updates;
 
-			await userController.updateUser(mockReq as Request, mockRes as Response, next);
+			await userController.updateUser(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
 
 			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-				success: true,
-				data: { user: updatedUser },
-			}));
+			expect(mockRes.json).toHaveBeenCalledWith(
+				expect.objectContaining({
+					success: true,
+					data: { user: updatedUser },
+				}),
+			);
 		});
 
 		it("should throw error if updating another user's profile", async () => {
 			mockReq.params = { userId: "other-user" };
 			mockReq.userId = "user-123";
 
-			await userController.updateUser(mockReq as Request, mockRes as Response, next);
+			await userController.updateUser(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
 
 			expect(next).toHaveBeenCalledWith(expect.any(Error));
 			const error = next.mock.calls[0][0] as any;
@@ -118,13 +144,19 @@ describe("UserController", () => {
 			mockReq.params = { userId: "user-123" };
 			mockReq.userId = "user-123";
 
-			await userController.deleteUser(mockReq as Request, mockRes as Response, next);
+			await userController.deleteUser(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
 
 			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-				success: true,
-				message: "User deleted successfully",
-			}));
+			expect(mockRes.json).toHaveBeenCalledWith(
+				expect.objectContaining({
+					success: true,
+					message: "User deleted successfully",
+				}),
+			);
 		});
 	});
 });

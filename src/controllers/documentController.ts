@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
+import fs from "fs/promises";
+import path from "path";
 import { asyncHandler } from "../middlewares/errorHandler";
 import documentBodyRepository from "../repositories/documentBodyRepository";
+import documentFileRepository from "../repositories/documentFileRepository";
 import documentRepository from "../repositories/documentRepository";
 import liveblocksWebhookService from "../services/liveblocksWebhookService";
 import permissionService from "../services/permissionService";
-import { templateService } from "../services/templateService";
 import { StorageService } from "../services/StorageService";
-import documentFileRepository from "../repositories/documentFileRepository";
-import fs from "fs/promises";
-import path from "path";
+import { templateService } from "../services/templateService";
 import { NotFoundError } from "../utils/errorTypes";
 import logger from "../utils/logger";
 import {
@@ -25,17 +25,30 @@ import {
 export const createDocument = asyncHandler(
 	async (req: Request, res: Response) => {
 		const workspaceId = req.params.workspaceId as string;
-		const { title, description, content: bodyContent, savedContent, message, templateId } = req.body;
+		const {
+			title,
+			description,
+			content: bodyContent,
+			savedContent,
+			message,
+			templateId,
+		} = req.body;
 		const userId = req.userId!;
 
-		logger.info("Create document request", { workspaceId, title, userId, templateId });
+		logger.info("Create document request", {
+			workspaceId,
+			title,
+			userId,
+			templateId,
+		});
 
 		let content = bodyContent || savedContent || "";
 
 		// If templateId is provided, fetch content from template
 		if (templateId) {
 			try {
-				const templateContent = await templateService.getTemplateContent(templateId);
+				const templateContent =
+					await templateService.getTemplateContent(templateId);
 				content = templateContent;
 				logger.info(`Initialized document with template: ${templateId}`);
 			} catch (templateError) {
@@ -74,40 +87,52 @@ export const createDocument = asyncHandler(
 		if (templateId) {
 			try {
 				const assets = await templateService.getTemplateAssets(templateId);
-				
+
 				// Upload assets in parallel to avoid timeouts
-				await Promise.all(assets.map(async (asset) => {
-					const buffer = await fs.readFile(asset.path);
-					const fileExtension = path.extname(asset.name).toLowerCase();
-					
-					// Simple MIME mapping
-					let contentType = "application/octet-stream";
-					if (fileExtension === ".cls") contentType = "text/plain";
-					else if (fileExtension === ".sty") contentType = "text/plain";
-					else if (fileExtension === ".bib") contentType = "text/plain";
-					else if (fileExtension === ".bst") contentType = "text/plain";
-					else if (fileExtension === ".png") contentType = "image/png";
-					else if (fileExtension === ".jpg" || fileExtension === ".jpeg") contentType = "image/jpeg";
-					else if (fileExtension === ".pdf") contentType = "application/pdf";
+				await Promise.all(
+					assets.map(async (asset) => {
+						const buffer = await fs.readFile(asset.path);
+						const fileExtension = path.extname(asset.name).toLowerCase();
 
-					// Upload to R2 with organized key structure
-					const normalizedName = asset.name.split(path.sep).join("/");
-					const r2Key = `latex-assets/${document.documentId}/${normalizedName}`;
-					const url = await StorageService.uploadBuffer(buffer, r2Key, contentType);
+						// Simple MIME mapping
+						let contentType = "application/octet-stream";
+						if (fileExtension === ".cls") contentType = "text/plain";
+						else if (fileExtension === ".sty") contentType = "text/plain";
+						else if (fileExtension === ".bib") contentType = "text/plain";
+						else if (fileExtension === ".bst") contentType = "text/plain";
+						else if (fileExtension === ".png") contentType = "image/png";
+						else if (fileExtension === ".jpg" || fileExtension === ".jpeg")
+							contentType = "image/jpeg";
+						else if (fileExtension === ".pdf") contentType = "application/pdf";
 
-					// Register in Firestore sub-collection
-					await documentFileRepository.addFile(document.documentId, {
-						name: normalizedName,
-						type: contentType,
-						url,
-						r2Key,
-						size: buffer.length,
-					});
-					
-					logger.info(`Template asset ${asset.name} uploaded for document ${document.documentId}`);
-				}));
+						// Upload to R2 with organized key structure
+						const normalizedName = asset.name.split(path.sep).join("/");
+						const r2Key = `latex-assets/${document.documentId}/${normalizedName}`;
+						const url = await StorageService.uploadBuffer(
+							buffer,
+							r2Key,
+							contentType,
+						);
+
+						// Register in Firestore sub-collection
+						await documentFileRepository.addFile(document.documentId, {
+							name: normalizedName,
+							type: contentType,
+							url,
+							r2Key,
+							size: buffer.length,
+						});
+
+						logger.info(
+							`Template asset ${asset.name} uploaded for document ${document.documentId}`,
+						);
+					}),
+				);
 			} catch (assetError) {
-				logger.error(`Error uploading template assets for ${templateId}:`, assetError);
+				logger.error(
+					`Error uploading template assets for ${templateId}:`,
+					assetError,
+				);
 				// We don't fail document creation if assets fail, but it will affect compilation
 			}
 		}
