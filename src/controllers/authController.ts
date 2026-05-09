@@ -9,6 +9,8 @@ import {
 	successResponse,
 } from "../utils/responseFormatter";
 
+
+
 /**
  * Register a new user
  * POST /api/auth/register

@@ -26,6 +26,10 @@ import userRoutes from "./routes/users";
 import webhookRoutes from "./routes/webhooks";
 import workspaceRoutes from "./routes/workspaces";
 import logger from "./utils/logger";
+import { successResponse } from "./utils/responseFormatter";
+
+
+
 
 const app: Application = express();
 app.set("trust proxy", 1);
@@ -58,20 +62,30 @@ app.use(sanitize);
 app.use("/api/webhooks", webhookRoutes);
 
 app.get("/health", (_req, res) => {
-	res.json({
-		status: "ok",
-		timestamp: new Date().toISOString(),
-		environment: env.NODE_ENV,
-	});
+	return successResponse(
+		res,
+		{
+			status: "ok",
+			timestamp: new Date().toISOString(),
+			environment: env.NODE_ENV,
+		},
+		"Service is healthy",
+	);
 });
 
+
 app.get("/api", (_req, res) => {
-	res.json({
-		message: "PaperNest API",
-		version: "1.0.0",
-		docs: "/api/docs",
-	});
+	return successResponse(
+		res,
+		{
+			message: "PaperNest API",
+			version: "1.0.0",
+			docs: "/api/docs",
+		},
+		"API information retrieved",
+	);
 });
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -103,21 +117,24 @@ app.use("/api/latex", latexRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/semantic-scholar", semanticScholarRoutes);
 
-// Socket.IO Diagnostic Route (to identify the source of the 404s)
 app.all("/socket.io/", (req, res) => {
 	logger.info(`[SocketDiagnostic] Request received from ${req.ip}`);
 	logger.info(`[SocketDiagnostic] User-Agent: ${req.get("User-Agent")}`);
 	logger.info(`[SocketDiagnostic] Method: ${req.method}`);
 	logger.info(`[SocketDiagnostic] Query: ${JSON.stringify(req.query)}`);
 
-	// Return consistent response for polling/EIO
-	res.json({
-		sid: "diagnostic-session",
-		upgrades: [],
-		pingInterval: 25000,
-		pingTimeout: 5000,
-	});
+	return successResponse(
+		res,
+		{
+			sid: "diagnostic-session",
+			upgrades: [],
+			pingInterval: 25000,
+			pingTimeout: 5000,
+		},
+		"Socket.IO diagnostic info",
+	);
 });
+
 
 // Handle 404
 app.use(notFound);

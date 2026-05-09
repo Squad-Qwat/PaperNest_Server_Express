@@ -5,20 +5,11 @@ import os from "os";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { env } from "../config/env";
+import type { LatexCompileOptions, LatexCompileResult } from "../types/latex.types";
+
 import logger from "../utils/logger";
 
-export interface LatexCompileOptions {
-	content: string;
-	mainFileName?: string;
-	assets?: Array<{ name: string; url: string; r2Key?: string }>;
-	engine?: "tectonic" | "pdflatex";
-}
 
-export interface LatexCompileResult {
-	pdf?: Buffer;
-	log: string;
-	status: number;
-}
 
 /**
  * Service to handle LaTeX compilation using Tectonic.

@@ -17,6 +17,8 @@ import {
 	successResponse,
 } from "../utils/responseFormatter";
 
+
+
 /**
  * Create a new document in workspace
  * POST /api/workspaces/:workspaceId/documents
@@ -77,11 +79,13 @@ export const createDocument = asyncHandler(
 			versionNumber: 1,
 		});
 
-		// Update document with version reference (savedContent was already set in create)
-		const updatedDocument = await documentRepository.update(
+		// Update document with version reference
+		const updatedDocument = await documentRepository.updateContent(
 			document.documentId,
-			{ currentVersionId: version.documentBodyId },
+			content || "",
+			version.documentBodyId,
 		);
+
 
 		// If templateId is provided, also handle assets (cls, sty, bib files)
 		if (templateId) {

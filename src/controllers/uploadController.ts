@@ -3,21 +3,21 @@ import type { Request, Response } from "express";
 import { db } from "../config/firebase";
 import { StorageService } from "../services/StorageService";
 import { FileManagementService } from "../services/FileManagementService";
+import { errorResponse, successResponse } from "../utils/responseFormatter";
+
 
 export const getPresignedUrl = async (
 	req: Request,
 	res: Response,
-): Promise<void> => {
+): Promise<any> => {
+
 	try {
 		const { filename, contentType, folder } = req.body;
 
 		if (!filename || !contentType) {
-			res.status(400).json({
-				success: false,
-				message: "Filename and contentType are required",
-			});
-			return;
+			return errorResponse(res, "Filename and contentType are required", 400);
 		}
+
 
 		// Default to 'latex-assets' if folder isn't provided
 		const targetFolder = folder || "latex-assets";
@@ -28,28 +28,29 @@ export const getPresignedUrl = async (
 			targetFolder,
 		);
 
-		res.status(200).json({
-			success: true,
-			data: result,
-		});
+		return successResponse(res, result, "Pre-signed URL generated successfully");
+
 	} catch (error: any) {
-		res.status(500).json({
-			success: false,
-			message: error.message || "Failed to generate pre-signed URL",
-		});
+		return errorResponse(
+			res,
+			error.message || "Failed to generate pre-signed URL",
+			500,
+		);
 	}
+
 };
 
 export const proxyDownload = async (
 	req: Request,
 	res: Response,
-): Promise<void> => {
+): Promise<any> => {
+
 	try {
 		const url = req.query.url as string;
 		if (!url) {
-			res.status(400).json({ success: false, message: "URL is required" });
-			return;
+			return errorResponse(res, "URL is required", 400);
 		}
+
 
 		console.log(`[ProxyDownload] Request: ${url}`);
 
@@ -112,29 +113,29 @@ export const proxyDownload = async (
 		const message = error.response?.data?.toString() || error.message;
 		console.error(`[ProxyDownload] Error ${status}:`, message);
 
-		res.status(status).json({
-			success: false,
-			message: `Failed to proxy asset download: ${message}`,
-			upstreamStatus: status,
-		});
+		return errorResponse(
+			res,
+			`Failed to proxy asset download: ${message}`,
+			status,
+			[{ upstreamStatus: status }],
+		);
 	}
+
 };
 
 export const deleteFile = async (
 	req: Request,
 	res: Response,
-): Promise<void> => {
+): Promise<any> => {
+
 	try {
 		const documentId = req.params.documentId as string;
 		const fileId = req.params.fileId as string;
 
 		if (!documentId || !fileId) {
-			res.status(400).json({
-				success: false,
-				message: "Document ID and File ID are required",
-			});
-			return;
+			return errorResponse(res, "Document ID and File ID are required", 400);
 		}
+
 
 		console.log(
 			`[DeleteFile] Request to delete file ${fileId} from document ${documentId}`,
@@ -156,35 +157,37 @@ export const deleteFile = async (
 			}
 		}
 
-		res.json({
-			success: true,
-			message: "File deleted successfully from R2 and Firestore",
-		});
+		return successResponse(
+			res,
+			null,
+			"File deleted successfully from R2 and Firestore",
+		);
+
 	} catch (error: any) {
 		console.error(`[DeleteFile] Error:`, error.message);
-		res.status(500).json({
-			success: false,
-			message: "Failed to delete file",
-		});
+		return errorResponse(res, "Failed to delete file", 500);
 	}
+
 };
 
 export const renameFile = async (
 	req: Request,
 	res: Response,
-): Promise<void> => {
+): Promise<any> => {
+
 	try {
 		const documentId = req.params.documentId as string;
 		const fileId = req.params.fileId as string;
 		const { newName } = req.body;
 
 		if (!documentId || !fileId || !newName) {
-			res.status(400).json({
-				success: false,
-				message: "Document ID, File ID, and New Name are required",
-			});
-			return;
+			return errorResponse(
+				res,
+				"Document ID, File ID, and New Name are required",
+				400,
+			);
 		}
+
 
 		console.log(
 			`[RenameFile] Request to rename file ${fileId} in document ${documentId} to ${newName}`,
@@ -192,15 +195,11 @@ export const renameFile = async (
 
 		await FileManagementService.updateFileName(documentId, fileId, newName);
 
-		res.json({
-			success: true,
-			message: "File renamed successfully",
-		});
+		return successResponse(res, null, "File renamed successfully");
+
 	} catch (error: any) {
 		console.error(`[RenameFile] Error:`, error.message);
-		res.status(500).json({
-			success: false,
-			message: "Failed to rename file",
-		});
+		return errorResponse(res, "Failed to rename file", 500);
 	}
+
 };

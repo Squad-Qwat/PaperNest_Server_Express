@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../config/constants";
 import { ragService } from "../services/ai/rag/rag.service";
+import { errorResponse, successResponse } from "../utils/responseFormatter";
+
 
 /**
  * Controller for RAG indexing operations
@@ -10,11 +12,10 @@ export const indexPDF = async (req: Request, res: Response): Promise<void> => {
 		const { documentId, fileKey } = req.body;
 
 		if (!documentId || !fileKey) {
-			res
-				.status(HTTP_STATUS.BAD_REQUEST)
-				.json({ error: "documentId and fileKey are required" });
+			errorResponse(res, "documentId and fileKey are required", HTTP_STATUS.BAD_REQUEST);
 			return;
 		}
+
 
 		// Run indexing in background to not block the response
 		// In a production environment, this should be a background job / queue
@@ -30,16 +31,21 @@ export const indexPDF = async (req: Request, res: Response): Promise<void> => {
 				);
 			});
 
-		res.status(HTTP_STATUS.OK).json({
-			message: "PDF indexing started in background",
-			documentId,
-			fileKey,
-		});
+		successResponse(
+			res,
+			{ documentId, fileKey },
+			"PDF indexing started in background",
+			HTTP_STATUS.OK,
+		);
+
 	} catch (error: any) {
 		console.error("[RAGController] Error starting indexing:", error);
-		res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-			error: "Failed to start indexing",
-			details: error.message,
-		});
+		errorResponse(
+			res,
+			"Failed to start indexing",
+			HTTP_STATUS.INTERNAL_SERVER_ERROR,
+			error instanceof Error ? [error.message] : undefined,
+		);
+
 	}
 };

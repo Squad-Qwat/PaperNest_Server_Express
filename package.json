@@ -3,9 +3,11 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"start": "npx ts-node dist/server.js",
+		"start": "node dist/server.js",
+
 		"dev": "nodemon",
-		"build": "tsc && node scripts/copy-templates.js",
+		"build": "tsc && tsc-alias && node scripts/copy-templates.js",
+
 		"clean": "rimraf dist",
 		"prebuild": "pnpm run clean",
 		"test": "jest",
@@ -66,6 +68,8 @@
 		"supertest": "^7.1.4",
 		"ts-jest": "^29.4.6",
 		"ts-node": "^10.9.2",
+		"tsc-alias": "^1.8.17",
+		"tsconfig-paths": "^4.2.0",
 		"typescript": "^5.9.3"
 	}
 }

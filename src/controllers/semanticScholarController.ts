@@ -2,7 +2,8 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../middlewares/errorHandler";
 import { semanticScholarService } from "../services/SemanticScholarService";
 import logger from "../utils/logger";
-import { successResponse } from "../utils/responseFormatter";
+import { errorResponse, successResponse } from "../utils/responseFormatter";
+
 
 /**
  * Search papers on Semantic Scholar
@@ -13,10 +14,9 @@ export const searchPapers = asyncHandler(
 		const { q, limit, offset } = req.query;
 
 		if (!q) {
-			return res
-				.status(400)
-				.json({ status: "error", message: 'Query parameter "q" is required' });
+			return errorResponse(res, 'Query parameter "q" is required', 400);
 		}
+
 
 		logger.info(`[SemanticScholarController] Searching papers for: "${q}"`);
 

@@ -1,12 +1,18 @@
 import type { Request, Response } from "express";
 import { agentFactory } from "../services/ai/agents/agent.factory";
 import { validateAICredentials } from "../services/ai/config";
-import type { ToolResult } from "../services/ai/types/agent.types";
+import type { ToolResult } from "../types/ai/agent.types";
+
+
+
+import { errorResponse } from "../utils/responseFormatter";
+
 
 export const streamAIResponse = async (
 	req: Request,
 	res: Response,
-): Promise<void> => {
+): Promise<any> => {
+
 	try {
 		const {
 			message,
@@ -25,17 +31,19 @@ export const streamAIResponse = async (
 
 		const credentialsCheck = validateAICredentials(providerId);
 		if (!credentialsCheck.valid) {
-			res.status(500).json({
-				error: "AI service not configured",
-				details: credentialsCheck.error,
-			});
-			return;
+			return errorResponse(
+				res,
+				"AI service not configured",
+				500,
+				credentialsCheck.error ? [credentialsCheck.error] : undefined,
+			);
 		}
 
+
 		if (!message || typeof message !== "string") {
-			res.status(400).json({ error: "Message is required" });
-			return;
+			return errorResponse(res, "Message is required", 400);
 		}
+
 
 		// Set headers for Server-Sent Events (SSE)
 		res.writeHead(200, {
@@ -117,11 +125,14 @@ export const streamAIResponse = async (
 	} catch (error) {
 		console.error("[AI Stream] Fatal error:", error);
 		if (!res.headersSent) {
-			res.status(500).json({
-				error: "Failed to initialize streaming",
-				details: error instanceof Error ? error.message : "Unknown error",
-			});
+			errorResponse(
+				res,
+				"Failed to initialize streaming",
+				500,
+				error instanceof Error ? [error.message] : undefined,
+			);
 		} else if (!res.writableEnded && res.writable) {
+
 			try {
 				res.write(
 					`data: ${JSON.stringify({

@@ -1,9 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
 import { TEMPLATE_LIMITS } from "../config/constants";
-import type { TemplateMetadata } from "../types";
+
+
 import logger from "../utils/logger";
 import { getTemplatesDir } from "../utils/paths";
+import { TemplateMetadata } from "@/types";
 
 export class TemplateService {
 	private templatesDir = getTemplatesDir();

@@ -3,6 +3,12 @@ import documentFileRepository from "../repositories/documentFileRepository";
 import permissionService from "../services/permissionService";
 import { latexService } from "../services/latexService";
 import logger from "../utils/logger";
+import {
+	errorResponse,
+	forbiddenResponse,
+	successResponse,
+} from "../utils/responseFormatter";
+
 
 /**
  * Controller to handle LaTeX-related requests.
@@ -15,8 +21,9 @@ export const compileLatex = async (
 	const { content, mainFileName, assets, engine, documentId } = req.body;
 
 	if (!content) {
-		return res.status(400).json({ error: "LaTeX content is required" });
+		return errorResponse(res, "LaTeX content is required", 400);
 	}
+
 
 	try {
 		const userId = (req as any).userId;
@@ -42,8 +49,9 @@ export const compileLatex = async (
 				logger.warn(
 					`[LatexController] User ${userId} unauthorized for document ${documentId}`,
 				);
-				return res.status(403).json({ error: "Unauthorized access to document" });
+				return forbiddenResponse(res, "Unauthorized access to document");
 			}
+
 
 			try {
 				const dbFiles = await documentFileRepository.findByDocument(documentId);
@@ -80,23 +88,27 @@ export const compileLatex = async (
 
 			// Let's send a JSON response to handle both PDF and Logs in a structured way.
 			// This is better for the frontend to handle potential errors and showing logs.
-			return res.json({
-				pdf: result.pdf.toString("base64"),
-				log: result.log,
-				status: result.status,
-			});
+			return successResponse(
+				res,
+				{
+					pdf: result.pdf.toString("base64"),
+					log: result.log,
+					status: result.status,
+				},
+				"Compilation successful",
+			);
 		} else {
 			// Compilation failed to produce a PDF, but we still return logs
-			return res.status(422).json({
-				error: "Compilation failed",
-				log: result.log,
-				status: result.status,
-			});
+			return errorResponse(res, "Compilation failed", 422, [
+				{ log: result.log, status: result.status },
+			]);
 		}
+
 	} catch (error: any) {
 		logger.error(
 			`[LatexController] Error during compilation: ${error.message}`,
 		);
-		return res.status(500).json({ error: "Internal Server Error" });
+		return errorResponse(res, "Internal Server Error", 500);
 	}
+
 };
