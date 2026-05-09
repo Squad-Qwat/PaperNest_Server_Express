@@ -1,4 +1,6 @@
+import { jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
+
 
 // Extended Request type with user property
 interface RequestWithUser extends Request {
@@ -31,14 +33,16 @@ export const mockRequest = (
 // Mock Express Response
 export const mockResponse = (): Partial<Response> => {
 	const res: Partial<Response> = {
-		status: jest.fn().mockReturnThis(),
-		json: jest.fn().mockReturnThis(),
-		send: jest.fn().mockReturnThis(),
-		sendStatus: jest.fn().mockReturnThis(),
-		setHeader: jest.fn().mockReturnThis(),
-		cookie: jest.fn().mockReturnThis(),
-		clearCookie: jest.fn().mockReturnThis(),
+		status: jest.fn().mockReturnThis() as any,
+		json: jest.fn().mockReturnThis() as any,
+		send: jest.fn().mockReturnThis() as any,
+		sendStatus: jest.fn().mockReturnThis() as any,
+		setHeader: jest.fn().mockReturnThis() as any,
+		cookie: jest.fn().mockReturnThis() as any,
+		clearCookie: jest.fn().mockReturnThis() as any,
+		end: jest.fn().mockReturnThis() as any,
 	};
+
 	return res;
 };
 
