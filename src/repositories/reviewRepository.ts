@@ -165,7 +165,7 @@ export class ReviewRepository {
 		};
 
 		if (message) {
-			updateData.message = message;
+			updateData.lecturerMessage = message;
 		}
 
 		return this.update(reviewId, updateData);

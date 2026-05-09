@@ -41,6 +41,11 @@ export const createReview = asyncHandler(
 		if (!lecturer) {
 			throw new NotFoundError("Lecturer not found");
 		}
+		logger.debug("Lecturer role check", {
+			lecturerUserId,
+			foundRole: lecturer.role,
+			name: lecturer.name,
+		});
 		if (lecturer.role !== "Lecturer") {
 			throw new BadRequestError("Selected user is not a lecturer");
 		}

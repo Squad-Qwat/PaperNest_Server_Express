@@ -79,6 +79,7 @@ export interface Review {
 	lecturerUserId: string;
 	studentUserId: string;
 	message: string;
+	lecturerMessage?: string;
 	status: "pending" | "approved" | "revision_required" | "rejected";
 	requestedAt: Date;
 	reviewedAt: Date | null;
