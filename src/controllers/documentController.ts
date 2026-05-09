@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../middlewares/errorHandler";
 import documentBodyRepository from "../repositories/documentBodyRepository";
 import documentRepository from "../repositories/documentRepository";
+import userRepository from "../repositories/userRepository";
 import liveblocksWebhookService from "../services/liveblocksWebhookService";
 import permissionService from "../services/permissionService";
 import { NotFoundError } from "../utils/errorTypes";
@@ -35,10 +36,13 @@ export const createDocument = asyncHandler(
 			createdBy: userId,
 		});
 
+		const creator = await userRepository.findById(userId);
+
 		// Create initial version
 		const version = await documentBodyRepository.create({
 			documentId: document.documentId,
 			userId,
+			user: creator ? { name: creator.name, photoURL: creator.photoURL } : undefined,
 			content: content || "",
 			message: message || "Initial version",
 			isCurrentVersion: true,
@@ -241,10 +245,13 @@ export const updateDocumentContent = asyncHandler(
 		// Mark all versions as not current
 		await documentBodyRepository.setAllVersionsNotCurrent(documentId);
 
+		const creator = await userRepository.findById(userId);
+
 		// Create new version
 		const version = await documentBodyRepository.create({
 			documentId,
 			userId,
+			user: creator ? { name: creator.name, photoURL: creator.photoURL } : undefined,
 			content,
 			message: message || `Version ${newVersionNumber}`,
 			isCurrentVersion: true,

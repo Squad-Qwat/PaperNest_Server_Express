@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../middlewares/errorHandler";
 import documentBodyRepository from "../repositories/documentBodyRepository";
+import documentRepository from "../repositories/documentRepository";
 import notificationRepository from "../repositories/notificationRepository";
 import reviewRepository from "../repositories/reviewRepository";
 import userRepository from "../repositories/userRepository";
@@ -56,12 +57,26 @@ export const createReview = asyncHandler(
 			throw new NotFoundError("Document version not found");
 		}
 
+		// Get document title for notification
+		const document = await documentRepository.findById(documentId);
+		const documentTitle = document?.title || "a document";
+
+		// Get user details for denormalization
+		const student = await userRepository.findById(studentUserId);
+		const lecturerDetail = await userRepository.findById(lecturerUserId);
+
 		// Create review
 		const review = await reviewRepository.create({
 			documentBodyId,
 			documentId,
 			lecturerUserId,
 			studentUserId,
+			student: student
+				? { name: student.name, photoURL: student.photoURL }
+				: undefined,
+			lecturer: lecturerDetail
+				? { name: lecturerDetail.name, photoURL: lecturerDetail.photoURL }
+				: undefined,
 			message: message || "",
 			status: "pending",
 			requestedAt: new Date(),
@@ -73,7 +88,7 @@ export const createReview = asyncHandler(
 			userId: lecturerUserId,
 			type: "review_request",
 			title: "New Review Request",
-			message: `You have a new review request from ${req.user?.name}`,
+			message: `${req.user?.name || "A student"} requested a review for "${documentTitle}"`,
 			relatedId: review.reviewId,
 			isRead: false,
 		});
@@ -217,19 +232,22 @@ export const approveReview = asyncHandler(
 		const reviewId = req.params.reviewId as string;
 		const { message } = req.body;
 
-		logger.info("Approve review request", { reviewId });
 		const review = await reviewRepository.updateStatus(
 			reviewId,
 			"approved",
 			message || "",
 		);
 
+		// Get document title
+		const document = await documentRepository.findById(review.documentId);
+		const documentTitle = document?.title || "your document";
+
 		// Create notification for student
 		await notificationRepository.create({
 			userId: review.studentUserId,
 			type: "review_completed",
 			title: "Review Approved",
-			message: "Your document has been approved",
+			message: `Your document "${documentTitle}" has been approved by ${req.user?.name}`,
 			relatedId: reviewId,
 			isRead: false,
 		});
@@ -248,19 +266,22 @@ export const rejectReview = asyncHandler(
 		const reviewId = req.params.reviewId as string;
 		const { message } = req.body;
 
-		logger.info("Reject review request", { reviewId });
 		const review = await reviewRepository.updateStatus(
 			reviewId,
 			"rejected",
 			message || "",
 		);
 
+		// Get document title
+		const document = await documentRepository.findById(review.documentId);
+		const documentTitle = document?.title || "your document";
+
 		// Create notification for student
 		await notificationRepository.create({
 			userId: review.studentUserId,
 			type: "review_completed",
 			title: "Review Rejected",
-			message: "Your document has been rejected",
+			message: `Your document "${documentTitle}" has been rejected by ${req.user?.name}`,
 			relatedId: reviewId,
 			isRead: false,
 		});
@@ -291,12 +312,16 @@ export const requestRevision = asyncHandler(
 			message,
 		);
 
+		// Get document title
+		const document = await documentRepository.findById(review.documentId);
+		const documentTitle = document?.title || "your document";
+
 		// Create notification for student
 		await notificationRepository.create({
 			userId: review.studentUserId,
 			type: "review_completed",
 			title: "Revision Required",
-			message: "Your document requires revision",
+			message: `Your document "${documentTitle}" requires revision (Feedback from ${req.user?.name})`,
 			relatedId: reviewId,
 			isRead: false,
 		});

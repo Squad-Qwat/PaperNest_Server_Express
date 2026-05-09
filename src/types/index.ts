@@ -48,6 +48,10 @@ export interface DocumentBody {
 	documentBodyId: string;
 	documentId: string;
 	userId: string;
+	user?: {
+		name: string;
+		photoURL: string | null;
+	};
 	content: any;
 	message: string;
 	isCurrentVersion: boolean;
@@ -78,6 +82,14 @@ export interface Review {
 	documentId: string;
 	lecturerUserId: string;
 	studentUserId: string;
+	student?: {
+		name: string;
+		photoURL: string | null;
+	};
+	lecturer?: {
+		name: string;
+		photoURL: string | null;
+	};
 	message: string;
 	lecturerMessage?: string;
 	status: "pending" | "approved" | "revision_required" | "rejected";
