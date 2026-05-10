@@ -3,11 +3,11 @@ import { aiRegistry } from "../../providers/registry";
 import { createRAGTool } from "../../tools/rag.tool";
 import { createCodeMirrorTools } from "../../tools/schemas";
 import { semanticScholarTool } from "../../tools/semanticScholar.tool";
-import {
-	type AgentStreamParams,
-	type StreamEvent,
+import type {
+	AgentStreamParams,
+	StreamEvent,
 	ToolResult,
-} from "../../types/agent.types";
+} from "@/types/ai/agent.types";
 import type { IAgentProvider } from "../interface";
 
 /**
@@ -67,7 +67,7 @@ export class DeepAgentProvider implements IAgentProvider {
 		});
 
 		// 4. Prepare Input
-		const inputMessages = params.conversationHistory.map((msg) =>
+		const inputMessages = params.conversationHistory.map((msg: { role: string; content: string }) =>
 			msg.role === "user"
 				? new HumanMessage(msg.content)
 				: new AIMessage(msg.content),
@@ -89,14 +89,14 @@ export class DeepAgentProvider implements IAgentProvider {
 			const toolCallId = params.toolResults[0].toolCallId;
 			const toolCallMsg = new AIMessage({
 				content: "",
-				tool_calls: params.toolResults.map((r) => ({
+				tool_calls: params.toolResults.map((r: ToolResult) => ({
 					id: r.toolCallId,
 					name: r.name,
 					args: {},
 				})),
 			} as any);
 			const toolResultMsgs = params.toolResults.map(
-				(r) =>
+				(r: ToolResult) =>
 					new ToolMessage({
 						content: r.result,
 						tool_call_id: r.toolCallId,
