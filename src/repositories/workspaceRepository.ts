@@ -2,6 +2,8 @@ import { COLLECTIONS } from "../config/constants";
 import { db } from "../config/firebase";
 import type { Workspace } from "../types";
 
+
+
 export class WorkspaceRepository {
 	private collection = db.collection(COLLECTIONS.WORKSPACES);
 

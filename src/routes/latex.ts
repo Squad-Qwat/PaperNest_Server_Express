@@ -10,6 +10,7 @@ const router: Router = Router();
 const compileSchema = Joi.object({
 	content: Joi.string().required(),
 	mainFileName: Joi.string(),
+	documentId: Joi.string(),
 	assets: Joi.array().items(
 		Joi.object({
 			name: Joi.string().required(),

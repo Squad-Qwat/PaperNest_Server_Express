@@ -1,8 +1,10 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"module": "NodeNext",
-		"lib": ["ES2022"],
+		"module": "CommonJS",
+		"lib": [
+			"ES2022"
+		],
 		"outDir": "./dist",
 		"rootDir": "./src",
 		"strict": true,
@@ -10,8 +12,16 @@
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
-		"moduleResolution": "NodeNext",
+		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
+		"paths": {
+			"@langchain/langgraph/prebuilt": [
+				"./node_modules/@langchain/langgraph/dist/prebuilt/index.d.ts"
+			],
+			"@/*": [
+				"./src/*"
+			]
+		},
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
@@ -22,9 +32,14 @@
 		"noUnusedParameters": false,
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
-		"typeRoots": ["./node_modules/@types", "./src/types"]
+		"typeRoots": [
+			"./node_modules/@types"
+		],
+		"baseUrl": ".",
 	},
-	"include": ["src/**/*"],
+	"include": [
+		"src/**/*"
+	],
 	"exclude": [
 		"node_modules",
 		"dist",

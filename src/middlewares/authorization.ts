@@ -467,6 +467,7 @@ export const authorizeDocumentPermission = (
 			const hasPermission = await permissionService.hasMinimumPermission(
 				userId,
 				documentId,
+				document.workspaceId,
 				requiredPermission,
 			);
 

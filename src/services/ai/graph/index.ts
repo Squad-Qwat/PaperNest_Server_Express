@@ -16,7 +16,7 @@ import {
 	AgentStreamParams,
 	type StreamEvent,
 	type ToolResult,
-} from "../types/agent.types";
+} from "@/types/ai/agent.types";
 import { contentToText, extractTokenMetadata } from "../utils";
 import { executorNode, plannerNode, reflectorNode, toolNode } from "./nodes";
 import {

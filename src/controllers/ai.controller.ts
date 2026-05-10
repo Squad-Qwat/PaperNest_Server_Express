@@ -1,12 +1,12 @@
 import type { Request, Response } from "express";
-import { agentFactory } from "../services/ai/agents/agent.factory";
-import { validateAICredentials } from "../services/ai/config";
-import type { ToolResult } from "../services/ai/types/agent.types";
+import type { ToolResult } from "../types/ai/agent.types";
+import { errorResponse } from "../utils/responseFormatter";
 
 export const streamAIResponse = async (
 	req: Request,
 	res: Response,
-): Promise<void> => {
+): Promise<any> => {
+
 	try {
 		const {
 			message,
@@ -20,21 +20,25 @@ export const streamAIResponse = async (
 			reasoningEnabled = false,
 			providerId,
 			modelId,
-			agentId = "manual_graph", // New parameter
+			agentId = "manual_graph",
 		} = req.body;
+
+		// DYNAMIC IMPORTS: Only load heavy AI modules when a request actually arrives
+		const { agentFactory } = await import("../services/ai/agents/agent.factory");
+		const { validateAICredentials } = await import("../services/ai/config");
 
 		const credentialsCheck = validateAICredentials(providerId);
 		if (!credentialsCheck.valid) {
-			res.status(500).json({
-				error: "AI service not configured",
-				details: credentialsCheck.error,
-			});
-			return;
+			return errorResponse(
+				res,
+				"AI service not configured",
+				500,
+				credentialsCheck.error ? [credentialsCheck.error] : undefined,
+			);
 		}
 
 		if (!message || typeof message !== "string") {
-			res.status(400).json({ error: "Message is required" });
-			return;
+			return errorResponse(res, "Message is required", 400);
 		}
 
 		// Set headers for Server-Sent Events (SSE)
@@ -42,11 +46,10 @@ export const streamAIResponse = async (
 			"Content-Type": "text/event-stream",
 			"Cache-Control": "no-cache, no-transform",
 			Connection: "keep-alive",
-			"X-Accel-Buffering": "no", // Disable proxy buffering
+			"X-Accel-Buffering": "no",
 			"X-Content-Type-Options": "nosniff",
 		});
 
-		// CRITICAL: Disable Node.js default timeout for this long-running SSE stream
 		res.setTimeout(0);
 
 		res.write(
@@ -58,7 +61,6 @@ export const streamAIResponse = async (
 		let keepAliveInterval: any;
 
 		try {
-			// res.on('close') is the standard way to detect client disconnect in Node.js
 			res.on("close", () => {
 				isDisconnected = true;
 				if (keepAliveInterval) clearInterval(keepAliveInterval);
@@ -67,10 +69,9 @@ export const streamAIResponse = async (
 				);
 			});
 
-			// Helper to keep connection alive if LLM is slow
 			keepAliveInterval = setInterval(() => {
 				if (!isDisconnected) {
-					res.write(": ping\n\n"); // SSE comment to keep connection active
+					res.write(": ping\n\n");
 				}
 			}, 15000);
 
@@ -91,17 +92,12 @@ export const streamAIResponse = async (
 				providerId,
 				modelId,
 			})) {
-				// Check if client is still connected
 				if (isDisconnected) break;
-
-				// Write chunk to Express response
 				res.write(`data: ${JSON.stringify(chunk)}\n\n`);
 
-				// Optional: flush if using compression/buffers
 				if (typeof (res as any).flush === "function") {
 					(res as any).flush();
 				}
-
 				await new Promise((resolve) => setTimeout(resolve, 5));
 			}
 
@@ -117,10 +113,12 @@ export const streamAIResponse = async (
 	} catch (error) {
 		console.error("[AI Stream] Fatal error:", error);
 		if (!res.headersSent) {
-			res.status(500).json({
-				error: "Failed to initialize streaming",
-				details: error instanceof Error ? error.message : "Unknown error",
-			});
+			errorResponse(
+				res,
+				"Failed to initialize streaming",
+				500,
+				error instanceof Error ? [error.message] : undefined,
+			);
 		} else if (!res.writableEnded && res.writable) {
 			try {
 				res.write(

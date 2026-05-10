@@ -2,6 +2,8 @@ import { COLLECTIONS } from "../config/constants";
 import { db } from "../config/firebase";
 import type { User } from "../types";
 
+
+
 export class UserRepository {
 	private collection = db.collection(COLLECTIONS.USERS);
 
@@ -34,7 +36,7 @@ export class UserRepository {
 			return null;
 		}
 
-		return doc.data() as User;
+		return { ...doc.data() } as User;
 	}
 
 	/**

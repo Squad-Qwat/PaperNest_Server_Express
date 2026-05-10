@@ -1,4 +1,7 @@
-import type { AgentStreamParams, StreamEvent } from "../types/agent.types";
+import type { AgentStreamParams, StreamEvent } from "../../../types/ai/agent.types";
+
+
+
 
 /**
  * Interface for AI Agent Providers

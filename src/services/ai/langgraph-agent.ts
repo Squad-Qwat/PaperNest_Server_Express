@@ -6,7 +6,7 @@
  */
 
 import { streamAgent as graphStreamAgent } from "./graph";
-import type { ToolResult } from "./types/agent.types";
+import type { ToolResult } from "@/types/ai/agent.types";
 
 /**
  * Re-export types if needed by consumers
