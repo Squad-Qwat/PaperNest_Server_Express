@@ -36,12 +36,13 @@ export const compileLatex = async (
 		let resolvedAssets = (assets || []).map((a: any) => ({
 			name: a.name,
 			url: a.url,
-			// Strip r2Key from user input for security - only system can provide it
 		}));
 
 		if (documentId) {
+			logger.info(`[LatexController] Verifying permissions for document: ${documentId}`);
 			const document = await documentRepository.findById(documentId);
 			if (!document) {
+				logger.warn(`[LatexController] Document ${documentId} not found`);
 				return errorResponse(res, "Document not found", 404);
 			}
 
@@ -59,7 +60,7 @@ export const compileLatex = async (
 				return forbiddenResponse(res, "Unauthorized access to document");
 			}
 
-
+			logger.info(`[LatexController] Permissions verified. Fetching assets...`);
 			try {
 				const dbFiles = await documentFileRepository.findByDocument(documentId);
 				resolvedAssets = dbFiles.map((file) => ({
@@ -68,14 +69,16 @@ export const compileLatex = async (
 					r2Key: file.r2Key,
 				}));
 				logger.info(
-					`[LatexController] Fetched ${resolvedAssets.length} assets from Firestore for document ${documentId}`,
+					`[LatexController] Fetched ${resolvedAssets.length} assets from Firestore`,
 				);
 			} catch (dbError: any) {
 				logger.warn(
-					`[LatexController] Failed to fetch assets from Firestore: ${dbError.message}`,
+					`[LatexController] Failed to fetch assets: ${dbError.message}`,
 				);
 			}
 		}
+
+		logger.info(`[LatexController] Starting LaTeX compilation with ${engine || "pdflatex"}...`);
 
 		const result = await latexService.compile({
 			content,
@@ -106,8 +109,13 @@ export const compileLatex = async (
 			);
 		} else {
 			// Compilation failed to produce a PDF, but we still return logs
-			return errorResponse(res, "Compilation failed", 422, [
-				{ log: result.log, status: result.status },
+			// We provide the log in a format that the frontend can easily consume
+			return errorResponse(res, "LaTeX Compilation Failed", 422, [
+				{ 
+					log: result.log, 
+					status: result.status,
+					message: "The LaTeX engine returned an error. Please check your syntax."
+				},
 			]);
 		}
 
