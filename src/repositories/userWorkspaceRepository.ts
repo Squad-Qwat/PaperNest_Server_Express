@@ -159,8 +159,7 @@ export class UserWorkspaceRepository {
 	/**
 	 * Delete all user workspace relationships for a workspace (cascade delete)
 	 */
-	async deleteByWorkspace(workspaceId: string): Promise<void> 
-	{
+	async deleteByWorkspace(workspaceId: string): Promise<void> {
 		const snapshot = await this.collection
 			.where("workspaceId", "==", workspaceId)
 			.get();
@@ -171,8 +170,7 @@ export class UserWorkspaceRepository {
 		const batchSize = 500;
 		const docs = snapshot.docs;
 
-		for (let i = 0; i < docs.length; i += batchSize) 
-		{
+		for (let i = 0; i < docs.length; i += batchSize) {
 			const batch = db.batch();
 			docs.slice(i, i + batchSize).forEach((doc) => batch.delete(doc.ref));
 			await batch.commit();

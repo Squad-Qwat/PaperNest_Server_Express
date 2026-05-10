@@ -105,7 +105,7 @@ app.get(
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api", documentRoutes);
-app.use("/api/documents", citationRoutes);
+app.use("/api", citationRoutes);
 app.use("/api", commentRoutes);
 app.use("/api", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);

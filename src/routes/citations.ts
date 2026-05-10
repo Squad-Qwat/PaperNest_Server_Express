@@ -4,6 +4,9 @@ import { authenticate } from "../middlewares/auth";
 import {
 	authorizeDocument,
 	authorizeDocumentEdit,
+	authorizeWorkspace,
+	authorizeCitation,
+	authorizeCitationEdit,
 } from "../middlewares/authorization";
 import { validate } from "../middlewares/validation";
 import {
@@ -21,7 +24,7 @@ const router: Router = Router();
  * @access  Protected (requires edit permission)
  */
 router.post(
-	"/:documentId/citations",
+	"/documents/:documentId/citations",
 	authenticate,
 	authorizeDocumentEdit,
 	validate({ body: createCitationSchema }),
@@ -34,7 +37,7 @@ router.post(
  * @access  Protected (requires document access)
  */
 router.get(
-	"/:documentId/citations/search",
+	"/documents/:documentId/citations/search",
 	authenticate,
 	authorizeDocument,
 	validate({ query: searchCitationSchema }),
@@ -47,7 +50,7 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-	"/:documentId/citations/doi/:doi",
+	"/documents/:documentId/citations/doi/:doi",
 	authenticate,
 	authorizeDocument,
 	citationController.getCitationByDOI,
@@ -59,7 +62,7 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-	"/:documentId/citations",
+	"/documents/:documentId/citations",
 	authenticate,
 	authorizeDocument,
 	citationController.getDocumentCitations,
@@ -71,7 +74,7 @@ router.get(
  * @access  Protected (requires document access)
  */
 router.get(
-	"/:documentId/citations/:citationId",
+	"/documents/:documentId/citations/:citationId",
 	authenticate,
 	authorizeDocument,
 	citationController.getCitationById,
@@ -83,7 +86,7 @@ router.get(
  * @access  Protected (requires edit permission)
  */
 router.put(
-	"/:documentId/citations/:citationId",
+	"/documents/:documentId/citations/:citationId",
 	authenticate,
 	authorizeDocumentEdit,
 	validate({ body: updateCitationSchema }),
@@ -96,9 +99,79 @@ router.put(
  * @access  Protected (requires edit permission)
  */
 router.delete(
-	"/:documentId/citations/:citationId",
+	"/documents/:documentId/citations/:citationId",
 	authenticate,
 	authorizeDocumentEdit,
+	citationController.deleteCitation,
+);
+
+/**
+ * Workspace-specific citation routes
+ */
+
+/**
+ * @route   GET /api/workspaces/:workspaceId/citations
+ * @desc    Get all citations for a workspace
+ * @access  Protected (requires workspace access)
+ */
+router.get(
+	"/workspaces/:workspaceId/citations",
+	authenticate,
+	authorizeWorkspace(),
+	citationController.getWorkspaceCitations,
+);
+
+/**
+ * @route   POST /api/workspaces/:workspaceId/citations
+ * @desc    Create a new citation in a workspace
+ * @access  Protected (requires editor permission)
+ */
+router.post(
+	"/workspaces/:workspaceId/citations",
+	authenticate,
+	authorizeWorkspace("editor"),
+	validate({ body: createCitationSchema }),
+	citationController.createCitation,
+);
+
+/**
+ * Flat citation routes (no document/workspace prefix required)
+ */
+
+/**
+ * @route   GET /api/citations/:citationId
+ * @desc    Get citation by ID
+ * @access  Protected
+ */
+router.get(
+	"/citations/:citationId",
+	authenticate,
+	authorizeCitation,
+	citationController.getCitationById,
+);
+
+/**
+ * @route   PUT /api/citations/:citationId
+ * @desc    Update citation
+ * @access  Protected
+ */
+router.put(
+	"/citations/:citationId",
+	authenticate,
+	authorizeCitationEdit,
+	validate({ body: updateCitationSchema }),
+	citationController.updateCitation,
+);
+
+/**
+ * @route   DELETE /api/citations/:citationId
+ * @desc    Delete citation
+ * @access  Protected
+ */
+router.delete(
+	"/citations/:citationId",
+	authenticate,
+	authorizeCitationEdit,
 	citationController.deleteCitation,
 );
 
