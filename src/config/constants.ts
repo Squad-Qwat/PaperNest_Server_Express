@@ -170,11 +170,26 @@ export const PAGINATION = {
 
 // File Upload
 export const FILE_UPLOAD = {
-	MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+	MAX_FILE_SIZE: 10 * 1024 * 1024,
 	ALLOWED_MIME_TYPES: [
 		"image/jpeg",
 		"image/png",
 		"image/gif",
 		"application/pdf",
 	],
+} as const;
+
+export const TEMPLATE_LIMITS = {
+	MAX_TEMPLATE_SIZE: 50 * 1024 * 1024,
+	MAX_ASSET_SIZE: 10 * 1024 * 1024,
+	MAX_ASSETS_COUNT: 100,
+} as const;
+
+export const RATE_LIMIT_CONFIG = {
+	templates: {
+		windowMs: 15 * 60 * 1000,
+		max: 100,
+		standardHeaders: true,
+		legacyHeaders: false,
+	},
 } as const;

@@ -2,6 +2,8 @@ import { COLLECTIONS } from "../config/constants";
 import { db } from "../config/firebase";
 import type { Document } from "../types";
 
+
+
 export class DocumentRepository {
 	private collection = db.collection(COLLECTIONS.DOCUMENTS);
 

@@ -3,66 +3,70 @@ import { env } from "./config/env";
 import { firebaseAdmin } from "./config/firebase";
 import logger from "./utils/logger";
 
-const PORT = env.PORT;
+/**
+ * Resilient Server Startup
+ * Ensures Firebase and other dependencies are checked before listening
+ */
+const startServer = async () => {
+	try {
+		const PORT = env.PORT || 3000;
 
-// Start server
-const server = app.listen(PORT, () => {
-	logger.info(`🚀 Server running on port ${PORT}`);
-	logger.info(`📝 Environment: ${env.NODE_ENV}`);
-	logger.info(
-		`🔥 Firebase initialized: ${firebaseAdmin.apps.length > 0 ? "Yes" : "No"}`,
-	);
-	logger.info(`✅ API available at: http://localhost:${PORT}/api`);
-	logger.info(`❤️  Health check at: http://localhost:${PORT}/health`);
-});
+		// Verify Firebase initialization status
+		const isFirebaseReady = firebaseAdmin.apps.length > 0;
 
-server.on("error", (error: any) => {
-	if (error.code === "EADDRINUSE") {
-		logger.error(
-			`❌ Port ${PORT} is already in use. Please kill the other process or change the PORT in .env`,
-		);
-	} else {
-		logger.error("❌ Server error:", error);
-	}
-	process.exit(1);
-});
+		const server = app.listen(PORT, () => {
+			logger.info(`🚀 Server running on port ${PORT}`);
+			logger.info(`📝 Environment: ${env.NODE_ENV}`);
+			logger.info(`🔥 Firebase initialized: ${isFirebaseReady ? "Yes" : "No"}`);
+			logger.info(`✅ API available at: http://localhost:${PORT}/api`);
+		});
 
-// Graceful shutdown
-const gracefulShutdown = (signal: string) => {
-	logger.info(`${signal} received. Starting graceful shutdown...`);
+		server.on("error", (error: any) => {
+			if (error.code === "EADDRINUSE") {
+				logger.error(
+					`❌ Port ${PORT} is already in use. Please kill the other process or change the PORT in .env`,
+				);
+			} else {
+				logger.error("❌ Server error:", error);
+			}
+			process.exit(1);
+		});
 
-	server.close(() => {
-		logger.info("HTTP server closed");
+		// Graceful shutdown
+		const gracefulShutdown = (signal: string) => {
+			logger.info(`${signal} received. Starting graceful shutdown...`);
+			server.close(() => {
+				logger.info("HTTP server closed");
+				process.exit(0);
+			});
 
-		// Close database connections, etc.
-		process.exit(0);
-	});
+			setTimeout(() => {
+				logger.error("Forced shutdown after timeout");
+				process.exit(1);
+			}, 10000);
+		};
 
-	// Force shutdown after 10 seconds
-	setTimeout(() => {
-		logger.error("Forced shutdown after timeout");
+		process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+		process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+	} catch (error) {
+		logger.error("--- FATAL STARTUP ERROR ---", error);
 		process.exit(1);
-	}, 10000);
+	}
 };
 
-// Handle shutdown signals
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+// Execute startup
+startServer();
 
-// Handle unhandled promise rejections
+// Global Exception Handlers
 process.on("unhandledRejection", (reason: Error, promise: Promise<any>) => {
 	logger.error("Unhandled Rejection at:", promise, "reason:", reason);
-	// Don't exit process in development
 	if (env.NODE_ENV === "production") {
 		process.exit(1);
 	}
 });
 
-// Handle uncaught exceptions
 process.on("uncaughtException", (error: Error) => {
 	logger.error("Uncaught Exception:", error);
-	// Exit process after logging
 	process.exit(1);
 });
-
-export default server;

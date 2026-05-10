@@ -80,7 +80,6 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
 	const { userId } = req.params;
 
-	// Users can only delete their own account
 	if (req.userId !== userId) {
 		throw new NotFoundError("You can only delete your own account");
 	}

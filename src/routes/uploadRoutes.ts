@@ -3,6 +3,7 @@ import {
 	deleteFile,
 	getPresignedUrl,
 	proxyDownload,
+	renameFile,
 } from "../controllers/uploadController";
 import { authenticate } from "../middlewares/auth";
 
@@ -27,5 +28,12 @@ router.get("/download", authenticate, proxyDownload);
  * @access  Protected
  */
 router.delete("/file/:documentId/:fileId", authenticate, deleteFile);
+
+/**
+ * @route   PATCH /api/upload/rename/:documentId/:fileId
+ * @desc    Rename/move a file in Firestore
+ * @access  Protected
+ */
+router.patch("/rename/:documentId/:fileId", authenticate, renameFile);
 
 export default router;

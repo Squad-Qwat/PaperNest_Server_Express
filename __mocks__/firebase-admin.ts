@@ -118,6 +118,7 @@ export class MockQuery {
 
 // Mock Collection Reference
 export class MockCollectionReference extends MockQuery {
+	private docRefs = new Map<string, MockDocumentReference>();
 	private mockDocs: MockDocumentSnapshot[] = [];
 
 	constructor(private _path: string) {
@@ -127,7 +128,10 @@ export class MockCollectionReference extends MockQuery {
 
 	doc(id?: string) {
 		const docId = id || `mock-${Date.now()}`;
-		return new MockDocumentReference(docId, `${this._path}/${docId}`);
+		if (!this.docRefs.has(docId)) {
+			this.docRefs.set(docId, new MockDocumentReference(docId, `${this._path}/${docId}`));
+		}
+		return this.docRefs.get(docId)!;
 	}
 
 	async add(data: any) {
@@ -176,6 +180,37 @@ export class MockFirestore {
 	getCollection(path: string) {
 		return this.collections.get(path);
 	}
+
+	async runTransaction(cb: (transaction: MockTransaction) => Promise<any>) {
+		const transaction = new MockTransaction();
+		return await cb(transaction);
+	}
+
+	getAll = jest.fn(async (...refs: MockDocumentReference[]) => {
+		return await Promise.all(refs.map((ref) => ref.get()));
+	});
+}
+
+// Mock Transaction
+export class MockTransaction {
+	get = jest.fn(async (ref: MockDocumentReference) => {
+		return await ref.get();
+	});
+
+	set = jest.fn((ref: MockDocumentReference, data: any) => {
+		ref.set(data);
+		return this;
+	});
+
+	update = jest.fn((ref: MockDocumentReference, data: any) => {
+		ref.update(data);
+		return this;
+	});
+
+	delete = jest.fn((ref: MockDocumentReference) => {
+		ref.delete();
+		return this;
+	});
 }
 
 // Mock Auth

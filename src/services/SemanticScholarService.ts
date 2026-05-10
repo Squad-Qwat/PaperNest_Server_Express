@@ -1,26 +1,11 @@
 import axios from "axios";
 import { env } from "../config/env";
+import type { SemanticScholarPaper } from "../types/semanticScholar.types";
+
 import logger from "../utils/logger";
 
-export interface SemanticScholarPaper {
-	paperId: string;
-	externalIds?: Record<string, string>;
-	url?: string;
-	title?: string;
-	abstract?: string;
-	venue?: string;
-	year?: number;
-	citationCount?: number;
-	openAccessPdf?: {
-		url: string;
-		status: string;
-	};
-	authors?: Array<{
-		authorId: string;
-		name: string;
-	}>;
-	fieldsOfStudy?: string[];
-}
+
+
 
 class SemanticScholarService {
 	private readonly baseUrl = "https://api.semanticscholar.org/graph/v1";

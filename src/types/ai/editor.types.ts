@@ -3,8 +3,6 @@
  *
  * Shared TypeScript types for document context, cursor navigation,
  * and editor operations. Follows clean architecture principles.
- *
- * @module lib/ai/types/editor
  */
 
 // ============================================================================
