@@ -2,7 +2,7 @@ import { Router } from "express";
 import * as authController from "../controllers/authController";
 import { authenticate, authenticateFirebase } from "../middlewares/auth";
 import { authRateLimiter } from "../middlewares/rateLimiter";
-import { validateTurnstile } from "../middlewares/turnstile";
+// import { validateTurnstile } from "../middlewares/turnstile";
 import { validate } from "../middlewares/validation";
 import {
 	checkEmailSchema,
@@ -27,7 +27,7 @@ router.post(
 router.post(
 	"/register",
 	authRateLimiter,
-	validateTurnstile,
+	// validateTurnstile,
 	validate({ body: registerSchema }),
 	authController.register,
 );
@@ -41,14 +41,14 @@ router.post(
 
 router.post(
 	"/login",
-	validateTurnstile,
+	// validateTurnstile,
 	validate({ body: loginSchema }),
 	authController.login
 );
 
 router.post(
 	"/social",
-	validateTurnstile,
+	// validateTurnstile,
 	validate({ body: loginSchema }),
 	authController.socialLogin,
 );
