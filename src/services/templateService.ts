@@ -4,7 +4,7 @@ import { TEMPLATE_LIMITS } from "../config/constants";
 
 
 import logger from "../utils/logger";
-import { getTemplatesDir } from "../utils/paths";
+import { getTemplatesDir, safeJoin } from "../utils/paths";
 import { TemplateMetadata } from "@/types";
 
 export class TemplateService {
@@ -50,7 +50,7 @@ export class TemplateService {
 			throw new Error(`Template with id ${id} not found`);
 		}
 
-		const filePath = path.join(this.templatesDir, id, metadata.mainFile);
+		const filePath = safeJoin(this.templatesDir, id, metadata.mainFile);
 		try {
 			return await fs.readFile(filePath, "utf-8");
 		} catch (error) {
@@ -69,7 +69,7 @@ export class TemplateService {
 			throw new Error(`Template with id ${id} not found`);
 		}
 
-		const templateFolderPath = path.join(this.templatesDir, id);
+		const templateFolderPath = safeJoin(this.templatesDir, id);
 		try {
 			const assets: { name: string; path: string }[] = [];
 			let totalSize = 0;

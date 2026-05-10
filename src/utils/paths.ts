@@ -36,7 +36,24 @@ export function getTemplatesDir(): string {
 	return path.join(projectRoot, baseDir, "templates", "files");
 }
 
+/**
+ * Securely joins paths and ensures the result is within the base directory.
+ * Prevents directory traversal attacks.
+ */
+export function safeJoin(base: string, ...parts: string[]): string {
+	const joined = path.join(base, ...parts);
+	const resolvedBase = path.resolve(base);
+	const resolvedJoined = path.resolve(joined);
+
+	if (!resolvedJoined.startsWith(resolvedBase)) {
+		throw new Error("Potential directory traversal attempt detected");
+	}
+
+	return resolvedJoined;
+}
+
 export default {
 	getProjectRoot,
 	getTemplatesDir,
+	safeJoin,
 };

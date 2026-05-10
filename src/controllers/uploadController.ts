@@ -189,8 +189,9 @@ export const renameFile = async (
 		}
 
 
+		const sanitizedNewName = newName.replace(/[\r\n]/g, " ");
 		console.log(
-			`[RenameFile] Request to rename file ${fileId} in document ${documentId} to ${newName}`,
+			`[RenameFile] Request to rename file ${fileId} in document ${documentId} to ${sanitizedNewName}`,
 		);
 
 		await FileManagementService.updateFileName(documentId, fileId, newName);
