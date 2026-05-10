@@ -7,7 +7,7 @@
 
 import type { BaseMessage } from "@langchain/core/messages";
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
-import type { ToolResult } from "../types/agent.types";
+import type { ToolResult } from "@/types/ai/agent.types";
 
 export type ExecutionOutcome =
 	| "executed_tool"

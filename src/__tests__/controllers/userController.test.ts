@@ -17,6 +17,8 @@ jest.mock("../../config/firebase", () => {
 jest.mock("../../repositories/userRepository");
 jest.mock("../../utils/logger");
 
+import { createMockExpress } from "../testUtils";
+
 describe("UserController", () => {
 	let mockReq: any;
 	let mockRes: any;
@@ -24,17 +26,10 @@ describe("UserController", () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		mockReq = {
-			body: {},
-			params: {},
-			query: {},
-			userId: "user-123",
-		};
-		mockRes = {
-			status: jest.fn().mockReturnThis(),
-			json: jest.fn().mockReturnThis(),
-		};
-		next = jest.fn();
+		const mocks = createMockExpress();
+		mockReq = mocks.mockReq;
+		mockRes = mocks.mockRes;
+		next = mocks.next;
 	});
 
 	describe("getUserById", () => {

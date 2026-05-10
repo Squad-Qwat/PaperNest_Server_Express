@@ -22,6 +22,8 @@ import {
 	NotFoundError,
 } from "../../utils/errorTypes";
 
+import { createMockExpress } from "../testUtils";
+
 describe("WorkspaceController", () => {
 	let mockReq: any;
 	let mockRes: any;
@@ -29,18 +31,10 @@ describe("WorkspaceController", () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		mockReq = {
-			body: {},
-			params: {},
-			query: {},
-			userId: "user-123",
-		};
-		mockRes = {
-			status: jest.fn().mockReturnThis(),
-			json: jest.fn().mockReturnThis(),
-			send: jest.fn().mockReturnThis(),
-		};
-		next = jest.fn();
+		const mocks = createMockExpress();
+		mockReq = mocks.mockReq;
+		mockRes = mocks.mockRes;
+		next = mocks.next;
 	});
 
 	describe("createWorkspace", () => {

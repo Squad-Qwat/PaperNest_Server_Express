@@ -11,6 +11,8 @@ jest.mock("../../config/firebase", () => ({
 jest.mock("../../services/authService");
 jest.mock("../../utils/logger");
 
+import { createMockExpress } from "../testUtils";
+
 describe("AuthController", () => {
 	let mockReq: any;
 	let mockRes: any;
@@ -18,19 +20,10 @@ describe("AuthController", () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		mockReq = {
-			body: {},
-			params: {},
-			query: {},
-			userId: "user-123",
-			user: mockUser as any,
-		};
-		mockRes = {
-			status: jest.fn().mockReturnThis(),
-			json: jest.fn().mockReturnThis(),
-			send: jest.fn().mockReturnThis(),
-		};
-		next = jest.fn();
+		const mocks = createMockExpress({ user: mockUser as any });
+		mockReq = mocks.mockReq;
+		mockRes = mocks.mockRes;
+		next = mocks.next;
 	});
 
 	describe("register", () => {
