@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import documentFileRepository from "../repositories/documentFileRepository";
+import documentRepository from "../repositories/documentRepository";
 import permissionService from "../services/permissionService";
 import { latexService } from "../services/latexService";
 import logger from "../utils/logger";
@@ -39,9 +40,15 @@ export const compileLatex = async (
 		}));
 
 		if (documentId) {
+			const document = await documentRepository.findById(documentId);
+			if (!document) {
+				return errorResponse(res, "Document not found", 404);
+			}
+
 			const hasAccess = await permissionService.hasMinimumPermission(
 				userId,
 				documentId,
+				document.workspaceId,
 				"viewer",
 			);
 

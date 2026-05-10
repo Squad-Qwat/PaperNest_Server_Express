@@ -4,10 +4,8 @@
 	"private": true,
 	"scripts": {
 		"start": "node dist/server.js",
-
 		"dev": "nodemon",
 		"build": "tsc && tsc-alias && node scripts/copy-templates.js",
-
 		"clean": "rimraf dist",
 		"prebuild": "pnpm run clean",
 		"test": "jest",
@@ -45,6 +43,7 @@
 		"morgan": "~1.10.1",
 		"multer": "^2.0.2",
 		"pdf-parse": "^2.4.5",
+		"uuid": "^14.0.0",
 		"winston": "^3.19.0",
 		"zod": "^4.3.6"
 	},

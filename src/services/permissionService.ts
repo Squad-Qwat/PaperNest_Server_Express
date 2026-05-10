@@ -1,5 +1,4 @@
 import documentPermissionRepository from "../repositories/documentPermissionRepository";
-import documentRepository from "../repositories/documentRepository";
 import userWorkspaceRepository from "../repositories/userWorkspaceRepository";
 import type { DocumentPermission } from "../types/Permission.types";
 import logger from "../utils/logger";
@@ -54,9 +53,6 @@ class PermissionService {
 				documentId,
 				userId: createdBy,
 			});
-
-			// For future: could also grant workspace members 'viewer' by default if needed
-			// For now, only document creator has explicit permission
 		} catch (error) {
 			logger.error("Error initializing document permissions:", error);
 			throw error;
@@ -65,11 +61,12 @@ class PermissionService {
 
 	/**
 	 * Get effective permission for user on document
-	 * Returns directly granted permission if exists, otherwise inherits from workspace role
+	 * REQUIRES workspaceId to break circular dependency with documentRepository
 	 */
 	async getEffectivePermission(
 		userId: string,
 		documentId: string,
+		workspaceId: string,
 	): Promise<{
 		permission: DocumentPermission;
 		source: "direct" | "workspace-inherited";
@@ -86,16 +83,12 @@ class PermissionService {
 				return { permission: directPermission, source: "direct" };
 			}
 
-			// No direct permission - check workspace membership
-			const document = await documentRepository.findById(documentId);
-			if (!document) {
-				return null;
-			}
-
+			// No direct permission - check workspace membership using provided workspaceId
 			const workspaceRole = await userWorkspaceRepository.getUserRole(
 				userId,
-				document.workspaceId,
+				workspaceId,
 			);
+			
 			if (!workspaceRole) {
 				return null;
 			}
@@ -118,15 +111,26 @@ class PermissionService {
 	async hasMinimumPermission(
 		userId: string,
 		documentId: string,
+		workspaceId: string,
 		minPermission: DocumentPermission,
 	): Promise<boolean> {
 		try {
-			const effective = await this.getEffectivePermission(userId, documentId);
+			const effective = await this.getEffectivePermission(
+				userId,
+				documentId,
+				workspaceId,
+			);
+			
 			if (!effective) {
 				return false;
 			}
 
-			const HIERARCHY = { viewer: 1, editor: 2, admin: 3 };
+			const HIERARCHY: Record<DocumentPermission, number> = { 
+				viewer: 1, 
+				editor: 2, 
+				admin: 3 
+			};
+			
 			return HIERARCHY[effective.permission] >= HIERARCHY[minPermission];
 		} catch (error) {
 			logger.error("Error checking minimum permission:", error);

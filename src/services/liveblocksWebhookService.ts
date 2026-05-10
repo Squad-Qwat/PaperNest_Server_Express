@@ -9,7 +9,9 @@ export class LiveblocksWebhookService {
 		this.apiSecret = env.LIVEBLOCKS_SECRET_KEY;
 
 		if (!this.apiSecret) {
-			throw new Error("LIVEBLOCKS_SECRET_KEY not configured");
+			logger.warn(
+				"⚠️ LIVEBLOCKS_SECRET_KEY not configured. Liveblocks features will not work.",
+			);
 		}
 	}
 

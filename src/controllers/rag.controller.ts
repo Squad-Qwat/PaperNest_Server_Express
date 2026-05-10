@@ -1,8 +1,6 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../config/constants";
-import { ragService } from "../services/ai/rag/rag.service";
 import { errorResponse, successResponse } from "../utils/responseFormatter";
-
 
 /**
  * Controller for RAG indexing operations
@@ -16,9 +14,10 @@ export const indexPDF = async (req: Request, res: Response): Promise<void> => {
 			return;
 		}
 
+		// DYNAMIC IMPORT: Load RAG service only when indexing is requested
+		const { ragService } = await import("../services/ai/rag/rag.service");
 
 		// Run indexing in background to not block the response
-		// In a production environment, this should be a background job / queue
 		ragService
 			.indexPDF(documentId, fileKey)
 			.then(() => {

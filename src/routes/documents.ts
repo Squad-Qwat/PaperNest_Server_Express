@@ -1,5 +1,4 @@
 import { Router } from "express";
-import * as batchOperationController from "../controllers/batchOperationController";
 import * as documentController from "../controllers/documentController";
 import * as versionController from "../controllers/versionController";
 import { authenticate } from "../middlewares/auth";
@@ -19,15 +18,12 @@ import {
 } from "../models/validators/documentValidator";
 import {
 	createVersionSchema,
-	versionNumberSchema,
 } from "../models/validators/versionValidator";
 
 const router: Router = Router();
 
 /**
  * @route   GET /api/documents/my-documents
- * @desc    Get user's documents across all workspaces
- * @access  Protected
  */
 router.get(
 	"/documents/my-documents",
@@ -37,9 +33,6 @@ router.get(
 
 /**
  * @route   GET /api/documents/:documentId/with-room-state
- * @desc    Get document with Liveblocks room state (consolidated endpoint)
- * @access  Protected (requires workspace access)
- * @optimization Reduces double-fetch pattern - returns document + version + room info in single call
  */
 router.get(
 	"/documents/:documentId/with-room-state",
@@ -54,8 +47,6 @@ router.get(
 
 /**
  * @route   POST /api/workspaces/:workspaceId/documents
- * @desc    Create a new document in workspace
- * @access  Protected (requires editor role or higher)
  */
 router.post(
 	"/workspaces/:workspaceId/documents",
@@ -66,9 +57,7 @@ router.post(
 );
 
 /**
- * @route   GET /api/workspaces/:workspaceId/documents/search?q=query
- * @desc    Search documents in workspace
- * @access  Protected (requires workspace access)
+ * @route   GET /api/workspaces/:workspaceId/documents/search
  */
 router.get(
 	"/workspaces/:workspaceId/documents/search",
@@ -80,8 +69,6 @@ router.get(
 
 /**
  * @route   GET /api/workspaces/:workspaceId/documents
- * @desc    Get all documents in workspace
- * @access  Protected (requires workspace access)
  */
 router.get(
 	"/workspaces/:workspaceId/documents",
@@ -92,8 +79,6 @@ router.get(
 
 /**
  * @route   GET /api/workspaces/:workspaceId/documents/:documentId
- * @desc    Get document by ID
- * @access  Protected (requires workspace access)
  */
 router.get(
 	"/workspaces/:workspaceId/documents/:documentId",
@@ -104,8 +89,6 @@ router.get(
 
 /**
  * @route   PUT /api/workspaces/:workspaceId/documents/:documentId
- * @desc    Update document metadata
- * @access  Protected (requires edit permission)
  */
 router.put(
 	"/workspaces/:workspaceId/documents/:documentId",
@@ -117,8 +100,6 @@ router.put(
 
 /**
  * @route   PUT /api/workspaces/:workspaceId/documents/:documentId/content
- * @desc    Update document content (creates new version)
- * @access  Protected (requires edit permission)
  */
 router.put(
 	"/workspaces/:workspaceId/documents/:documentId/content",
@@ -130,8 +111,6 @@ router.put(
 
 /**
  * @route   DELETE /api/workspaces/:workspaceId/documents/:documentId
- * @desc    Delete document
- * @access  Protected (requires edit permission)
  */
 router.delete(
 	"/workspaces/:workspaceId/documents/:documentId",
@@ -141,13 +120,11 @@ router.delete(
 );
 
 /**
- * Document version routes (non-nested)
+ * Document version routes
  */
 
 /**
  * @route   GET /api/documents/:documentId/versions
- * @desc    Get all versions of a document
- * @access  Protected (requires document access)
  */
 router.get(
 	"/documents/:documentId/versions",
@@ -158,8 +135,6 @@ router.get(
 
 /**
  * @route   GET /api/documents/:documentId/versions/current
- * @desc    Get current version of a document
- * @access  Protected (requires document access)
  */
 router.get(
 	"/documents/:documentId/versions/current",
@@ -170,8 +145,6 @@ router.get(
 
 /**
  * @route   POST /api/documents/:documentId/versions
- * @desc    Create a new version
- * @access  Protected (requires edit permission)
  */
 router.post(
 	"/documents/:documentId/versions",
@@ -183,8 +156,6 @@ router.post(
 
 /**
  * @route   GET /api/documents/:documentId/versions/:versionNumber
- * @desc    Get specific version by number
- * @access  Protected (requires document access)
  */
 router.get(
 	"/documents/:documentId/versions/:versionNumber",
@@ -195,8 +166,6 @@ router.get(
 
 /**
  * @route   POST /api/documents/:documentId/versions/:versionNumber/revert
- * @desc    Revert document to a specific version
- * @access  Protected (requires edit permission)
  */
 router.post(
 	"/documents/:documentId/versions/:versionNumber/revert",
@@ -207,16 +176,28 @@ router.post(
 
 /**
  * @route   POST /api/documents/:documentId/batch
- * @desc    Execute atomic batch operations (save content + update metadata + create version)
+ * @desc    Execute atomic batch operations
  * @access  Protected (requires editor permission on document)
- * @optimization Reduces 3 API calls to 1, with atomic transaction support
+ * 
+ * IMPLEMENTATION: Uses lazy loading for the batch controller to prevent 
+ * startup dependency cycles.
  */
 router.post(
 	"/documents/:documentId/batch",
 	authenticate,
 	authorizeDocumentPermission("editor"),
 	validate({ body: batchOperationRequestSchema }),
-	batchOperationController.executeBatchOperations,
+	async (req, res, next) => {
+		try {
+			// Dynamic import to break dependency cycle and heavy load at startup
+			const batchController = await import("../controllers/batchOperationController");
+			// Since it's a default export of an object in the original file
+			const controller = (batchController as any).default || batchController;
+			return controller.executeBatchOperations(req, res, next);
+		} catch (error) {
+			next(error);
+		}
+	},
 );
 
 export default router;
