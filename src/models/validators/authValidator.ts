@@ -59,6 +59,7 @@ export const registerSchema = Joi.object({
 				"any.required": "Invitation code is required when joining a workspace",
 			}),
 	}).optional(),
+	turnstileToken: Joi.string().optional(),
 });
 
 /**
@@ -69,6 +70,7 @@ export const loginSchema = Joi.object({
 		"any.required": "Firebase token is required",
 	}),
 	accessToken: Joi.string().optional(),
+	turnstileToken: Joi.string().optional(),
 });
 
 /**
@@ -82,6 +84,7 @@ export const loginWithEmailPasswordSchema = Joi.object({
 	password: Joi.string().required().messages({
 		"any.required": "Password is required",
 	}),
+	turnstileToken: Joi.string().optional(),
 });
 
 /**
