@@ -17,12 +17,14 @@ import {
  */
 export const createCitation = asyncHandler(
 	async (req: Request, res: Response) => {
-		const documentId = req.params.documentId as string;
+		const documentId = (req.params.documentId || req.body.documentId) as string | undefined;
+		const workspaceId = (req.params.workspaceId || req.body.workspaceId) as string;
 		const citationData = req.body;
 
-		logger.info("Create citation request", { documentId });
+		logger.info("Create citation request", { documentId, workspaceId });
 
 		const citation = await citationRepository.create({
+			workspaceId,
 			documentId,
 			...citationData,
 		});
@@ -50,6 +52,27 @@ export const getDocumentCitations = asyncHandler(
 		} else {
 			citations = await citationRepository.findByDocument(documentId);
 		}
+
+		return successResponse(
+			res,
+			{ citations, count: citations.length },
+			"Citations retrieved successfully",
+		);
+	},
+);
+
+/**
+ * Get all citations for a workspace
+ * GET /api/workspaces/:workspaceId/citations
+ * Protected (requires workspace access)
+ */
+export const getWorkspaceCitations = asyncHandler(
+	async (req: Request, res: Response) => {
+		const workspaceId = req.params.workspaceId as string;
+
+		logger.info("Get workspace citations request", { workspaceId });
+
+		const citations = await citationRepository.findByWorkspace(workspaceId);
 
 		return successResponse(
 			res,
@@ -175,4 +198,5 @@ export default {
 	deleteCitation,
 	searchCitations,
 	getCitationByDOI,
+	getWorkspaceCitations,
 };

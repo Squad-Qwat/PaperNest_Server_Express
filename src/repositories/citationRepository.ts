@@ -51,6 +51,24 @@ export class CitationRepository {
 	}
 
 	/**
+	 * Find all citations for a workspace
+	 */
+	async findByWorkspace(workspaceId: string): Promise<Citation[]> {
+		const snapshot = await this.collection
+			.where("workspaceId", "==", workspaceId)
+			.get();
+
+		const citations = snapshot.docs.map((doc) => doc.data() as Citation);
+
+		// Sort in memory to avoid index requirement
+		return citations.sort((a, b) => {
+			const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : (a.createdAt as any).toDate().getTime();
+			const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : (b.createdAt as any).toDate().getTime();
+			return timeB - timeA;
+		});
+	}
+
+	/**
 	 * Find citations by type
 	 */
 	async findByType(documentId: string, type: string): Promise<Citation[]> {

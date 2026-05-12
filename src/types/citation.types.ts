@@ -1,6 +1,7 @@
 export interface Citation {
 	citationId: string;
-	documentId: string;
+	workspaceId: string;
+	documentId?: string;
 	type: "article" | "book" | "website" | string;
 	title: string;
 	author: string;
