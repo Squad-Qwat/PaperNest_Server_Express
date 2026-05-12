@@ -52,6 +52,26 @@ export class DocumentFileRepository {
 			.doc(fileId)
 			.delete();
 	}
+
+	/**
+	 * Delete all file records for a document
+	 */
+	async deleteAllByDocument(documentId: string): Promise<void> {
+		const snapshot = await db
+			.collection("documents")
+			.doc(documentId)
+			.collection("files")
+			.get();
+
+		if (snapshot.empty) return;
+
+		const batch = db.batch();
+		snapshot.docs.forEach((doc) => {
+			batch.delete(doc.ref);
+		});
+
+		await batch.commit();
+	}
 }
 
 export default new DocumentFileRepository();

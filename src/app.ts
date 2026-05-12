@@ -28,9 +28,6 @@ import workspaceRoutes from "./routes/workspaces";
 import logger from "./utils/logger";
 import { successResponse } from "./utils/responseFormatter";
 
-
-
-
 const app: Application = express();
 app.set("trust proxy", 1);
 
