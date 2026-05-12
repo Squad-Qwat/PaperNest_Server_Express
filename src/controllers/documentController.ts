@@ -2,12 +2,15 @@ import type { Request, Response } from "express";
 import fs from "fs/promises";
 import path from "path";
 import { asyncHandler } from "../middlewares/errorHandler";
+import citationRepository from "../repositories/citationRepository";
+import commentRepository from "../repositories/commentRepository";
 import documentBodyRepository from "../repositories/documentBodyRepository";
 import documentFileRepository from "../repositories/documentFileRepository";
+import documentPermissionRepository from "../repositories/documentPermissionRepository";
 import documentRepository from "../repositories/documentRepository";
+import reviewRepository from "../repositories/reviewRepository";
 import liveblocksWebhookService from "../services/liveblocksWebhookService";
 import permissionService from "../services/permissionService";
-import { StorageService } from "../services/StorageService";
 import { templateService } from "../services/templateService";
 import { NotFoundError } from "../utils/errorTypes";
 import logger from "../utils/logger";
@@ -112,6 +115,10 @@ export const createDocument = asyncHandler(
 						// Upload to R2 with organized key structure
 						const normalizedName = asset.name.split(path.sep).join("/");
 						const r2Key = `latex-assets/${document.documentId}/${normalizedName}`;
+						
+						// Dynamic import to prevent circular dependency
+						const { StorageService } = await import("../services/StorageService");
+
 						const url = await StorageService.uploadBuffer(
 							buffer,
 							r2Key,
@@ -366,10 +373,45 @@ export const deleteDocument = asyncHandler(
 
 		logger.info("Delete document request", { documentId });
 
-		// TODO: Implement cascade delete for versions, citations, comments, reviews
+		// 1. Delete R2 files (LaTeX assets)
+		try {
+			const r2Prefix = `latex-assets/${documentId}/`;
+			
+			// Dynamic import to prevent circular dependency
+			const { StorageService } = await import("../services/StorageService");
+
+			await StorageService.deleteFilesByPrefix(r2Prefix);
+			logger.info(`LaTeX assets with prefix ${r2Prefix} deleted from R2`);
+		} catch (r2Error) {
+			logger.error(
+				`Failed to delete LaTeX assets for document ${documentId}:`,
+				r2Error,
+			);
+			// Continue deletion process even if R2 cleanup fails
+		}
+
+		// 2. Cascade delete from Firestore collections
+		try {
+			await Promise.all([
+				documentBodyRepository.deleteAllByDocument(documentId),
+				documentFileRepository.deleteAllByDocument(documentId),
+				citationRepository.deleteAllByDocument(documentId),
+				commentRepository.deleteAllByDocument(documentId),
+				reviewRepository.deleteAllByDocument(documentId),
+				documentPermissionRepository.deleteAllByDocument(documentId),
+			]);
+			logger.info(`All related Firestore records deleted for document ${documentId}`);
+		} catch (firestoreError) {
+			logger.error(
+				`Error during Firestore cascade delete for document ${documentId}:`,
+				firestoreError,
+			);
+		}
+
+		// 3. Delete the main document record
 		await documentRepository.delete(documentId);
 
-		// Cleanup the Liveblocks Room corresponding to the document to truly delete the state
+		// 4. Cleanup the Liveblocks Room
 		try {
 			const roomId = `document:${documentId}`;
 			await liveblocksWebhookService.deleteRoom(roomId);

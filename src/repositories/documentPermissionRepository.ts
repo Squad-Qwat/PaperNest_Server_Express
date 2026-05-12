@@ -199,6 +199,31 @@ class DocumentPermissionRepository {
 			throw error;
 		}
 	}
+
+	/**
+	 * Delete all permissions for a document
+	 */
+	async deleteAllByDocument(documentId: string): Promise<void> {
+		try {
+			const snapshot = await firestore
+				.collection(this.COLLECTION_NAME)
+				.where("documentId", "==", documentId)
+				.get();
+
+			if (snapshot.empty) return;
+
+			const batch = firestore.batch();
+			snapshot.docs.forEach((doc) => {
+				batch.delete(doc.ref);
+			});
+
+			await batch.commit();
+			logger.info(`All permissions deleted for document: ${documentId}`);
+		} catch (error) {
+			logger.error("Error deleting document permissions:", error);
+			throw error;
+		}
+	}
 }
 
 export default new DocumentPermissionRepository();

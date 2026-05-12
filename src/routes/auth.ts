@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as authController from "../controllers/authController";
 import { authenticate } from "../middlewares/auth";
 import { authRateLimiter } from "../middlewares/rateLimiter";
+import { validateTurnstile } from "../middlewares/turnstile";
 import { validate } from "../middlewares/validation";
 import {
 	checkEmailSchema,
@@ -36,6 +37,7 @@ router.post(
 router.post(
 	"/register",
 	authRateLimiter,
+	validateTurnstile,
 	validate({ body: registerSchema }),
 	authController.register,
 );
@@ -57,7 +59,12 @@ router.post(
  * @desc    Login with Firebase token (Standard)
  * @access  Public
  */
-router.post("/login", validate({ body: loginSchema }), authController.login);
+router.post(
+	"/login",
+	validateTurnstile,
+	validate({ body: loginSchema }),
+	authController.login
+);
 
 /**
  * @route   POST /api/auth/social
@@ -66,6 +73,7 @@ router.post("/login", validate({ body: loginSchema }), authController.login);
  */
 router.post(
 	"/social",
+	validateTurnstile,
 	validate({ body: loginSchema }),
 	authController.socialLogin,
 );

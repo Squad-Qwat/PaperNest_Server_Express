@@ -1,6 +1,7 @@
 import {
 	DeleteObjectCommand,
 	GetObjectCommand,
+	ListObjectsV2CommandOutput,
 	PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -41,6 +42,55 @@ export class StorageService {
 			console.log(`[StorageService] Object deleted from R2: ${key}`);
 		} catch (error) {
 			console.error("Error deleting object from R2:", error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Deletes all files with a certain prefix from R2
+	 * @param prefix The prefix to match
+	 */
+	static async deleteFilesByPrefix(prefix: string) {
+		const { ListObjectsV2Command, DeleteObjectsCommand } = await import(
+			"@aws-sdk/client-s3"
+		);
+
+		try {
+			let isTruncated = true;
+			let continuationToken: string | undefined;
+
+			while (isTruncated) {
+				const listCommand: any = new ListObjectsV2Command({
+					Bucket: process.env.R2_BUCKET_NAME,
+					Prefix: prefix,
+					ContinuationToken: continuationToken,
+				});
+
+				const listResponse = (await r2.send(
+					listCommand,
+				)) as ListObjectsV2CommandOutput;
+
+				if (listResponse.Contents && listResponse.Contents.length > 0) {
+					const deleteCommand = new DeleteObjectsCommand({
+						Bucket: process.env.R2_BUCKET_NAME,
+						Delete: {
+							Objects: listResponse.Contents.map((content) => ({
+								Key: content.Key,
+							})),
+						},
+					});
+
+					await r2.send(deleteCommand);
+					console.log(
+						`[StorageService] Deleted ${listResponse.Contents.length} objects with prefix: ${prefix}`,
+					);
+				}
+
+				isTruncated = !!listResponse.IsTruncated;
+				continuationToken = listResponse.NextContinuationToken;
+			}
+		} catch (error) {
+			console.error("Error deleting objects by prefix from R2:", error);
 			throw error;
 		}
 	}
