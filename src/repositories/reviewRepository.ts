@@ -196,6 +196,30 @@ export class ReviewRepository {
 	}
 
 	/**
+	 * Delete reviews by documentBodyIds
+	 */
+	async deleteByDocumentBodyIds(documentBodyIds: string[]): Promise<void> {
+		if (!documentBodyIds || documentBodyIds.length === 0) return;
+
+		// Firestore 'in' query supports up to 10 elements
+		const batchSize = 10;
+		for (let i = 0; i < documentBodyIds.length; i += batchSize) {
+			const batchIds = documentBodyIds.slice(i, i + batchSize);
+			const snapshot = await this.collection
+				.where("documentBodyId", "in", batchIds)
+				.get();
+
+			if (!snapshot.empty) {
+				const batch = db.batch();
+				snapshot.docs.forEach((doc) => {
+					batch.delete(doc.ref);
+				});
+				await batch.commit();
+			}
+		}
+	}
+
+	/**
 	 * Count reviews by status
 	 */
 	async countByStatus(status: string): Promise<number> {

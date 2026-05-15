@@ -15,11 +15,11 @@ import type {
 	RegisterData,
 	User,
 } from "../types";
-import logger from "../utils/logger";
-import registrationService from "./registrationService";
-import { OTPService } from "./otpService";
-import { EmailService } from "./emailService";
 import { BadRequestError } from "../utils/errorTypes";
+import logger from "../utils/logger";
+import { EmailService } from "./emailService";
+import { OTPService } from "./otpService";
+import registrationService from "./registrationService";
 
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
 	try {
@@ -392,12 +392,17 @@ export const sendOTP = async (uid: string) => {
 
 	const otp = OTPService.generateOTP();
 	await OTPService.saveOTP(uid, otp);
-	await EmailService.sendOTPEmail(firebaseUser.email, firebaseUser.displayName || "User", otp);
+	await EmailService.sendOTPEmail(
+		firebaseUser.email,
+		firebaseUser.displayName || "User",
+		otp,
+	);
 };
 
 export const verifyOTP = async (uid: string, otp: string) => {
 	const isValid = await OTPService.verifyOTP(uid, otp);
-	if (!isValid) throw new BadRequestError("Kode OTP tidak valid atau sudah kadaluarsa");
+	if (!isValid)
+		throw new BadRequestError("Kode OTP tidak valid atau sudah kadaluarsa");
 
 	await auth.updateUser(uid, { emailVerified: true });
 	await OTPService.deleteOTP(uid);

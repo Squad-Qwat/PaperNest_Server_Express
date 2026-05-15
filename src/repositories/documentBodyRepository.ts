@@ -190,6 +190,42 @@ export class DocumentBodyRepository {
 	}
 
 	/**
+	 * Get all versions created after a specific version number
+	 */
+	async getVersionsAfter(
+		documentId: string,
+		versionNumber: number,
+	): Promise<DocumentBody[]> {
+		const snapshot = await this.collection
+			.where("documentId", "==", documentId)
+			.where("versionNumber", ">", versionNumber)
+			.get();
+
+		return snapshot.docs.map((doc) => doc.data() as DocumentBody);
+	}
+
+	/**
+	 * Delete all versions created after a specific version number
+	 */
+	async deleteVersionsAfter(
+		documentId: string,
+		versionNumber: number,
+	): Promise<void> {
+		const snapshot = await this.collection
+			.where("documentId", "==", documentId)
+			.where("versionNumber", ">", versionNumber)
+			.get();
+
+		if (snapshot.empty) return;
+
+		const batch = db.batch();
+		snapshot.docs.forEach((doc) => {
+			batch.delete(doc.ref);
+		});
+		await batch.commit();
+	}
+
+	/**
 	 * Count versions of a document
 	 */
 	async countByDocument(documentId: string): Promise<number> {
