@@ -52,4 +52,51 @@ export class EmailService {
 			throw new Error("Failed to send verification email: " + error.message);
 		}
 	}
+
+	static async sendWorkspaceInvitationEmail(
+		to: string,
+		inviterName: string,
+		workspaceName: string,
+		inviteUrl: string,
+	): Promise<void> {
+		try {
+			const response = await resend.emails.send({
+				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				to,
+				subject: `Invitation: Join ${workspaceName} on PaperNest`,
+				text: `Hi! ${inviterName} has invited you to join the "${workspaceName}" workspace on PaperNest. Click here to accept: ${inviteUrl}`,
+				html: `
+					<div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; color: #111827; line-height: 1.6;">
+						<h1 style="color: #009689; font-size: 24px; margin-bottom: 24px;">PaperNest</h1>
+						<p style="font-size: 16px;">Hello,</p>
+						<p style="font-size: 16px;">
+							<strong>${inviterName}</strong> has invited you to collaborate on the <strong>${workspaceName}</strong> workspace.
+						</p>
+						<div style="margin: 32px 0;">
+							<a href="${inviteUrl}" style="background-color: #009689; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">
+								Accept Invitation
+							</a>
+						</div>
+						<p style="font-size: 14px; color: #6b7280; margin-top: 40px;">
+							If you're having trouble with the button, copy and paste this URL into your browser:
+						</p>
+						<p style="font-size: 12px; color: #009689; word-break: break-all;">
+							${inviteUrl}
+						</p>
+						<hr style="border: none; border-top: 1px solid #f3f4f6; margin: 32px 0;">
+						<p style="font-size: 12px; color: #9ca3af; text-align: center;">
+							&copy; ${new Date().getFullYear()} PaperNest. All rights reserved.
+						</p>
+					</div>
+				`,
+			});
+
+			if (response.error) {
+				throw new Error(response.error.message);
+			}
+		} catch (error: any) {
+			logger.error("Failed to send invitation email", { error: error.message });
+			throw new Error("Failed to send invitation email: " + error.message);
+		}
+	}
 }

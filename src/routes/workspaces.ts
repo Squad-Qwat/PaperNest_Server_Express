@@ -8,12 +8,14 @@ import {
 import { validate } from "../middlewares/validation";
 import {
 	createWorkspaceSchema,
-	inviteMemberSchema,
-	joinWorkspaceSchema,
 	updateInvitationStatusSchema,
 	updateMemberRoleSchema,
 	updateWorkspaceSchema,
 } from "../models/validators/workspaceValidator";
+import {
+	sendInvitationsSchema,
+	acceptInvitationSchema,
+} from "../models/validators/invitationValidator";
 
 const router: Router = Router();
 
@@ -91,11 +93,23 @@ router.get(
  * @access  Protected (requires editor role or higher)
  */
 router.post(
-	"/:workspaceId/members",
+	"/:workspaceId/invitations",
 	authenticate,
 	authorizeWorkspace("editor"),
-	validate({ body: inviteMemberSchema }),
-	workspaceController.inviteMember,
+	validate({ body: sendInvitationsSchema }),
+	workspaceController.sendInvitations,
+);
+
+router.get(
+	"/invitations/:token",
+	workspaceController.getInvitationByToken,
+);
+
+router.post(
+	"/invitations/:token/accept",
+	authenticate,
+	validate({ params: acceptInvitationSchema }),
+	workspaceController.acceptInvitation,
 );
 
 /**
@@ -123,16 +137,5 @@ router.delete(
 	workspaceController.removeMember,
 );
 
-/**
- * @route   POST /api/workspaces/:workspaceId/join
- * @desc    Join workspace directly
- * @access  Protected
- */
-router.post(
-	"/:workspaceId/join",
-	authenticate,
-	validate({ body: joinWorkspaceSchema }),
-	workspaceController.joinWorkspace,
-);
 
 export default router;
