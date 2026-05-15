@@ -15,24 +15,19 @@ import type {
 	RegisterData,
 	User,
 } from "../types";
-
-
-
 import logger from "../utils/logger";
 import registrationService from "./registrationService";
+import { OTPService } from "./otpService";
+import { EmailService } from "./emailService";
+import { BadRequestError } from "../utils/errorTypes";
 
-
-/**
- * Tiered Registration: Create Firebase User and 'Park' data in pending_registrations
- */
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
 	try {
 		if (await userRepository.emailExists(data.email))
-			throw new Error("Email already exists");
+			throw new BadRequestError("Email already exists");
 		if (await userRepository.usernameExists(data.username))
-			throw new Error("Username already exists");
+			throw new BadRequestError("Username already exists");
 
-		// 1. Create Firebase User
 		const firebaseUser = await auth.createUser({
 			email: data.email,
 			password: data.password,
@@ -40,7 +35,6 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
 			emailVerified: false,
 		});
 
-		// 2. Store data in pending_registrations instead of official users collection
 		try {
 			await registrationService.savePending(firebaseUser.uid, {
 				email: data.email,
@@ -50,13 +44,11 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
 				workspaceData: data.workspaceData,
 			});
 		} catch (error) {
-			// Cleanup Firebase user if metadata storage fails
 			await auth.deleteUser(firebaseUser.uid);
 			throw error;
 		}
 
-		// 3. Native Firebase Email will be triggered by frontend after sign-in
-		// using the custom token returned below.
+		await sendOTP(firebaseUser.uid);
 
 		return {
 			isVerificationRequired: true,
@@ -68,28 +60,20 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
 	}
 };
 
-/**
- * Finalize Tiered Registration: Commit to Firestore after verification is confirmed
- */
 export const finalizeRegistration = async (
 	firebaseToken: string,
 ): Promise<AuthResponse> => {
 	try {
 		const decodedToken = await auth.verifyIdToken(firebaseToken);
 
-		// Check if email is verified in Firebase
 		if (!decodedToken.email_verified) {
-			throw new Error("EMAIL_NOT_VERIFIED");
+			throw new BadRequestError("EMAIL_NOT_VERIFIED");
 		}
 
-		// Check if registration was already finalized (idempotency check)
 		const existingUser =
 			(await userRepository.findById(decodedToken.uid)) ||
 			(await userRepository.findByLinkedUid(decodedToken.uid));
 		if (existingUser) {
-			logger.info(
-				`Registration already finalized for user ${decodedToken.uid}`,
-			);
 			return {
 				user: existingUser,
 				token: generateToken({
@@ -105,7 +89,6 @@ export const finalizeRegistration = async (
 			};
 		}
 
-		// Atomic move from pending to main collections
 		const user = await registrationService.finalize(decodedToken.uid);
 
 		return {
@@ -127,15 +110,12 @@ export const finalizeRegistration = async (
 	}
 };
 
-/**
- * Login user with Firebase token (Standard)
- */
 export const login = async (firebaseToken: string): Promise<AuthResponse> => {
 	try {
 		const decodedToken = await auth.verifyIdToken(firebaseToken);
 
-		// Check if email is verified
 		if (!decodedToken.email_verified) {
+			await sendOTP(decodedToken.uid);
 			return { isVerificationRequired: true };
 		}
 
@@ -143,7 +123,7 @@ export const login = async (firebaseToken: string): Promise<AuthResponse> => {
 			(await userRepository.findById(decodedToken.uid)) ||
 			(await userRepository.findByLinkedUid(decodedToken.uid));
 
-		if (!user) throw new Error(ERROR_MESSAGES.USER_NOT_FOUND);
+		if (!user) throw new BadRequestError(ERROR_MESSAGES.USER_NOT_FOUND);
 
 		return {
 			user,
@@ -164,9 +144,6 @@ export const login = async (firebaseToken: string): Promise<AuthResponse> => {
 	}
 };
 
-/**
- * Login user with email and password using Firebase REST API
- */
 export const loginWithEmailPassword = async (
 	data: LoginData,
 ): Promise<AuthResponse> => {
@@ -180,10 +157,20 @@ export const loginWithEmailPassword = async (
 			},
 		);
 
-		const { localId } = response.data;
+		const { localId, idToken } = response.data;
 		const user = await userRepository.findById(localId);
 
-		if (!user) throw new Error(ERROR_MESSAGES.USER_NOT_FOUND);
+		if (!user) {
+			const pending = await registrationService.getPending(localId);
+			if (pending) {
+				await sendOTP(localId);
+				return {
+					isVerificationRequired: true,
+					firebaseToken: idToken,
+				};
+			}
+			throw new BadRequestError(ERROR_MESSAGES.USER_NOT_FOUND);
+		}
 
 		return {
 			user,
@@ -199,21 +186,17 @@ export const loginWithEmailPassword = async (
 			}),
 		};
 	} catch (error: any) {
-		logger.error("Email password login error:", error.response?.data || error);
 		if (
 			error.response?.data?.error?.message === "INVALID_LOGIN_CREDENTIALS" ||
 			error.response?.data?.error?.message === "EMAIL_NOT_FOUND" ||
 			error.response?.data?.error?.message === "INVALID_PASSWORD"
 		) {
-			throw new Error("Invalid email or password");
+			throw new BadRequestError("Invalid email or password");
 		}
 		throw error;
 	}
 };
 
-/**
- * Helper to fetch emails from GitHub API
- */
 const fetchGithubEmail = async (
 	accessToken: string,
 ): Promise<string | null> => {
@@ -230,14 +213,10 @@ const fetchGithubEmail = async (
 		}
 		return null;
 	} catch (error) {
-		logger.error("GitHub Email Fetch error:", error);
 		return null;
 	}
 };
 
-/**
- * Handle Social Login with Unification Logic
- */
 export const handleSocialLogin = async (
 	firebaseToken: string,
 	accessToken?: string,
@@ -250,7 +229,7 @@ export const handleSocialLogin = async (
 			email = (await fetchGithubEmail(accessToken)) || undefined;
 		}
 
-		if (!email) throw new Error("Email is required from provider");
+		if (!email) throw new BadRequestError("Email is required from provider");
 
 		let user =
 			(await userRepository.findById(uid)) ||
@@ -259,9 +238,6 @@ export const handleSocialLogin = async (
 		if (!user) {
 			user = await userRepository.findByEmail(email);
 			if (user) {
-				logger.info(
-					`Linking new UID ${uid} to existing user ${user.userId} (${email})`,
-				);
 				const linkedUids = user.linkedUids || [];
 				if (!linkedUids.includes(uid)) {
 					linkedUids.push(uid);
@@ -309,9 +285,6 @@ export const handleSocialLogin = async (
 	}
 };
 
-/**
- * Complete Social Registration (Onboarding)
- */
 export const completeSocialRegistration = async (
 	data: CompleteSocialRegistrationData,
 ): Promise<AuthResponse> => {
@@ -320,13 +293,13 @@ export const completeSocialRegistration = async (
 		const { uid, name, picture } = decodedToken;
 		const email = decodedToken.email || data.email;
 
-		if (!email) throw new Error("Email not found");
+		if (!email) throw new BadRequestError("Email not found");
 		if (await userRepository.usernameExists(data.username))
-			throw new Error("Username already exists");
+			throw new BadRequestError("Username already exists");
 
 		const existing = await userRepository.findByEmail(email);
 		if (existing)
-			throw new Error(
+			throw new BadRequestError(
 				"An account with this email already exists. Please login instead.",
 			);
 
@@ -358,15 +331,11 @@ export const completeSocialRegistration = async (
 	}
 };
 
-/**
- * Check if email is already in use
- */
 export const checkEmailAvailability = async (
 	email: string,
 ): Promise<{ available: boolean }> => {
 	try {
 		await auth.getUserByEmail(email);
-		// If no error, email exists
 		return { available: false };
 	} catch (error: any) {
 		if (error.code === "auth/user-not-found") {
@@ -376,9 +345,6 @@ export const checkEmailAvailability = async (
 	}
 };
 
-/**
- * Auth Lifecycle & Maintenance
- */
 export const refreshAccessToken = async (
 	refreshToken: string,
 ): Promise<{ token: string }> => {
@@ -386,7 +352,7 @@ export const refreshAccessToken = async (
 	const user =
 		(await userRepository.findById(decoded.userId)) ||
 		(await userRepository.findByLinkedUid(decoded.userId));
-	if (!user) throw new Error(ERROR_MESSAGES.USER_NOT_FOUND);
+	if (!user) throw new BadRequestError(ERROR_MESSAGES.USER_NOT_FOUND);
 	return {
 		token: generateToken({
 			userId: user.userId,
@@ -401,7 +367,7 @@ export const verifyFirebaseToken = async (token: string): Promise<User> => {
 	const user =
 		(await userRepository.findById(decodedToken.uid)) ||
 		(await userRepository.findByLinkedUid(decodedToken.uid));
-	if (!user) throw new Error(ERROR_MESSAGES.USER_NOT_FOUND);
+	if (!user) throw new BadRequestError(ERROR_MESSAGES.USER_NOT_FOUND);
 	return user;
 };
 
@@ -420,6 +386,23 @@ export const sendPasswordResetEmail = async (email: string) => {
 	logger.info(`Password reset link for ${email}: ${resetLink}`);
 };
 
+export const sendOTP = async (uid: string) => {
+	const firebaseUser = await auth.getUser(uid);
+	if (!firebaseUser.email) throw new BadRequestError("Email tidak ditemukan");
+
+	const otp = OTPService.generateOTP();
+	await OTPService.saveOTP(uid, otp);
+	await EmailService.sendOTPEmail(firebaseUser.email, firebaseUser.displayName || "User", otp);
+};
+
+export const verifyOTP = async (uid: string, otp: string) => {
+	const isValid = await OTPService.verifyOTP(uid, otp);
+	if (!isValid) throw new BadRequestError("Kode OTP tidak valid atau sudah kadaluarsa");
+
+	await auth.updateUser(uid, { emailVerified: true });
+	await OTPService.deleteOTP(uid);
+};
+
 export default {
 	register,
 	finalizeRegistration,
@@ -430,7 +413,9 @@ export default {
 	refreshAccessToken,
 	verifyFirebaseToken,
 	deleteUser,
-	updateUserEmail,
-	sendPasswordResetEmail,
-	checkEmailAvailability,
+	updateEmail: updateUserEmail,
+	sendPasswordReset: sendPasswordResetEmail,
+	checkEmail: checkEmailAvailability,
+	sendOTP,
+	verifyOTP,
 };

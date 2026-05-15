@@ -23,6 +23,7 @@
 		"@langchain/langgraph": "^1.2.7",
 		"@langchain/mistralai": "^1.0.7",
 		"@liveblocks/node": "^3.12.1",
+		"@upstash/redis": "^1.38.0",
 		"axios": "^1.13.2",
 		"bcryptjs": "^3.0.3",
 		"citation-js": "^0.7.21",
@@ -43,6 +44,7 @@
 		"morgan": "~1.10.1",
 		"multer": "^2.0.2",
 		"pdf-parse": "^2.4.5",
+		"resend": "^6.12.3",
 		"uuid": "^14.0.0",
 		"winston": "^3.19.0",
 		"zod": "^4.3.6"
