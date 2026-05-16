@@ -19,6 +19,19 @@ jest.mock("../../services/registrationService");
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+jest.mock("../../services/emailService", () => ({
+	EmailService: {
+		sendOTPEmail: jest.fn().mockImplementation(() => Promise.resolve()),
+	},
+}));
+
+jest.mock("../../services/otpService", () => ({
+	OTPService: {
+		generateOTP: jest.fn().mockReturnValue("123456"),
+		saveOTP: jest.fn().mockImplementation(() => Promise.resolve()),
+	},
+}));
+
 describe("AuthService", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -38,6 +51,11 @@ describe("AuthService", () => {
 			jest.mocked(userRepository.usernameExists).mockResolvedValue(false);
 			__mockAuth.createUser.mockResolvedValue({ uid: "uid-123" } as any);
 			__mockAuth.createCustomToken.mockResolvedValue("custom-token");
+			__mockAuth.getUser.mockResolvedValue({
+				uid: "uid-123",
+				email: "new@example.com",
+				displayName: "New User",
+			} as any);
 
 			const result = await authService.register(registerData);
 
@@ -111,6 +129,11 @@ describe("AuthService", () => {
 			__mockAuth.verifyIdToken.mockResolvedValue({
 				uid: "user-123",
 				email_verified: false,
+			} as any);
+			__mockAuth.getUser.mockResolvedValue({
+				uid: "user-123",
+				email: "user@example.com",
+				displayName: "User",
 			} as any);
 
 			const result = await authService.login("token");

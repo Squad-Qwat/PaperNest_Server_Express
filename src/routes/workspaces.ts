@@ -95,7 +95,7 @@ router.get(
 router.post(
 	"/:workspaceId/invitations",
 	authenticate,
-	authorizeWorkspace("editor"),
+	authorizeWorkspaceOwner,
 	validate({ body: sendInvitationsSchema }),
 	workspaceController.sendInvitations,
 );

@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { redis } from "../config/redis";
 import logger from "../utils/logger";
 
@@ -5,7 +6,7 @@ export class OTPService {
 	private static TTL = 300;
 
 	static generateOTP(): string {
-		return Math.floor(100000 + Math.random() * 900000).toString();
+		return randomInt(100000, 999999).toString();
 	}
 
 	static async saveOTP(uid: string, otp: string): Promise<void> {

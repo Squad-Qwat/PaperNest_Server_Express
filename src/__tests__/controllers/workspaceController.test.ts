@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import workspaceController from "../../controllers/workspaceController";
+import invitationRepository from "../../repositories/invitationRepository";
 import notificationRepository from "../../repositories/notificationRepository";
 import userRepository from "../../repositories/userRepository";
 import userWorkspaceRepository from "../../repositories/userWorkspaceRepository";
 import workspaceRepository from "../../repositories/workspaceRepository";
+import { EmailService } from "../../services/emailService";
 import { mockUser, mockWorkspace } from "../../tests/fixtures";
 
 jest.mock("../../config/firebase", () => ({
@@ -14,6 +16,8 @@ jest.mock("../../repositories/workspaceRepository");
 jest.mock("../../repositories/userWorkspaceRepository");
 jest.mock("../../repositories/userRepository");
 jest.mock("../../repositories/notificationRepository");
+jest.mock("../../repositories/invitationRepository");
+jest.mock("../../services/emailService");
 jest.mock("../../utils/logger");
 
 import {
@@ -56,53 +60,34 @@ describe("WorkspaceController", () => {
 		});
 	});
 
-	describe("inviteMember", () => {
-		it("should invite a user and create a notification", async () => {
+	describe("sendInvitations", () => {
+		it("should send invitations and create invitation records", async () => {
 			mockReq.params = { workspaceId: "workspace-123" };
-			mockReq.body = { userId: "invited-user", role: "editor" };
+			mockReq.body = { emails: ["invited@example.com"], role: "editor" };
+			mockReq.userId = "owner-id";
 
-			jest
-				.mocked(userRepository.findById)
-				.mockResolvedValue({ userId: "invited-user" } as any);
-			jest
-				.mocked(userWorkspaceRepository.findByUserAndWorkspace)
-				.mockResolvedValue(null);
-			jest
-				.mocked(userWorkspaceRepository.create)
-				.mockResolvedValue({ userWorkspaceId: "uw-123" } as any);
-			jest
-				.mocked(workspaceRepository.findById)
-				.mockResolvedValue(mockWorkspace);
+			jest.mocked(workspaceRepository.findById).mockResolvedValue(mockWorkspace);
+			jest.mocked(userRepository.findById).mockResolvedValue({ name: "Owner" } as any);
+			jest.mocked(userRepository.findByEmail).mockResolvedValue(null);
+			jest.mocked(invitationRepository.findByEmailAndWorkspace).mockResolvedValue(null);
+			jest.mocked(invitationRepository.create).mockResolvedValue({} as any);
+			jest.mocked(EmailService.sendWorkspaceInvitationEmail).mockResolvedValue(undefined as any);
 
-			await workspaceController.inviteMember(mockReq, mockRes, next);
+			await workspaceController.sendInvitations(mockReq, mockRes, next);
 
-			expect(mockRes.status).toHaveBeenCalledWith(201);
-			expect(userWorkspaceRepository.create).toHaveBeenCalledWith(
-				expect.objectContaining({
-					invitationStatus: "pending",
-				}),
-			);
-			expect(notificationRepository.create).toHaveBeenCalledWith(
-				expect.objectContaining({
-					type: "invitation",
-				}),
-			);
+			expect(mockRes.status).toHaveBeenCalledWith(200);
+			expect(invitationRepository.create).toHaveBeenCalled();
+			expect(EmailService.sendWorkspaceInvitationEmail).toHaveBeenCalled();
 		});
 
-		it("should throw ConflictError if user is already a member", async () => {
-			mockReq.params = { workspaceId: "workspace-123" };
-			mockReq.body = { userId: "invited-user" };
+		it("should throw NotFoundError if workspace not found", async () => {
+			mockReq.params = { workspaceId: "non-existent" };
+			mockReq.body = { emails: ["test@example.com"] };
+			jest.mocked(workspaceRepository.findById).mockResolvedValue(null);
 
-			jest
-				.mocked(userRepository.findById)
-				.mockResolvedValue({ userId: "invited-user" } as any);
-			jest
-				.mocked(userWorkspaceRepository.findByUserAndWorkspace)
-				.mockResolvedValue({} as any);
+			await workspaceController.sendInvitations(mockReq, mockRes, next);
 
-			await workspaceController.inviteMember(mockReq, mockRes, next);
-
-			expect(next).toHaveBeenCalledWith(expect.any(ConflictError));
+			expect(next).toHaveBeenCalledWith(expect.any(NotFoundError));
 		});
 	});
 
