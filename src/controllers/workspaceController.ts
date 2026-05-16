@@ -8,7 +8,12 @@ import {
 	ConflictError,
 	ForbiddenError,
 	NotFoundError,
+	BadRequestError,
 } from "../utils/errorTypes";
+import crypto from "crypto";
+import invitationRepository from "../repositories/invitationRepository";
+import { EmailService } from "../services/emailService";
+import { env } from "../config/env";
 import logger from "../utils/logger";
 import {
 	createdResponse,
@@ -179,7 +184,6 @@ export const getWorkspaceMembers = asyncHandler(
 			workspaceId as string,
 		);
 
-		// Get full user details for each member
 		const members = await Promise.all(
 			userWorkspaces.map(async (uw) => {
 				const user = await userRepository.findById(uw.userId);
@@ -203,60 +207,196 @@ export const getWorkspaceMembers = asyncHandler(
 );
 
 /**
- * Invite member to workspace
- * POST /api/workspaces/:workspaceId/members
+ * Send email invitations to multiple users
+ * POST /api/workspaces/:workspaceId/invitations
  * Protected (requires editor role or higher)
  */
-export const inviteMember = asyncHandler(
+export const sendInvitations = asyncHandler(
 	async (req: Request, res: Response) => {
-		const { workspaceId } = req.params;
-		const { userId, role } = req.body;
+		const workspaceId = req.params.workspaceId as string;
+		const { emails, role } = req.body;
 		const inviterId = req.userId!;
 
-		logger.info("Invite member request", { workspaceId, userId, role });
+		logger.info("Send invitations request", { workspaceId, emails, role });
 
-		// Check if user exists
-		const user = await userRepository.findById(userId);
-		if (!user) {
-			throw new NotFoundError("User not found");
+		const workspace = await workspaceRepository.findById(workspaceId as string);
+		if (!workspace) {
+			throw new NotFoundError("Workspace not found");
 		}
 
-		// Check if already a member
-		const existing = await userWorkspaceRepository.findByUserAndWorkspace(
-			userId,
-			workspaceId as string,
+		const inviter = await userRepository.findById(inviterId);
+		const results = [];
+
+		for (const email of emails) {
+			const user = await userRepository.findByEmail(email);
+			if (user) {
+				const existing = await userWorkspaceRepository.findByUserAndWorkspace(
+					user.userId,
+					workspaceId as string,
+				);
+				if (existing && existing.invitationStatus === "accepted") {
+					continue; // Already a member
+				}
+			}
+
+			const token = crypto.randomBytes(32).toString("hex");
+			const expiresAt = new Date();
+			expiresAt.setDate(expiresAt.getDate() + 7);
+
+			let invitation = await invitationRepository.findByEmailAndWorkspace(
+				email,
+				workspaceId as string,
+			);
+
+			if (invitation) {
+				await invitationRepository.updateInvitation(invitation.invitationId, {
+					token,
+					status: "pending",
+					expiresAt,
+					updatedAt: new Date(),
+				});
+			} else {
+				invitation = await invitationRepository.create({
+					workspaceId: workspaceId as string,
+					email,
+					role: role || "viewer",
+					inviterId,
+					token,
+					status: "pending",
+					expiresAt,
+				});
+			}
+
+			const inviteUrl = `${env.FRONTEND_URL}/invitations/accept/${token}`;
+			await EmailService.sendWorkspaceInvitationEmail(
+				email,
+				inviter?.name || "Someone",
+				workspace.title,
+				inviteUrl,
+			);
+
+			results.push({ email, status: "sent" });
+		}
+
+		return successResponse(
+			res,
+			{ results },
+			"Invitations processed successfully",
 		);
-		if (existing) {
-			throw new ConflictError(
-				"User is already a member or has pending invitation",
+	},
+);
+
+/**
+ * Get invitation details by token
+ * GET /api/invitations/:token
+ * Public (to show details before joining)
+ */
+export const getInvitationByToken = asyncHandler(
+	async (req: Request, res: Response) => {
+		const token = req.params.token as string;
+
+		const invitation = await invitationRepository.findByToken(token);
+		if (!invitation || invitation.status !== "pending") {
+			throw new NotFoundError("Invitation not found or no longer valid");
+		}
+
+		const expiresAtVal = (invitation.expiresAt as any).toDate
+			? (invitation.expiresAt as any).toDate()
+			: new Date(invitation.expiresAt);
+
+		if (expiresAtVal < new Date()) {
+			await invitationRepository.updateStatus(
+				invitation.invitationId,
+				"expired",
+			);
+			throw new BadRequestError("Invitation has expired");
+		}
+
+		const workspace = await workspaceRepository.findById(invitation.workspaceId as string);
+		const inviter = await userRepository.findById(invitation.inviterId);
+
+		return successResponse(
+			res,
+			{
+				invitation: {
+					email: invitation.email,
+					role: invitation.role,
+					workspaceTitle: workspace?.title,
+					workspaceIcon: workspace?.icon,
+					inviterName: inviter?.name,
+				},
+			},
+			"Invitation details retrieved successfully",
+		);
+	},
+);
+
+/**
+ * Accept invitation
+ * POST /api/invitations/:token/accept
+ * Protected
+ */
+export const acceptInvitation = asyncHandler(
+	async (req: Request, res: Response) => {
+		const token = req.params.token as string;
+		const userId = req.userId!;
+
+		const invitation = await invitationRepository.findByToken(token);
+		if (!invitation || invitation.status !== "pending") {
+			throw new NotFoundError("Invitation not found or no longer valid");
+		}
+
+		const expiresAtVal = (invitation.expiresAt as any).toDate
+			? (invitation.expiresAt as any).toDate()
+			: new Date(invitation.expiresAt);
+
+		if (expiresAtVal < new Date()) {
+			await invitationRepository.updateStatus(
+				invitation.invitationId,
+				"expired",
+			);
+			throw new BadRequestError("Invitation has expired");
+		}
+
+		const user = await userRepository.findById(userId);
+		if (user?.email !== invitation.email) {
+			throw new ForbiddenError(
+				"This invitation was sent to a different email address",
 			);
 		}
 
-		// Create invitation
-		const userWorkspace = await userWorkspaceRepository.create({
+		const existing = await userWorkspaceRepository.findByUserAndWorkspace(
 			userId,
-			workspaceId: workspaceId as string,
-			role: role || "viewer",
-			invitationStatus: "pending",
-			invitedBy: inviterId,
-		});
-
-		// Create notification for invited user
-		const workspace = await workspaceRepository.findById(workspaceId as string);
-		await notificationRepository.create({
-			userId,
-			type: "invitation",
-			title: "Workspace Invitation",
-			message: `You have been invited to join "${workspace?.title}"`,
-			relatedId: userWorkspace.userWorkspaceId,
-			isRead: false,
-		});
-
-		return createdResponse(
-			res,
-			{ userWorkspace },
-			"Member invited successfully",
+			invitation.workspaceId as string,
 		);
+
+		if (existing) {
+			if (existing.invitationStatus === "accepted") {
+				await invitationRepository.updateStatus(
+					invitation.invitationId,
+					"accepted",
+				);
+				return successResponse(res, null, "You are already a member");
+			}
+			// Update existing pending status
+			await userWorkspaceRepository.updateInvitationStatus(
+				existing.userWorkspaceId,
+				"accepted",
+			);
+		} else {
+			// Create new member record
+			await userWorkspaceRepository.create({
+				userId,
+				workspaceId: invitation.workspaceId,
+				role: invitation.role,
+				invitationStatus: "accepted",
+				invitedBy: invitation.inviterId,
+			});
+		}
+
+		await invitationRepository.updateStatus(invitation.invitationId, "accepted");
+
+		return successResponse(res, null, "Successfully joined workspace");
 	},
 );
 
@@ -418,54 +558,6 @@ export const updateInvitationStatus = asyncHandler(
 	},
 );
 
-/**
- * Join workspace directly
- * POST /api/workspaces/:workspaceId/join
- * Protected
- */
-export const joinWorkspace = asyncHandler(
-	async (req: Request, res: Response) => {
-		const { workspaceId } = req.params;
-		const userId = req.userId!;
-		const { role } = req.body;
-
-		logger.info("Join workspace request", { workspaceId, userId });
-
-		const workspace = await workspaceRepository.findById(workspaceId as string);
-		if (!workspace) {
-			throw new NotFoundError("Workspace not found");
-		}
-
-		const existing = await userWorkspaceRepository.findByUserAndWorkspace(
-			userId,
-			workspaceId as string,
-		);
-		if (existing) {
-			if (existing.invitationStatus === "accepted") {
-				throw new ConflictError("You are already a member of this workspace");
-			}
-			if (existing.invitationStatus === "pending") {
-				throw new ConflictError(
-					"You have a pending invitation for this workspace",
-				);
-			}
-		}
-
-		const userWorkspace = await userWorkspaceRepository.create({
-			userId,
-			workspaceId: workspaceId as string,
-			role: role || "viewer",
-			invitationStatus: "accepted",
-			invitedBy: userId,
-		});
-
-		return createdResponse(
-			res,
-			{ userWorkspace, workspace },
-			"Successfully joined workspace",
-		);
-	},
-);
 
 export default {
 	createWorkspace,
@@ -474,10 +566,11 @@ export default {
 	updateWorkspace,
 	deleteWorkspace,
 	getWorkspaceMembers,
-	inviteMember,
+	sendInvitations,
+	getInvitationByToken,
+	acceptInvitation,
 	updateMemberRole,
 	removeMember,
 	getPendingInvitations,
 	updateInvitationStatus,
-	joinWorkspace,
 };

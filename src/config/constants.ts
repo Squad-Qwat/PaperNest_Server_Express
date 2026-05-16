@@ -11,6 +11,7 @@ export const COLLECTIONS = {
 	NOTIFICATIONS: "notifications",
 	PRESENCE: "presence",
 	RAG_CHUNKS: "ragChunks",
+	INVITATIONS: "invitations",
 } as const;
 
 // User Roles

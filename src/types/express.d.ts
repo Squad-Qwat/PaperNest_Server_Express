@@ -1,4 +1,3 @@
-// Extend Express Request type
 import { User } from "./index";
 
 declare global {
@@ -6,6 +5,7 @@ declare global {
 		interface Request {
 			user?: User;
 			userId?: string;
+			firebaseUid?: string;
 		}
 	}
 }
