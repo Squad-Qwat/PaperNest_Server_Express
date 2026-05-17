@@ -25,6 +25,7 @@ export const reflectorNode = async (state: AgentStateType) => {
 		provider: state.providerId as any,
 		model: state.modelId,
 		reasoningEnabled: state.reasoningEnabled,
+		streaming: false, // Disable streaming for evaluation steps
 	});
 
 	// Find the active step

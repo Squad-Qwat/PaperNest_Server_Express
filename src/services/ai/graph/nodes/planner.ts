@@ -41,6 +41,7 @@ export const plannerNode = async (state: AgentStateType) => {
 		provider: state.providerId as any,
 		model: state.modelId,
 		reasoningEnabled: state.reasoningEnabled,
+		streaming: false, // Disable streaming to ensure reliable structured output generation
 	});
 
 	// Extract task: use goal if replanning, otherwise extract from messages

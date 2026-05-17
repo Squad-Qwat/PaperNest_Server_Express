@@ -35,6 +35,7 @@ export const executorNode = async (state: AgentStateType) => {
 		provider: state.providerId as any,
 		model: state.modelId,
 		reasoningEnabled: state.reasoningEnabled,
+		streaming: false, // Disable streaming to prevent GoogleGenAI stream parsing errors when binding tools
 	});
 	const tools = [...createCodeMirrorTools(), semanticScholarTool];
 	const modelWithTools = (model as any).bindTools(tools);
