@@ -1,7 +1,7 @@
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createAIModel } from "../../config";
 import { loadPrompts } from "../../promptLoader";
-import { createCodeMirrorTools } from "../../tools/schemas";
+import { getActiveToolsForState } from "../../tools/workspace.tool";
 import { extractTokenMetadata, getToolDescriptions } from "../../utils";
 import { PlanSchema } from "../schemas/planSchema";
 import type { AgentStateType } from "../state";
@@ -71,7 +71,8 @@ export const plannerNode = async (state: AgentStateType) => {
 
 	const documentSnippet =
 		state.documentContent?.slice(0, 2000) || "(no document content)";
-	const toolDescriptions = getToolDescriptions();
+	const tools = getActiveToolsForState(state);
+	const toolDescriptions = getToolDescriptions(tools);
 
 	// Build the planner prompt with all placeholders filled
 	const plannerPrompt = prompts.planner

@@ -1,8 +1,6 @@
 import type { BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { ToolNode as BaseToolNode } from "@langchain/langgraph/prebuilt";
-import { createRAGTool } from "../../tools/rag.tool";
-import { createCodeMirrorTools } from "../../tools/schemas";
-import { semanticScholarTool } from "../../tools/semanticScholar.tool";
+import { getActiveToolsForState } from "../../tools/workspace.tool";
 import type { AgentStateType } from "../state";
 
 export const toolNode = async (state: AgentStateType) => {
@@ -12,11 +10,7 @@ export const toolNode = async (state: AgentStateType) => {
 		);
 
 		// Create a tool node instance that includes backend-executed tools
-		const tools = [
-			...createCodeMirrorTools(),
-			semanticScholarTool,
-			createRAGTool(state.documentId || "unknown"),
-		];
+		const tools = getActiveToolsForState(state);
 		const baseToolNode = new BaseToolNode(tools);
 
 		// Execute tool node (this will run Semantic Scholar/RAG on backend,

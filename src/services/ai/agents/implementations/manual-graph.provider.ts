@@ -20,6 +20,7 @@ export class ManualGraphProvider implements IAgentProvider {
 			params.conversationHistory,
 			params.toolResults,
 			params.documentId,
+			params.workspaceId,
 			params.initialPlan,
 			params.reasoningEnabled,
 			params.providerId,

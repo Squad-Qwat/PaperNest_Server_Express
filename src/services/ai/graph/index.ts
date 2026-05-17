@@ -123,6 +123,7 @@ export async function* streamAgent(
 	conversationHistory: Array<{ role: string; content: string }> = [],
 	existingToolResults?: ToolResult[],
 	documentId?: string,
+	workspaceId?: string,
 	initialPlan?: any[],
 	reasoningEnabled: boolean = false,
 	providerId?: string,
@@ -184,6 +185,7 @@ export async function* streamAgent(
 			iteration: 0,
 			maxIterations: 15,
 			documentId: documentId || "",
+			workspaceId: workspaceId || "",
 			isComplete: false, // Explicitly initialize
 			goal: taskForGoal, // Preserve task for replan cycles
 			reasoningEnabled,

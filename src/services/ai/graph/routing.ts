@@ -106,6 +106,8 @@ export function routeAfterExecutor(state: AgentStateType): RouteType {
 		const BACKEND_ONLY_TOOLS = [
 			"search_semantic_scholar",
 			"search_attached_pdfs",
+			"search_workspace_documents",
+			"read_workspace_document_by_id",
 		];
 		const hasBackendTool = toolCalls.some((tc: any) =>
 			BACKEND_ONLY_TOOLS.includes(tc.name),

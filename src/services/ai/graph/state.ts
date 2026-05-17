@@ -50,6 +50,10 @@ export const AgentState = Annotation.Root({
 		reducer: (_, newVal) => newVal ?? "",
 		default: () => "",
 	}),
+	workspaceId: Annotation<string>({
+		reducer: (_, newVal) => newVal ?? "",
+		default: () => "",
+	}),
 	documentContent: Annotation<string>({
 		reducer: (_, newVal) => newVal ?? "",
 		default: () => "",

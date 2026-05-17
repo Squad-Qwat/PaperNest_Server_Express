@@ -1,8 +1,7 @@
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createAIModel } from "../../config";
 import { loadPrompts } from "../../promptLoader";
-import { createCodeMirrorTools } from "../../tools/schemas";
-import { semanticScholarTool } from "../../tools/semanticScholar.tool";
+import { getActiveToolsForState } from "../../tools/workspace.tool";
 import {
 	contentToText,
 	extractTokenMetadata,
@@ -37,7 +36,7 @@ export const executorNode = async (state: AgentStateType) => {
 		reasoningEnabled: state.reasoningEnabled,
 		streaming: false, // Disable streaming to prevent GoogleGenAI stream parsing errors when binding tools
 	});
-	const tools = [...createCodeMirrorTools(), semanticScholarTool];
+	const tools = getActiveToolsForState(state);
 	const modelWithTools = (model as any).bindTools(tools);
 
 	// Priority: 'active' step first (FE tool results returned for this step in round 2),
@@ -107,7 +106,7 @@ export const executorNode = async (state: AgentStateType) => {
 		})
 		.join("\n");
 
-	const toolDescriptions = getToolDescriptions();
+	const toolDescriptions = getToolDescriptions(tools);
 
 	// Fill all executor prompt placeholders
 	const executorPrompt = prompts.executor

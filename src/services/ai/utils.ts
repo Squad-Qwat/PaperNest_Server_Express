@@ -4,8 +4,6 @@
  * Centralizes common helper functions to ensure DRY principles and consistent behavior.
  */
 
-import { createCodeMirrorTools } from "./tools/schemas";
-
 /**
  * Converts various AI message content formats (string, parts array) to plain text.
  */
@@ -48,7 +46,6 @@ export const extractTokenMetadata = (usage: any = {}) => {
  * Generates a formatted list of available tools and their descriptions.
  * Used for system prompt injection.
  */
-export const getToolDescriptions = (): string => {
-	const tools = createCodeMirrorTools();
+export const getToolDescriptions = (tools: any[]): string => {
 	return tools.map((t) => `- **${t.name}**: ${t.description}`).join("\n");
 };
