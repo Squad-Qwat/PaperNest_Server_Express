@@ -49,7 +49,7 @@ export const plannerNode = async (state: AgentStateType) => {
 		state.goal && state.goal.trim()
 			? state.goal
 			: state.messages.at(-1)?.content &&
-					typeof state.messages.at(-1)!.content === "string"
+				typeof state.messages.at(-1)!.content === "string"
 				? (state.messages.at(-1)!.content as string).trim()
 				: "";
 
@@ -111,10 +111,23 @@ export const plannerNode = async (state: AgentStateType) => {
 			taskMessage: taskMessage.substring(0, 50),
 		});
 
-		// Always include HumanMessage to satisfy Gemini 'contents' requirement
+		const lastUserMsg = [...state.messages]
+			.reverse()
+			.find((m) => m instanceof HumanMessage);
+
+		const plannerInputMessage =
+			lastUserMsg && Array.isArray(lastUserMsg.content)
+				? new HumanMessage({
+						content: [
+							{ type: "text", text: `Plan this task: ${taskMessage}` },
+							...lastUserMsg.content.filter((part: any) => part.type !== "text"),
+						],
+					})
+				: new HumanMessage(`Plan this task: ${taskMessage}`);
+
 		const response = await modelWithStructure.invoke([
 			sysMsg,
-			new HumanMessage(`Plan this task: ${taskMessage}`),
+			plannerInputMessage,
 		]);
 
 		const parsedPlan = response.parsed;
@@ -144,7 +157,7 @@ export const plannerNode = async (state: AgentStateType) => {
 
 		const plannerReasoning =
 			typeof parsedPlan.reasoning === "string" &&
-			parsedPlan.reasoning.trim().length > 0
+				parsedPlan.reasoning.trim().length > 0
 				? `### Planner\n${parsedPlan.reasoning.trim()}`
 				: `### Planner\nGenerated ${plan.length} step(s) to accomplish the task.`;
 

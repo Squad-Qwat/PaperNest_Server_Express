@@ -9,6 +9,7 @@ import type {
 	ToolResult,
 } from "@/types/ai/agent.types";
 import type { IAgentProvider } from "../interface";
+import { parseBase64Attachments } from "../../utils";
 
 /**
  * DeepAgent Provider
@@ -73,15 +74,19 @@ export class DeepAgentProvider implements IAgentProvider {
 				: new AIMessage(msg.content),
 		);
 
-		// Add current document state as context in the last message or system prompt
-		// For DeepAgents, we can just append it to the prompt or messages
 		const lastUserMessage = params.message;
-		const enrichedMessage = `Document Context:\n${params.documentContent}\n\nUser Request: ${lastUserMessage}`;
+		const textContent = `Document Context:\n${params.documentContent}\n\nUser Request: ${lastUserMessage}`;
 
-		// 5. Handle Tool Resumption (if any)
+		const messageParts: any[] = [{ type: "text", text: textContent }];
+
+		if (params.files && params.files.length > 0) {
+			const parsedMedia = parseBase64Attachments(params.files);
+			messageParts.push(...parsedMedia);
+		}
+
 		const messages: any[] = [
 			...inputMessages,
-			new HumanMessage(enrichedMessage),
+			new HumanMessage({ content: messageParts }),
 		];
 
 		if (params.toolResults && params.toolResults.length > 0) {
@@ -123,9 +128,10 @@ export class DeepAgentProvider implements IAgentProvider {
 
 			let fullContent = "";
 			let pendingToolCalls: any[] = [];
-			const chunkCount = 0;
+			let chunkCount = 0;
 
 			for await (const entry of stream) {
+				chunkCount++;
 				const [namespace, chunk] = entry as [string[], any];
 				const chunkKeys = Object.keys(chunk);
 

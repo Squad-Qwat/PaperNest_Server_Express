@@ -17,7 +17,7 @@ import {
 	type StreamEvent,
 	type ToolResult,
 } from "@/types/ai/agent.types";
-import { contentToText, extractTokenMetadata } from "../utils";
+import { contentToText, extractTokenMetadata, parseBase64Attachments } from "../utils";
 import { executorNode, plannerNode, reflectorNode, toolNode } from "./nodes";
 import {
 	ROUTES,
@@ -128,6 +128,7 @@ export async function* streamAgent(
 	reasoningEnabled: boolean = false,
 	providerId?: string,
 	modelId?: string,
+	files?: Array<{ filename: string; mediaType: string; url: string }>,
 ): AsyncGenerator<StreamEvent> {
 	console.log("[Graph] Starting Plan-and-Execute agent for thread:", threadId);
 
@@ -148,16 +149,10 @@ export async function* streamAgent(
 					: new AIMessage(msg.text),
 			);
 
-		// Prune history to prevent message explosion (cost & context size)
 		const prunedHistory = pruneMessageHistory(historyMessages);
 
-		// taskForGoal must always be the USER's message, never the AI's response.
-		// Using conversationHistory.at(-1) is wrong because history can end with an AI message.
 		const taskForGoal = userMessage;
 
-		// CRITICAL FIX: Don't reuse plan if all steps are already completed
-		// (happens when frontend sends plan from previous execution)
-		// New message = generate fresh plan
 		const shouldUseInitialPlan =
 			initialPlan &&
 			initialPlan.length > 0 &&
@@ -174,20 +169,34 @@ export async function* streamAgent(
 				: "GENERATING fresh plan",
 		});
 
+		let humanMessageInstance: HumanMessage;
+
+		if (files && files.length > 0) {
+			const parsedMedia = parseBase64Attachments(files);
+			const messageParts: any[] = [
+				{ type: "text", text: userMessage },
+				...parsedMedia,
+			];
+
+			humanMessageInstance = new HumanMessage({ content: messageParts });
+		} else {
+			humanMessageInstance = new HumanMessage(userMessage);
+		}
+
 		const initialState: Partial<AgentStateType> = {
-			messages: [...prunedHistory, new HumanMessage(userMessage)],
+			messages: [...prunedHistory, humanMessageInstance],
 			documentContent,
 			documentHTML,
 			cursorPosition: 0,
-			plan: shouldUseInitialPlan ? initialPlan : [], // Empty if already completed
-			pastSteps: [], // Initialize pastSteps for tracking
+			plan: shouldUseInitialPlan ? initialPlan : [],
+			pastSteps: [],
 			needsReplanning: false,
 			iteration: 0,
 			maxIterations: 15,
 			documentId: documentId || "",
 			workspaceId: workspaceId || "",
-			isComplete: false, // Explicitly initialize
-			goal: taskForGoal, // Preserve task for replan cycles
+			isComplete: false,
+			goal: taskForGoal,
 			reasoningEnabled,
 			providerId: providerId || "google-genai",
 			modelId: modelId || "gemma-4-31b-it",

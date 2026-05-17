@@ -22,6 +22,7 @@ export const streamAIResponse = async (
 			providerId,
 			modelId,
 			agentId = "manual_graph",
+			files = [],
 		} = req.body;
 
 		// DYNAMIC IMPORTS: Only load heavy AI modules when a request actually arrives
@@ -93,6 +94,7 @@ export const streamAIResponse = async (
 				reasoningEnabled,
 				providerId,
 				modelId,
+				files,
 			})) {
 				if (isDisconnected) break;
 				res.write(`data: ${JSON.stringify(chunk)}\n\n`);

@@ -43,4 +43,5 @@ export interface AgentStreamParams {
 	reasoningEnabled?: boolean;
 	providerId?: string;
 	modelId?: string;
+	files?: Array<{ filename: string; mediaType: string; url: string }>;
 }

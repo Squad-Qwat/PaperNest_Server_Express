@@ -25,6 +25,7 @@ export class ManualGraphProvider implements IAgentProvider {
 			params.reasoningEnabled,
 			params.providerId,
 			params.modelId,
+			params.files,
 		);
 	}
 }

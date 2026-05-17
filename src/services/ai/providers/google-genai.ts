@@ -37,11 +37,11 @@ export class GoogleGenAIProvider implements AIProvider {
 			streaming: config.streaming,
 			...(shouldApplyThinking
 				? {
-						thinkingConfig: {
-							includeThoughts: true,
-							thinkingBudget,
-						},
-					}
+					thinkingConfig: {
+						includeThoughts: true,
+						thinkingBudget,
+					},
+				}
 				: {}),
 		});
 	}

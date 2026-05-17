@@ -154,9 +154,9 @@ export const executorNode = async (state: AgentStateType) => {
 
 		const fallbackHuman = new HumanMessage(
 			lastUserText ||
-				currentStep?.description ||
-				state.goal ||
-				"Continue with the current plan.",
+			currentStep?.description ||
+			state.goal ||
+			"Continue with the current plan.",
 		);
 
 		response = await modelWithTools.invoke([sysMsg, fallbackHuman]);
