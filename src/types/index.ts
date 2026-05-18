@@ -62,7 +62,8 @@ export interface DocumentBody {
 
 export interface Citation {
 	citationId: string;
-	documentId: string;
+	userId: string;
+	documentId?: string | null;
 	type: "article" | "book" | "website" | string;
 	title: string;
 	author: string;
