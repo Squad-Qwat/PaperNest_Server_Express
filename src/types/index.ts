@@ -64,7 +64,7 @@ export interface Citation {
 	citationId: string;
 	userId: string;
 	documentId?: string | null;
-	type: "article" | "book" | "website" | string;
+	type: "article" | "book" | "website" | (string & {});
 	title: string;
 	author: string;
 	publicationInfo: string;
