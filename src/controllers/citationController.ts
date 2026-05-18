@@ -19,13 +19,16 @@ export const createCitation = asyncHandler(
 	async (req: Request, res: Response) => {
 		const documentId = (req.params.documentId || req.body.documentId) as string | undefined;
 		const workspaceId = (req.params.workspaceId || req.body.workspaceId) as string;
-		const citationData = req.body;
+		// const citationData = req.body;
+
+		// destructure parts of citationData to prevent controlled value overwrite from spread
+		const {documentId: _bodyDocId, workspaceId: _bodyWorkspaceId, ...citationData} = req.body
 
 		logger.info("Create citation request", { documentId, workspaceId });
 
 		const citation = await citationRepository.create({
 			workspaceId,
-			documentId,
+			...(documentId ? {documentId} : {}), // Only include documentId if it's actually defined — omit it entirely otherwise
 			...citationData,
 		});
 
@@ -69,10 +72,12 @@ export const getDocumentCitations = asyncHandler(
 export const getWorkspaceCitations = asyncHandler(
 	async (req: Request, res: Response) => {
 		const workspaceId = req.params.workspaceId as string;
+		const type = req.query.type as string | undefined;
 
 		logger.info("Get workspace citations request", { workspaceId });
 
-		const citations = await citationRepository.findByWorkspace(workspaceId);
+		const allCitations = await citationRepository.findByWorkspace(workspaceId);
+        const citations = type ? allCitations.filter(c => c.type === type) : allCitations;
 
 		return successResponse(
 			res,

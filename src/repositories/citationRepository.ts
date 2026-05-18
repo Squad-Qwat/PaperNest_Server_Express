@@ -21,7 +21,10 @@ export class CitationRepository {
 			updatedAt: now,
 		};
 
-		await docRef.set(citation);
+		// Strip undefined fields before writing, to prevent panic from Firestore side
+		const firestoreData = Object.fromEntries(Object.entries(citation).filter(([_, v]) => v !== undefined));
+
+		await docRef.set(firestoreData);
 		return citation;
 	}
 
