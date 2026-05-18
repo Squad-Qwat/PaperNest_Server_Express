@@ -110,21 +110,20 @@ describe("CitationRepository", () => {
 
 	describe("getAllByPagination", () => {
 		it("should paginate correctly", async () => {
-			const mockCountData = { count: 10 };
-			mockCollection.get = jest.fn().mockImplementation(function (this: any) {
-				if (this._isCountQuery) {
-					return Promise.resolve({ data: () => mockCountData });
-				}
-				return Promise.resolve({
-					docs: mockCitations.map(c => ({ data: () => c }))
-				});
-			});
+			mockCollection.setMockDocs(mockCitations);
+			
+			// Mock count to avoid overriding get
+			const countSpy = jest.spyOn(mockCollection, 'count').mockReturnValue({
+				get: async () => ({ data: () => ({ count: 10 }) })
+			} as any);
 
 			const result = await citationRepository.getAllByPagination(mockUserId, 1, 5);
 
 			expect(result.total).toBe(10);
 			expect(result.totalPages).toBe(2);
 			expect(result.data).toBeDefined();
+			
+			countSpy.mockRestore();
 		});
 	});
 

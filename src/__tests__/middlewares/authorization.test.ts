@@ -14,6 +14,7 @@ import {
 } from "../../tests/mocks/express.mocks";
 import { ForbiddenError, UnauthorizedError } from "../../utils/errorTypes";
 
+jest.mock("firebase-admin", () => require("../../../__mocks__/firebase-admin"));
 jest.mock("../../repositories/userWorkspaceRepository");
 jest.mock("../../repositories/workspaceRepository");
 jest.mock("../../utils/logger", () => ({

@@ -36,6 +36,7 @@ jest.mock("../../services/liveblocksWebhookService");
 let documentController: typeof import("../../controllers/documentController");
 
 beforeAll(() => {
+	process.env.LIVEBLOCKS_SECRET_KEY = "test_secret_key";
 	documentController = require("../../controllers/documentController");
 });
 

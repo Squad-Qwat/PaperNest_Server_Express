@@ -126,6 +126,7 @@ export const mockDocumentBodies: DocumentBody[] = [
 // Citation Fixtures
 export const mockCitation: Citation = {
 	citationId: "citation-123",
+	userId: "user-123",
 	documentId: "doc-123",
 	type: "article",
 	title: "Machine Learning in Healthcare",
@@ -144,6 +145,7 @@ export const mockCitations: Citation[] = [
 	mockCitation,
 	{
 		citationId: "citation-456",
+		userId: "user-123",
 		documentId: "doc-123",
 		type: "book",
 		title: "Introduction to AI",

@@ -102,6 +102,10 @@ export class MockQuery {
 		return this;
 	}
 
+	offset(count: number) {
+		return this; // Just return this for chainability
+	}
+
 	count() {
 		return {
 			get: async () => ({

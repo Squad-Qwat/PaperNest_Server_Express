@@ -11,6 +11,7 @@ import {
 import { NotFoundError } from "../../utils/errorTypes";
 
 // Mock dependencies
+jest.mock("firebase-admin", () => require("../../../__mocks__/firebase-admin"));
 jest.mock("../../repositories/citationRepository");
 jest.mock("../../utils/logger", () => ({
 	info: jest.fn(),
