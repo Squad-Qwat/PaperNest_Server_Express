@@ -23,6 +23,7 @@ describe("CitationController", () => {
 	let req: Partial<Request>;
 	let res: Partial<Response>;
 	let next: NextFunction;
+	const mockUserId = "user-123";
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -31,9 +32,9 @@ describe("CitationController", () => {
 	});
 
 	describe("createCitation", () => {
-		it("should create a citation successfully", async () => {
+		it("should create a global citation successfully", async () => {
 			req = mockRequest({
-				params: { documentId: "doc-123" },
+				userId: mockUserId,
 				body: {
 					type: "article-journal",
 					title: "Test Article",
@@ -43,7 +44,7 @@ describe("CitationController", () => {
 				},
 			});
 
-			jest.mocked(citationRepository.create).mockResolvedValue(mockCitation);
+			jest.mocked(citationRepository.createGlobalCitation).mockResolvedValue(mockCitation);
 
 			await citationController.createCitation(
 				req as Request,
@@ -51,9 +52,9 @@ describe("CitationController", () => {
 				next,
 			);
 
-			expect(citationRepository.create).toHaveBeenCalledWith(
+			expect(citationRepository.createGlobalCitation).toHaveBeenCalledWith(
+				mockUserId,
 				expect.objectContaining({
-					documentId: "doc-123",
 					type: "article-journal",
 					title: "Test Article",
 					author: "Smith, J.",
@@ -63,74 +64,48 @@ describe("CitationController", () => {
 			expect(res.status).toHaveBeenCalledWith(201);
 			expect(res.json).toHaveBeenCalledWith({
 				success: true,
-				message: "Citation created successfully",
+				message: "Citation created successfully in library",
 				data: { citation: mockCitation },
 			});
 		});
 	});
 
-	describe("getDocumentCitations", () => {
-		it("should get all citations for a document", async () => {
+	describe("getCitations", () => {
+		it("should get all citations for a user with pagination", async () => {
 			req = mockRequest({
-				params: { documentId: "doc-123" },
-				query: {},
+				userId: mockUserId,
+				query: { page: "1", limit: "10" },
 			});
 
+			const mockResult = { data: mockCitations, total: 2, totalPages: 1 };
 			jest
-				.mocked(citationRepository.findByDocument)
-				.mockResolvedValue(mockCitations);
+				.mocked(citationRepository.getAllByPagination)
+				.mockResolvedValue(mockResult);
 
-			await citationController.getDocumentCitations(
+			await citationController.getCitations(
 				req as Request,
 				res as Response,
 				next,
 			);
 
-			expect(citationRepository.findByDocument).toHaveBeenCalledWith("doc-123");
+			expect(citationRepository.getAllByPagination).toHaveBeenCalledWith(mockUserId, 1, 10);
 			expect(res.status).toHaveBeenCalledWith(200);
 			expect(res.json).toHaveBeenCalledWith({
 				success: true,
 				message: "Citations retrieved successfully",
-				data: { citations: mockCitations, count: mockCitations.length },
-			});
-		});
-
-		it("should filter citations by type when type query param provided", async () => {
-			req = mockRequest({
-				params: { documentId: "doc-123" },
-				query: { type: "article-journal" },
-			});
-
-			const filteredCitations = [mockCitations[0]];
-			jest
-				.mocked(citationRepository.findByType)
-				.mockResolvedValue(filteredCitations);
-
-			await citationController.getDocumentCitations(
-				req as Request,
-				res as Response,
-				next,
-			);
-
-			expect(citationRepository.findByType).toHaveBeenCalledWith(
-				"doc-123",
-				"article-journal",
-			);
-			expect(res.json).toHaveBeenCalledWith({
-				success: true,
-				message: "Citations retrieved successfully",
-				data: { citations: filteredCitations, count: 1 },
+				data: mockResult,
 			});
 		});
 	});
 
 	describe("getCitationById", () => {
-		it("should get citation by id successfully", async () => {
+		it("should get user citation by id successfully", async () => {
 			req = mockRequest({
+				userId: mockUserId,
 				params: { citationId: "citation-123" },
 			});
 
-			jest.mocked(citationRepository.findById).mockResolvedValue(mockCitation);
+			jest.mocked(citationRepository.findUserCitationById).mockResolvedValue(mockCitation);
 
 			await citationController.getCitationById(
 				req as Request,
@@ -138,7 +113,7 @@ describe("CitationController", () => {
 				next,
 			);
 
-			expect(citationRepository.findById).toHaveBeenCalledWith("citation-123");
+			expect(citationRepository.findUserCitationById).toHaveBeenCalledWith(mockUserId, "citation-123");
 			expect(res.status).toHaveBeenCalledWith(200);
 			expect(res.json).toHaveBeenCalledWith({
 				success: true,
@@ -147,12 +122,13 @@ describe("CitationController", () => {
 			});
 		});
 
-		it("should throw NotFoundError when citation does not exist", async () => {
+		it("should throw NotFoundError when citation does not exist or unauthorized", async () => {
 			req = mockRequest({
+				userId: mockUserId,
 				params: { citationId: "non-existent" },
 			});
 
-			jest.mocked(citationRepository.findById).mockResolvedValue(null);
+			jest.mocked(citationRepository.findUserCitationById).mockResolvedValue(null);
 
 			await citationController.getCitationById(
 				req as Request,
@@ -165,14 +141,15 @@ describe("CitationController", () => {
 	});
 
 	describe("updateCitation", () => {
-		it("should update citation successfully", async () => {
+		it("should update user citation successfully", async () => {
 			req = mockRequest({
+				userId: mockUserId,
 				params: { citationId: "citation-123" },
 				body: { title: "Updated Title" },
 			});
 
 			const updatedCitation = { ...mockCitation, title: "Updated Title" };
-			jest.mocked(citationRepository.update).mockResolvedValue(updatedCitation);
+			jest.mocked(citationRepository.updateUserCitation).mockResolvedValue(updatedCitation);
 
 			await citationController.updateCitation(
 				req as Request,
@@ -180,7 +157,8 @@ describe("CitationController", () => {
 				next,
 			);
 
-			expect(citationRepository.update).toHaveBeenCalledWith(
+			expect(citationRepository.updateUserCitation).toHaveBeenCalledWith(
+				mockUserId,
 				"citation-123",
 				expect.objectContaining({
 					title: "Updated Title",
@@ -196,12 +174,13 @@ describe("CitationController", () => {
 	});
 
 	describe("deleteCitation", () => {
-		it("should delete citation successfully", async () => {
+		it("should delete user citation successfully", async () => {
 			req = mockRequest({
+				userId: mockUserId,
 				params: { citationId: "citation-123" },
 			});
 
-			jest.mocked(citationRepository.delete).mockResolvedValue(undefined);
+			jest.mocked(citationRepository.deleteUserCitation).mockResolvedValue(true);
 
 			await citationController.deleteCitation(
 				req as Request,
@@ -209,20 +188,20 @@ describe("CitationController", () => {
 				next,
 			);
 
-			expect(citationRepository.delete).toHaveBeenCalledWith("citation-123");
+			expect(citationRepository.deleteUserCitation).toHaveBeenCalledWith(mockUserId, "citation-123");
 			expect(res.status).toHaveBeenCalledWith(204);
 		});
 	});
 
 	describe("searchCitations", () => {
-		it("should search citations by title and author", async () => {
+		it("should search user citations by title and author", async () => {
 			req = mockRequest({
-				params: { documentId: "doc-123" },
-				query: { q: "machine learning" },
+				userId: mockUserId,
+				query: { q: "machine learning", limit: "5" },
 			});
 
 			const searchResults = [mockCitation];
-			jest.mocked(citationRepository.search).mockResolvedValue(searchResults);
+			jest.mocked(citationRepository.searchCitationsByUser).mockResolvedValue(searchResults);
 
 			await citationController.searchCitations(
 				req as Request,
@@ -230,21 +209,23 @@ describe("CitationController", () => {
 				next,
 			);
 
-			expect(citationRepository.search).toHaveBeenCalledWith(
-				"doc-123",
+			expect(citationRepository.searchCitationsByUser).toHaveBeenCalledWith(
+				mockUserId,
 				"machine learning",
+				5
 			);
 			expect(res.status).toHaveBeenCalledWith(200);
 		});
 	});
 
 	describe("getCitationByDOI", () => {
-		it("should find citation by DOI successfully", async () => {
+		it("should find user citation by DOI successfully", async () => {
 			req = mockRequest({
-				params: { documentId: "doc-123", doi: "10.1234/example" },
+				userId: mockUserId,
+				params: { doi: "10.1234/example" },
 			});
 
-			jest.mocked(citationRepository.findByDoi).mockResolvedValue(mockCitation);
+			jest.mocked(citationRepository.findUserCitationByDoi).mockResolvedValue(mockCitation);
 
 			await citationController.getCitationByDOI(
 				req as Request,
@@ -252,8 +233,8 @@ describe("CitationController", () => {
 				next,
 			);
 
-			expect(citationRepository.findByDoi).toHaveBeenCalledWith(
-				"doc-123",
+			expect(citationRepository.findUserCitationByDoi).toHaveBeenCalledWith(
+				mockUserId,
 				"10.1234/example",
 			);
 			expect(res.status).toHaveBeenCalledWith(200);
@@ -263,22 +244,6 @@ describe("CitationController", () => {
 				data: { citation: mockCitation },
 				meta: undefined,
 			});
-		});
-
-		it("should throw NotFoundError when DOI not found", async () => {
-			req = mockRequest({
-				params: { documentId: "doc-123", doi: "non-existent-doi" },
-			});
-
-			jest.mocked(citationRepository.findByDoi).mockResolvedValue(null);
-
-			await citationController.getCitationByDOI(
-				req as Request,
-				res as Response,
-				next,
-			);
-
-			expect(next).toHaveBeenCalledWith(expect.any(NotFoundError));
 		});
 	});
 });

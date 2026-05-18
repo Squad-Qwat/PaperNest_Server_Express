@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../middlewares/errorHandler";
 import citationRepository from "../repositories/citationRepository";
-import type { Citation } from "../types";
 import { NotFoundError } from "../utils/errorTypes";
 import logger from "../utils/logger";
 import {
@@ -11,49 +10,45 @@ import {
 } from "../utils/responseFormatter";
 
 /**
- * Create a new citation
- * POST /api/documents/:documentId/citations
- * Protected (requires edit permission)
+ * Create a new citation in user's library
+ * POST /api/citations
+ * Protected
  */
 export const createCitation = asyncHandler(
 	async (req: Request, res: Response) => {
-		const documentId = req.params.documentId as string;
+		const userId = req.userId!;
 		const citationData = req.body;
 
-		logger.info("Create citation request", { documentId });
+		logger.info("Create global citation request", { userId });
 
-		const citation = await citationRepository.create({
-			documentId,
-			...citationData,
-		});
+		const citation = await citationRepository.createGlobalCitation(
+			userId,
+			citationData
+		);
 
-		return createdResponse(res, { citation }, "Citation created successfully");
+		return createdResponse(res, { citation }, "Citation created successfully in library");
 	},
 );
 
 /**
- * Get all citations for a document
- * GET /api/documents/:documentId/citations
- * Protected (requires document access)
+ * Get all citations for a user (with optional pagination)
+ * GET /api/citations
+ * Protected
  */
-export const getDocumentCitations = asyncHandler(
+export const getCitations = asyncHandler(
 	async (req: Request, res: Response) => {
-		const documentId = req.params.documentId as string;
-		const type = req.query.type as string | undefined;
+		const userId = req.userId!;
+		const page = parseInt(req.query.page as string) || 1;
+		const limit = parseInt(req.query.limit as string) || 10;
 
-		logger.info("Get document citations request", { documentId, type });
+		logger.info("Get user citations request", { userId, page, limit });
 
-		let citations: Citation[];
-
-		if (type) {
-			citations = await citationRepository.findByType(documentId, type);
-		} else {
-			citations = await citationRepository.findByDocument(documentId);
-		}
+		// Use the new pagination method
+		const result = await citationRepository.getAllByPagination(userId, page, limit);
 
 		return successResponse(
 			res,
-			{ citations, count: citations.length },
+			result,
 			"Citations retrieved successfully",
 		);
 	},
@@ -61,19 +56,20 @@ export const getDocumentCitations = asyncHandler(
 
 /**
  * Get citation by ID
- * GET /api/documents/:documentId/citations/:citationId
- * Protected (requires document access)
+ * GET /api/citations/:citationId
+ * Protected
  */
 export const getCitationById = asyncHandler(
 	async (req: Request, res: Response) => {
+		const userId = req.userId!;
 		const citationId = req.params.citationId as string;
 
-		logger.info("Get citation request", { citationId });
+		logger.info("Get user citation by ID request", { userId, citationId });
 
-		const citation = await citationRepository.findById(citationId);
+		const citation = await citationRepository.findUserCitationById(userId, citationId);
 
 		if (!citation) {
-			throw new NotFoundError("Citation not found");
+			throw new NotFoundError("Citation not found or unauthorized");
 		}
 
 		return successResponse(
@@ -86,17 +82,18 @@ export const getCitationById = asyncHandler(
 
 /**
  * Update citation
- * PUT /api/documents/:documentId/citations/:citationId
- * Protected (requires edit permission)
+ * PUT /api/citations/:citationId
+ * Protected
  */
 export const updateCitation = asyncHandler(
 	async (req: Request, res: Response) => {
+		const userId = req.userId!;
 		const citationId = req.params.citationId as string;
 		const updates = req.body;
 
-		logger.info("Update citation request", { citationId, updates });
+		logger.info("Update user citation request", { userId, citationId });
 
-		const citation = await citationRepository.update(citationId, updates);
+		const citation = await citationRepository.updateUserCitation(userId, citationId, updates);
 
 		return successResponse(res, { citation }, "Citation updated successfully");
 	},
@@ -104,59 +101,65 @@ export const updateCitation = asyncHandler(
 
 /**
  * Delete citation
- * DELETE /api/documents/:documentId/citations/:citationId
- * Protected (requires edit permission)
+ * DELETE /api/citations/:citationId
+ * Protected
  */
 export const deleteCitation = asyncHandler(
 	async (req: Request, res: Response) => {
+		const userId = req.userId!;
 		const citationId = req.params.citationId as string;
 
-		logger.info("Delete citation request", { citationId });
+		logger.info("Delete user citation request", { userId, citationId });
 
-		await citationRepository.delete(citationId);
+		const success = await citationRepository.deleteUserCitation(userId, citationId);
+		
+		if (!success) {
+			throw new NotFoundError("Citation not found or unauthorized");
+		}
 
 		return noContentResponse(res);
 	},
 );
 
 /**
- * Search citations by title or author
- * GET /api/documents/:documentId/citations/search?q=query
- * Protected (requires document access)
+ * Search user's citations by title or author
+ * GET /api/citations/search?q=query
+ * Protected
  */
 export const searchCitations = asyncHandler(
 	async (req: Request, res: Response) => {
-		const documentId = req.params.documentId as string;
+		const userId = req.userId!;
 		const q = req.query.q as string;
+		const limit = parseInt(req.query.limit as string) || 10;
 
-		logger.info("Search citations request", { documentId, query: q });
+		logger.info("Search user citations request", { userId, query: q });
 
-		const citations = await citationRepository.search(documentId, q);
+		const citations = await citationRepository.searchCitationsByUser(userId, q, limit);
 
 		return successResponse(
 			res,
 			{ citations, count: citations.length },
-			"Citations retrieved successfully",
+			"Citations searched successfully",
 		);
 	},
 );
 
 /**
- * Find citation by DOI
- * GET /api/documents/:documentId/citations/doi/:doi
- * Protected (requires document access)
+ * Find citation by DOI in user's library
+ * GET /api/citations/doi/:doi
+ * Protected
  */
 export const getCitationByDOI = asyncHandler(
 	async (req: Request, res: Response) => {
-		const documentId = req.params.documentId as string;
+		const userId = req.userId!;
 		const doi = req.params.doi as string;
 
-		logger.info("Get citation by DOI request", { documentId, doi });
+		logger.info("Get user citation by DOI request", { userId, doi });
 
-		const citation = await citationRepository.findByDoi(documentId, doi);
+		const citation = await citationRepository.findUserCitationByDoi(userId, doi);
 
 		if (!citation) {
-			throw new NotFoundError("Citation not found");
+			throw new NotFoundError("Citation with this DOI not found in your library");
 		}
 
 		return successResponse(
@@ -169,7 +172,7 @@ export const getCitationByDOI = asyncHandler(
 
 export default {
 	createCitation,
-	getDocumentCitations,
+	getCitations,
 	getCitationById,
 	updateCitation,
 	deleteCitation,

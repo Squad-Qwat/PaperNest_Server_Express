@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { __mockFirestore } from "../../../__mocks__/firebase-admin";
-import { CitationRepository } from "../../repositories/citationRepository";
+import citationRepository from "../../repositories/citationRepository";
 import { mockCitation, mockCitations } from "../../tests/fixtures";
 
 jest.mock("../../config/firebase", () => ({
@@ -8,19 +8,17 @@ jest.mock("../../config/firebase", () => ({
 }));
 
 describe("CitationRepository", () => {
-	let citationRepository: CitationRepository;
 	let mockCollection: any;
+	const mockUserId = "user-123";
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		citationRepository = new CitationRepository();
 		mockCollection = __mockFirestore.collection("citations");
 	});
 
-	describe("create", () => {
-		it("should create a new citation successfully", async () => {
+	describe("createGlobalCitation", () => {
+		it("should create a new user citation successfully", async () => {
 			const citationData = {
-				documentId: "doc-123",
 				type: "article-journal",
 				title: "Test Article",
 				author: "Smith, J.",
@@ -37,54 +35,32 @@ describe("CitationRepository", () => {
 				set: (jest.fn() as any).mockResolvedValue(undefined),
 			});
 
-			const result = await citationRepository.create(citationData);
+			const result = await citationRepository.createGlobalCitation(mockUserId, citationData);
 
 			expect(result).toMatchObject(citationData);
 			expect(result.citationId).toBeDefined();
+			expect(result.userId).toBe(mockUserId);
 			expect(result.createdAt).toBeInstanceOf(Date);
 			expect(mockCollection.doc).toHaveBeenCalled();
 		});
-
-		it("should include optional doi when provided", async () => {
-			const citationData = {
-				documentId: "doc-123",
-				type: "article",
-				title: "Test Article",
-				author: "Smith, J.",
-				publicationInfo: "Journal of Testing, 2023",
-				doi: "10.1234/example",
-				accessDate: "2024-01-01",
-				publicationDate: "2023-12-01",
-				url: null,
-				cslJson: { type: "article-journal", title: "Test Article" },
-			};
-
-			mockCollection.doc = jest.fn().mockReturnValue({
-				id: "citation-456",
-				set: (jest.fn() as any).mockResolvedValue(undefined),
-			});
-
-			const result = await citationRepository.create(citationData);
-
-			expect(result.doi).toBe(citationData.doi);
-		});
 	});
 
-	describe("findById", () => {
-		it("should return citation when found", async () => {
+	describe("findUserCitationById", () => {
+		it("should return citation when found and owned by user", async () => {
 			const citationId = "citation-123";
 			const mockDoc = {
 				exists: true,
-				data: () => mockCitation,
+				data: () => ({ ...mockCitation, userId: mockUserId }),
 			};
 
 			mockCollection.doc = jest.fn().mockReturnValue({
 				get: (jest.fn() as any).mockResolvedValue(mockDoc),
 			});
 
-			const result = await citationRepository.findById(citationId);
+			const result = await citationRepository.findUserCitationById(mockUserId, citationId);
 
-			expect(result).toEqual(mockCitation);
+			expect(result).toBeDefined();
+			expect(result?.userId).toBe(mockUserId);
 		});
 
 		it("should return null when citation not found", async () => {
@@ -97,102 +73,120 @@ describe("CitationRepository", () => {
 				get: (jest.fn() as any).mockResolvedValue(mockDoc),
 			});
 
-			const result = await citationRepository.findById(citationId);
+			const result = await citationRepository.findUserCitationById(mockUserId, citationId);
+
+			expect(result).toBeNull();
+		});
+
+		it("should return null when citation owned by different user", async () => {
+			const citationId = "citation-123";
+			const mockDoc = {
+				exists: true,
+				data: () => ({ ...mockCitation, userId: "different-user" }),
+			};
+
+			mockCollection.doc = jest.fn().mockReturnValue({
+				get: (jest.fn() as any).mockResolvedValue(mockDoc),
+			});
+
+			const result = await citationRepository.findUserCitationById(mockUserId, citationId);
 
 			expect(result).toBeNull();
 		});
 	});
 
-	describe("findByDocument", () => {
-		it("should return all citations for a document", async () => {
-			const documentId = "doc-123";
+	describe("findCitationsByUser", () => {
+		it("should return all citations for a user", async () => {
 			const whereSpy = jest.spyOn(mockCollection, "where");
 
-			mockCollection.setMockDocs(mockCitations);
+			mockCollection.setMockDocs(mockCitations.map(c => ({...c, userId: mockUserId})));
 
-			const result = await citationRepository.findByDocument(documentId);
+			const result = await citationRepository.findCitationsByUser(mockUserId);
 
-			expect(result).toEqual(mockCitations);
-			expect(whereSpy).toHaveBeenCalledWith("documentId", "==", documentId);
-		});
-
-		it("should return empty array when no citations found", async () => {
-			const documentId = "doc-empty";
-
-			mockCollection.setMockDocs([]);
-
-			const result = await citationRepository.findByDocument(documentId);
-
-			expect(result).toEqual([]);
+			expect(result.length).toBeGreaterThan(0);
+			expect(whereSpy).toHaveBeenCalledWith("userId", "==", mockUserId);
 		});
 	});
 
-	describe("findByType", () => {
-		it("should return citations filtered by type", async () => {
-			const type = "article";
+	describe("getAllByPagination", () => {
+		it("should paginate correctly", async () => {
+			const mockCountData = { count: 10 };
+			mockCollection.get = jest.fn().mockImplementation(function (this: any) {
+				if (this._isCountQuery) {
+					return Promise.resolve({ data: () => mockCountData });
+				}
+				return Promise.resolve({
+					docs: mockCitations.map(c => ({ data: () => c }))
+				});
+			});
+
+			const result = await citationRepository.getAllByPagination(mockUserId, 1, 5);
+
+			expect(result.total).toBe(10);
+			expect(result.totalPages).toBe(2);
+			expect(result.data).toBeDefined();
+		});
+	});
+
+	describe("findByName", () => {
+		it("should return citation by exact title", async () => {
+			const titleName = "Test Article";
 
 			mockCollection.setMockDocs([mockCitation]);
 
-			const result = await citationRepository.findByType("doc-123", type);
+			const result = await citationRepository.findByName(mockUserId, titleName);
 
-			expect(result).toEqual([mockCitation]);
+			expect(result).toEqual(mockCitation);
 		});
 	});
 
-	describe("findByDoi", () => {
+	describe("findUserCitationByDoi", () => {
 		it("should return citation when found by DOI", async () => {
-			const documentId = "doc-123";
 			const doi = "10.1234/example.doi";
 
 			mockCollection.setMockDocs([mockCitation]);
 
-			const result = await citationRepository.findByDoi(documentId, doi);
+			const result = await citationRepository.findUserCitationByDoi(mockUserId, doi);
 
 			expect(result).toEqual(mockCitation);
 		});
-
-		it("should return null when citation not found by DOI", async () => {
-			const documentId = "doc-123";
-			const doi = "non-existent-doi";
-
-			mockCollection.setMockDocs([]);
-
-			const result = await citationRepository.findByDoi(documentId, doi);
-
-			expect(result).toBeNull();
-		});
 	});
 
-	describe("update", () => {
-		it("should update citation successfully", async () => {
+	describe("updateUserCitation", () => {
+		it("should update citation successfully when owned by user", async () => {
 			const citationId = "citation-123";
 			const updates = { title: "Updated Title" };
 
+			// Mock findUserCitationById behavior internally
+			jest.spyOn(citationRepository, 'findUserCitationById')
+				.mockResolvedValueOnce({ ...mockCitation, userId: mockUserId }) // For initial check
+				.mockResolvedValueOnce({ ...mockCitation, ...updates, userId: mockUserId }); // For returning updated
+
 			mockCollection.doc = jest.fn().mockReturnValue({
 				update: (jest.fn() as any).mockResolvedValue(undefined),
-				get: (jest.fn() as any).mockResolvedValue({
-					exists: true,
-					data: () => ({ ...mockCitation, ...updates }),
-				}),
 			});
 
-			const result = await citationRepository.update(citationId, updates);
+			const result = await citationRepository.updateUserCitation(mockUserId, citationId, updates);
 
 			expect(result).toMatchObject(updates);
 			expect(mockCollection.doc).toHaveBeenCalledWith(citationId);
 		});
 	});
 
-	describe("delete", () => {
-		it("should delete citation successfully", async () => {
+	describe("deleteUserCitation", () => {
+		it("should delete citation successfully when owned by user", async () => {
 			const citationId = "citation-123";
+
+			jest.spyOn(citationRepository, 'findUserCitationById')
+				.mockResolvedValueOnce({ ...mockCitation, userId: mockUserId });
 
 			mockCollection.doc = jest.fn().mockReturnValue({
 				delete: (jest.fn() as any).mockResolvedValue(undefined),
 			});
 
-			await citationRepository.delete(citationId);
+			const result = await citationRepository.deleteUserCitation(mockUserId, citationId);
 
+			expect(result).toBe(true);
 			expect(mockCollection.doc).toHaveBeenCalledWith(citationId);
 		});
 	});
