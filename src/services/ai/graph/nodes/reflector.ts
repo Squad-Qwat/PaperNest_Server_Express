@@ -4,20 +4,13 @@ import { loadPrompts } from "../../promptLoader";
 import { contentToText, extractTokenMetadata } from "../../utils";
 import type { AgentStateType } from "../state";
 
-/**
- * Reflector Node (LLM-Driven)
- *
- * Evaluates the result of the last tool execution against the step's acceptance
- * criteria and returns a COMPLETE / CONTINUE / REPLAN verdict from the LLM.
- */
 export const reflectorNode = async (state: AgentStateType) => {
 	const prompts = await loadPrompts(["system", "reflector"]);
 
-	// Validate prompts loaded
 	if (!prompts.system || !prompts.reflector) {
 		console.error("[Reflector] Missing required prompts");
 		return {
-			isComplete: true, // Fail-safe: mark complete to avoid infinite loop
+			isComplete: true,
 		};
 	}
 
@@ -25,18 +18,15 @@ export const reflectorNode = async (state: AgentStateType) => {
 		provider: state.providerId as any,
 		model: state.modelId,
 		reasoningEnabled: state.reasoningEnabled,
-		streaming: false, // Disable streaming for evaluation steps
+		streaming: false,
 	});
 
-	// Find the active step
 	const plan = [...state.plan];
 	const activeIndex = plan.findIndex(
 		(s) => s.status === "active" || s.status === "pending",
 	);
 	const activeStep = activeIndex !== -1 ? plan[activeIndex] : null;
 
-	// CRITICAL: If no active/pending step found, should not happen
-	// (Executor/Router should have prevented this, but safety check anyway)
 	if (activeIndex < 0 || !activeStep) {
 		console.warn(
 			"[Reflector] No active/pending step found! Reflector should not be called.",
@@ -58,7 +48,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 		};
 	}
 
-	// Validate active step has valid description
 	if (
 		!activeStep?.description ||
 		typeof activeStep.description !== "string" ||
@@ -72,14 +61,13 @@ export const reflectorNode = async (state: AgentStateType) => {
 		}
 		return {
 			plan,
-			isComplete: true, // Fail-safe exit
+			isComplete: true,
 			confidence: 0,
 			lastReasoningSummary: `### Reflector\nStep ${activeStep?.id || "?"} is invalid (missing description), marked as failed.`,
 			lastReasoningPhase: "reflector",
 		};
 	}
 
-	// Get tool result for the active step: match by tool_call_id if available
 	let resultText = "No tool result available";
 
 	console.log(
@@ -103,7 +91,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 		})),
 	});
 
-	// Try to find result matching this step's expected tool
 	if (state.lastToolResults && state.lastToolResults.length > 0) {
 		const stepTool = activeStep?.tool;
 		const resultForStep = stepTool
@@ -116,7 +103,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 		}
 	}
 
-	// FALLBACK: If no tool result, check last ToolMessage in message history
 	if (resultText === "No tool result available") {
 		const lastToolMessage = [...(state.messages || [])]
 			.reverse()
@@ -138,7 +124,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 			.map((s) => `- ${s.description}`)
 			.join("\n") || "(none — this may be the last step)";
 
-	// Build the reflector prompt with all placeholders filled
 	const reflectorPrompt = prompts.reflector
 		.replace("{step_description}", activeStep.description)
 		.replace(
@@ -175,7 +160,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 		console.warn(
 			`[Reflector] No execution detected for step ${activeStep?.id}, soft-completing step to avoid loop`,
 		);
-		// If it's just a greeting or text response, mark as completed
 		if (activeIndex !== -1) {
 			plan[activeIndex] = {
 				...plan[activeIndex],
@@ -196,7 +180,7 @@ export const reflectorNode = async (state: AgentStateType) => {
 		return {
 			plan,
 			pastSteps,
-			needsReplanning: true, // Force a replan if no execution was detected
+			needsReplanning: true,
 			confidence: hasMeaningfulText ? 0.9 : 0.2,
 			replanAttempts: (state.replanAttempts ?? 0) + 1,
 			consecutiveNoExecutionCycles: consecutiveNoExecutionCycles + 1,
@@ -208,23 +192,18 @@ export const reflectorNode = async (state: AgentStateType) => {
 		};
 	}
 
-	// Logic for judging text-only outcome even if a tool was planned
 	const executorPromptAddon =
 		lastExecutionOutcome === "executed_text_only"
 			? "\n\nNOTE: The AI provided a text-only response instead of using the planned tool. If the text response is a valid greeting or correctly answers the user's intent without needing the tool, mark it as COMPLETE or CONTINUE."
 			: "";
 
 	let reflectorReasoning = "";
-
 	let responseMetadata: any = {};
-
-	// Define isComplete here as it's modified in the try block
 	let isComplete = false;
 
 	try {
 		const response = await model.invoke([
 			sysMsg,
-			// Gemini requires at least one user turn in 'contents' — SystemMessage alone causes 400
 			new HumanMessage(
 				`Evaluate the step execution above and provide your COMPLETE/CONTINUE/REPLAN verdict.${executorPromptAddon}`,
 			),
@@ -237,7 +216,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 		);
 
 		if (verdict.startsWith("REPLAN")) {
-			// Step failed, need replan
 			needsReplanning = true;
 			confidence = 0.2;
 			replanAttempts += 1;
@@ -245,9 +223,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 			console.log(`[Reflector] Step ${activeStep?.id}: active → REPLAN NEEDED`);
 			reflectorReasoning = `**Step ${activeStep.id} Verdict:** REPLAN (Retry needed)`;
 		} else if (verdict.startsWith("COMPLETE")) {
-			// Task fully accomplished
-			// We trust the LLM's COMPLETE verdict as the ultimate authority,
-			// relying on updated System/Reflector prompts for accuracy.
 			for (let i = 0; i < plan.length; i++) {
 				if (plan[i].status !== "failed") {
 					plan[i] = { ...plan[i], status: "completed" as const };
@@ -259,21 +234,27 @@ export const reflectorNode = async (state: AgentStateType) => {
 			isComplete = true;
 			reflectorReasoning = `**Step ${activeStep.id} Verdict:** COMPLETE (Goal achieved)`;
 		} else {
-			// Step succeeded (CONTINUE)
 			if (activeIndex !== -1) {
-				// ONE-WAY STATE MACHINE: Only active → completed transition
-				if (plan[activeIndex].status === "active") {
-					plan[activeIndex] = {
-						...plan[activeIndex],
-						status: "completed" as const,
-					};
-					console.log(`[Reflector] Step ${activeStep?.id}: active → completed`);
+				const hasMoreSteps = plan.slice(activeIndex + 1).some(
+					(s) => s.status === "pending" || s.status === "active",
+				);
+
+				if (hasMoreSteps) {
+					if (plan[activeIndex].status === "active") {
+						plan[activeIndex] = {
+							...plan[activeIndex],
+							status: "completed" as const,
+						};
+						console.log(`[Reflector] Step ${activeStep?.id}: active → completed (proceeding to next step)`);
+					} else {
+						console.warn(
+							`[Reflector] Step ${activeStep?.id}: already ${plan[activeIndex].status}, not transitioning`,
+						);
+					}
+					pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
 				} else {
-					console.warn(
-						`[Reflector] Step ${activeStep?.id}: already ${plan[activeIndex].status}, not transitioning`,
-					);
+					console.log(`[Reflector] Step ${activeStep?.id}: keeping active because it is the last step and needs CONTINUE`);
 				}
-				pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
 			}
 			needsReplanning = false;
 			confidence = 0.9;
@@ -281,8 +262,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 			reflectorReasoning = `**Step ${activeStep.id} Verdict:** CONTINUE (Proceeding)`;
 		}
 	} catch (err) {
-		// LLM error: mark step as failed to break infinite loop
-		// Do NOT mark as completed (failed is more honest)
 		console.error(
 			"[Reflector] LLM evaluation failed:",
 			err instanceof Error ? err.message : String(err),

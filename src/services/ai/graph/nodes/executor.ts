@@ -15,14 +15,9 @@ type ModelInvokeResponse = {
 	_getType?: () => string;
 };
 
-/**
- * Executor Node
- * Executes a single step of the plan using the LLM with tool bindings.
- */
 export const executorNode = async (state: AgentStateType) => {
 	const prompts = await loadPrompts(["system", "executor"]);
 
-	// Validate prompts loaded
 	if (!prompts.system || !prompts.executor) {
 		console.error("[Executor] Missing required prompts");
 		return {
@@ -34,18 +29,24 @@ export const executorNode = async (state: AgentStateType) => {
 		provider: state.providerId as any,
 		model: state.modelId,
 		reasoningEnabled: state.reasoningEnabled,
-		streaming: false, // Disable streaming to prevent GoogleGenAI stream parsing errors when binding tools
+		streaming: false,
 	});
-	const tools = getActiveToolsForState(state);
-	const modelWithTools = (model as any).bindTools(tools);
 
-	// Priority: 'active' step first (FE tool results returned for this step in round 2),
-	// then 'pending' (fresh step, round 1).
 	const currentStep =
 		state.plan.find((s) => s.status === "active") ??
 		state.plan.find((s) => s.status === "pending");
 
-	// DEBUG: Log step details
+	const tools = getActiveToolsForState(state);
+	const isStepConversational =
+		!currentStep?.tool ||
+		currentStep.tool === "null" ||
+		currentStep.tool === "none" ||
+		currentStep.tool === "";
+
+	const modelWithTools = isStepConversational
+		? model
+		: (model as any).bindTools(tools);
+
 	console.log("[Executor] Current step lookup:", {
 		stepId: currentStep?.id,
 		stepDescription: currentStep?.description?.substring(0, 50),
@@ -58,8 +59,6 @@ export const executorNode = async (state: AgentStateType) => {
 		})),
 	});
 
-	// CRITICAL: If no pending/active step found, should not happen
-	// (Router should have routed to END, but safety check anyway)
 	if (!currentStep || currentStep.status === "completed") {
 		console.log(
 			`[Executor] No pending/active step found or step already completed. Ending execution for this node.`,
@@ -69,7 +68,6 @@ export const executorNode = async (state: AgentStateType) => {
 		};
 	}
 
-	// Validate current step exists and has valid description
 	if (
 		!currentStep?.description ||
 		typeof currentStep.description !== "string" ||
@@ -80,8 +78,6 @@ export const executorNode = async (state: AgentStateType) => {
 			currentStep,
 		);
 
-		// CRITICAL FIX: Mark step as failed to break infinite loop
-		// If step is active/pending but has no description, it's a data integrity issue
 		const failedPlan = state.plan.map((s) => {
 			if (s.id === currentStep?.id) {
 				console.warn(
@@ -94,7 +90,7 @@ export const executorNode = async (state: AgentStateType) => {
 
 		return {
 			messages: [],
-			plan: failedPlan, // Update plan to break loop
+			plan: failedPlan,
 		};
 	}
 
@@ -106,9 +102,10 @@ export const executorNode = async (state: AgentStateType) => {
 		})
 		.join("\n");
 
-	const toolDescriptions = getToolDescriptions(tools);
+	const toolDescriptions = isStepConversational
+		? "No tools are available for this conversational step. Respond to the user with a direct text response."
+		: getToolDescriptions(tools);
 
-	// Fill all executor prompt placeholders
 	const executorPrompt = prompts.executor
 		.replace("{tool_descriptions}", toolDescriptions)
 		.replace("{current_step}", currentStep.description.trim())
@@ -125,8 +122,8 @@ export const executorNode = async (state: AgentStateType) => {
 		stepDescription: currentStep?.description?.substring(0, 50),
 		stepTool: currentStep?.tool,
 		inputMessageCount: fullInput.length,
-		hasTools: tools.length > 0,
-		toolNames: tools.map((t) => t.name),
+		hasTools: !isStepConversational && tools.length > 0,
+		toolNames: isStepConversational ? [] : tools.map((t) => t.name),
 		stateMessagesCount: state.messages.length,
 		lastMessageType: state.messages.at(-1)?._getType?.() ?? "unknown",
 	});
@@ -162,7 +159,6 @@ export const executorNode = async (state: AgentStateType) => {
 		response = await modelWithTools.invoke([sysMsg, fallbackHuman]);
 	}
 
-	// DEBUG: Log response details
 	const toolCalls = (response as any).tool_calls ?? [];
 	const contentPreviewText =
 		typeof response.content === "string"
@@ -203,21 +199,15 @@ export const executorNode = async (state: AgentStateType) => {
 		return `**Step ${currentStep.id}:** No output (Reflecting...)`;
 	})();
 
-	// Mark the current step as 'active' in the plan update
-	// ONE-WAY STATE MACHINE: Only 'pending' → 'active' transition allowed
-	// This prevents status "bounce-back" (active → pending, completed → pending, etc)
 	const updatedPlan = state.plan.map((s) => {
 		if (s.id === currentStep?.id) {
-			// Only pending steps can transition to active
 			if (s.status === "pending") {
 				console.log(`[Executor] Step ${s.id}: pending → active`);
 				return { ...s, status: "active" as const };
 			} else if (s.status === "active") {
-				// Already active, continue execution
 				console.log(`[Executor] Step ${s.id}: Already active, continuing`);
 				return s;
 			} else {
-				// ERROR: Trying to execute completed/failed step - should not happen
 				console.error(
 					`[Executor] Step ${s.id}: Already ${s.status}, cannot execute! Marking failed.`,
 				);

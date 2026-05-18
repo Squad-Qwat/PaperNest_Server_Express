@@ -6,7 +6,6 @@ export const streamAIResponse = async (
 	req: Request,
 	res: Response,
 ): Promise<any> => {
-
 	try {
 		const {
 			message,
@@ -23,9 +22,9 @@ export const streamAIResponse = async (
 			modelId,
 			agentId = "manual_graph",
 			files = [],
+			taggedDocumentIds = [],
 		} = req.body;
 
-		// DYNAMIC IMPORTS: Only load heavy AI modules when a request actually arrives
 		const { agentFactory } = await import("../services/ai/agents/agent.factory");
 		const { validateAICredentials } = await import("../services/ai/config");
 
@@ -43,7 +42,6 @@ export const streamAIResponse = async (
 			return errorResponse(res, "Message is required", 400);
 		}
 
-		// Set headers for Server-Sent Events (SSE)
 		res.writeHead(200, {
 			"Content-Type": "text/event-stream",
 			"Cache-Control": "no-cache, no-transform",
@@ -77,7 +75,50 @@ export const streamAIResponse = async (
 				}
 			}, 15000);
 
-			// Resolve Agent and Stream
+			let finalConversationHistory = [...conversationHistory];
+
+			const isToolContinuation = Array.isArray(toolResults) && toolResults.length > 0;
+			if (!isToolContinuation && Array.isArray(taggedDocumentIds) && taggedDocumentIds.length > 0) {
+				const { default: documentRepository } = await import("../repositories/documentRepository");
+				const { default: documentBodyRepository } = await import("../repositories/documentBodyRepository");
+
+				const fetchPromises = taggedDocumentIds.map(async (docId: string) => {
+					try {
+						const document = await documentRepository.findById(docId);
+						if (!document) return null;
+						if (workspaceId && document.workspaceId !== workspaceId) return null;
+						if (!document.currentVersionId) return null;
+						const body = await documentBodyRepository.findById(document.currentVersionId);
+						return {
+							title: document.title,
+							content: body?.content || "",
+						};
+					} catch (error) {
+						console.error(`[AI Controller] Failed to fetch tagged document ${docId}:`, error);
+						return null;
+					}
+				});
+
+				const fetchedDocs = (await Promise.all(fetchPromises)).filter(Boolean);
+
+				if (fetchedDocs.length > 0) {
+					const docsBlock = fetchedDocs
+						.map((d: any) => `Here is the content of document "${d.title}" for your reference:\n\n${d.content}`)
+						.join("\n\n---\n\n");
+
+					finalConversationHistory.unshift(
+						{
+							role: "user",
+							content: `[CONTEXT INJECTION]\n${docsBlock}`,
+						},
+						{
+							role: "assistant",
+							content: "Understood. I have loaded the tagged documents into my memory and will use them to answer your questions.",
+						}
+					);
+				}
+			}
+
 			const agent = agentFactory.getAgent(agentId);
 			console.log(`[AI Controller] Invoking agent: ${agentId}`);
 
@@ -86,7 +127,7 @@ export const streamAIResponse = async (
 				documentContent,
 				documentHTML,
 				threadId,
-				conversationHistory,
+				conversationHistory: finalConversationHistory,
 				toolResults: toolResults as ToolResult[] | undefined,
 				documentId,
 				workspaceId,

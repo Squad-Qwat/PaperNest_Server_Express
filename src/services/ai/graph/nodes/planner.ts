@@ -6,16 +6,9 @@ import { extractTokenMetadata, getToolDescriptions } from "../../utils";
 import { PlanSchema } from "../schemas/planSchema";
 import type { AgentStateType } from "../state";
 
-/**
- * Planner Node (LLM-Driven)
- *
- * Calls the LLM with structured output to generate a typed, validated plan.
- * Replaces the previous heuristic (keyword-matching) implementation.
- */
 export const plannerNode = async (state: AgentStateType) => {
 	const prompts = await loadPrompts(["system", "planner"]);
 
-	// Early exit: validate we have the required prompts
 	if (!prompts.system || !prompts.planner) {
 		console.error("[Planner] Missing required prompts (system or planner)");
 		return {
@@ -28,23 +21,21 @@ export const plannerNode = async (state: AgentStateType) => {
 					acceptanceCriteria: "Prompt loading failed",
 				},
 			],
-			goal: state.goal, // Preserve existing goal
+			goal: state.goal,
 		};
 	}
 
-	// Skip replanning if a valid plan already exists and replanning isn't requested
 	if (state.plan && state.plan.length > 0 && !state.needsReplanning) {
-		return { goal: state.goal }; // Return early but preserve goal
+		return { goal: state.goal };
 	}
 
 	const model = createAIModel({
 		provider: state.providerId as any,
 		model: state.modelId,
 		reasoningEnabled: state.reasoningEnabled,
-		streaming: false, // Disable streaming to ensure reliable structured output generation
+		streaming: false,
 	});
 
-	// Extract task: use goal if replanning, otherwise extract from messages
 	const taskMessage =
 		state.goal && state.goal.trim()
 			? state.goal
@@ -53,7 +44,6 @@ export const plannerNode = async (state: AgentStateType) => {
 				? (state.messages.at(-1)!.content as string).trim()
 				: "";
 
-	// Early exit: no task provided
 	if (!taskMessage) {
 		console.warn("[Planner] No task message provided, cannot create plan");
 		return {
@@ -74,13 +64,11 @@ export const plannerNode = async (state: AgentStateType) => {
 	const tools = getActiveToolsForState(state);
 	const toolDescriptions = getToolDescriptions(tools);
 
-	// Build the planner prompt with all placeholders filled
 	const plannerPrompt = prompts.planner
 		.replace("{tool_descriptions}", toolDescriptions)
 		.replace("{document_snippet}", documentSnippet)
 		.replace("{task}", taskMessage);
 
-	// Validate prompt is not empty
 	if (!plannerPrompt.trim()) {
 		console.error("[Planner] Planner prompt is empty after substitution");
 		return {
@@ -99,8 +87,6 @@ export const plannerNode = async (state: AgentStateType) => {
 	const sysMsg = new SystemMessage(prompts.system + "\n\n" + plannerPrompt);
 
 	try {
-		// Use structured output to get a type-safe, validated plan from the LLM
-		// includeRaw: true allows us to capture token usage metadata
 		const modelWithStructure = (model as any).withStructuredOutput(PlanSchema, {
 			name: "plan",
 			includeRaw: true,
@@ -173,7 +159,6 @@ export const plannerNode = async (state: AgentStateType) => {
 			reasoningTokens: tokens.reasoningTokens,
 		};
 	} catch (err) {
-		// Fallback: single generic step if structured output fails
 		console.error(
 			"[Planner] Structured output failed, using fallback plan:",
 			err instanceof Error ? err.message : String(err),
@@ -185,7 +170,7 @@ export const plannerNode = async (state: AgentStateType) => {
 				status: "pending" as const,
 				confidence: 0.7,
 				acceptanceCriteria: "Task executed without error",
-				tool: undefined, // Explicitly note that fallback has no tool
+				tool: undefined,
 			},
 		];
 		console.warn("[Planner] Fallback plan created (no tool field!):", {

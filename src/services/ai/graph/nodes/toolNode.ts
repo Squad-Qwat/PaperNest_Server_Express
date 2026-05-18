@@ -9,19 +9,14 @@ export const toolNode = async (state: AgentStateType) => {
 			"[ToolNode] Handoff initiated. Generating client/backend execution payload.",
 		);
 
-		// Create a tool node instance that includes backend-executed tools
 		const tools = getActiveToolsForState(state);
 		const baseToolNode = new BaseToolNode(tools);
-
-		// Execute tool node (this will run Semantic Scholar/RAG on backend,
-		// and generate action stubs for CodeMirror tools)
 		const result = await baseToolNode.invoke(state);
 
 		console.log(
 			"[ToolNode] Tool execution/handoff prepared. returning to Client/Next node.",
 		);
 
-		// Extract ToolMessages (stubs) to ensure state.lastToolResults is initialized
 		if (result.messages && result.messages.length > 0) {
 			const toolMessages = result.messages.filter(
 				(msg: BaseMessage): msg is ToolMessage => msg._getType?.() === "tool",
