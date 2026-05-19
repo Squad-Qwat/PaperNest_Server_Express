@@ -166,15 +166,12 @@ export class MockFirestore {
 	}
 
 	settings = jest.fn();
-	batch = jest.fn(
-		() =>
-			({
-				set: jest.fn().mockReturnThis(),
-				update: jest.fn().mockReturnThis(),
-				delete: jest.fn().mockReturnThis(),
-				commit: jest.fn(() => Promise.resolve([])),
-			}) as any,
-	);
+	batch = () => ({
+		set: jest.fn().mockReturnThis(),
+		update: jest.fn().mockReturnThis(),
+		delete: jest.fn().mockReturnThis(),
+		commit: jest.fn(() => Promise.resolve([])),
+	}) as any;
 
 	// Helper to get collection for testing
 	getCollection(path: string) {
