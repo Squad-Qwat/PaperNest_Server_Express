@@ -235,7 +235,7 @@ export const sendInvitations = asyncHandler(
 					workspaceId as string,
 				);
 				if (existing && existing.invitationStatus === "accepted") {
-					continue; // Already a member
+					continue;
 				}
 			}
 
@@ -274,6 +274,17 @@ export const sendInvitations = asyncHandler(
 				workspace.title,
 				inviteUrl,
 			);
+
+			if (user) {
+				await notificationRepository.create({
+					userId: user.userId,
+					type: "invitation",
+					title: "Undangan Workspace Baru",
+					message: `${inviter?.name || "Seseorang"} mengundang Anda untuk bergabung ke workspace "${workspace.title}"`,
+					relatedId: workspaceId as string,
+					isRead: false,
+				});
+			}
 
 			results.push({ email, status: "sent" });
 		}
