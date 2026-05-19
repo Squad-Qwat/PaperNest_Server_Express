@@ -4,8 +4,6 @@
  * Centralizes common helper functions to ensure DRY principles and consistent behavior.
  */
 
-import { createCodeMirrorTools } from "./tools/schemas";
-
 /**
  * Converts various AI message content formats (string, parts array) to plain text.
  */
@@ -48,7 +46,28 @@ export const extractTokenMetadata = (usage: any = {}) => {
  * Generates a formatted list of available tools and their descriptions.
  * Used for system prompt injection.
  */
-export const getToolDescriptions = (): string => {
-	const tools = createCodeMirrorTools();
+export const getToolDescriptions = (tools: any[]): string => {
 	return tools.map((t) => `- **${t.name}**: ${t.description}`).join("\n");
+};
+
+export const parseBase64Attachments = (files: any[] = []): any[] => {
+	const parsed: any[] = [];
+	for (const file of files) {
+		const dataUrl = file.url || file.data;
+		if (dataUrl && typeof dataUrl === "string" && dataUrl.startsWith("data:")) {
+			const base64Parts = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+			if (base64Parts) {
+				const mimeType = base64Parts[1];
+				const base64Data = base64Parts[2];
+				if (mimeType.startsWith("image/") || mimeType === "application/pdf") {
+					parsed.push({
+						type: "media",
+						mimeType: mimeType,
+						data: base64Data,
+					});
+				}
+			}
+		}
+	}
+	return parsed;
 };

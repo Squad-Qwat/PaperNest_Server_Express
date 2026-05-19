@@ -38,8 +38,10 @@ export interface AgentStreamParams {
 	conversationHistory: Array<{ role: string; content: string }>;
 	toolResults?: ToolResult[];
 	documentId?: string;
+	workspaceId?: string;
 	initialPlan?: any[];
 	reasoningEnabled?: boolean;
 	providerId?: string;
 	modelId?: string;
+	files?: Array<{ filename: string; mediaType: string; url: string }>;
 }

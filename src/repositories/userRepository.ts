@@ -1,6 +1,7 @@
 import { COLLECTIONS } from "../config/constants";
-import { db } from "../config/firebase";
+import { db, auth } from "../config/firebase";
 import type { User } from "../types";
+import workspaceRepository from "./workspaceRepository";
 
 
 
@@ -159,11 +160,35 @@ export class UserRepository {
 		return updated;
 	}
 
-	/**
-	 * Delete user
-	 */
 	async delete(userId: string): Promise<void> {
+		const userSnap = await this.collection.doc(userId).get();
+		if (!userSnap.exists) return;
+		const user = userSnap.data() as User;
+		const ownedWorkspaces = await db.collection(COLLECTIONS.WORKSPACES).where("ownerId", "==", userId).get();
+		await Promise.all(ownedWorkspaces.docs.map((ws) => workspaceRepository.delete(ws.id)));
+		const batch = db.batch();
+		const queries = [
+			db.collection(COLLECTIONS.USER_WORKSPACES).where("userId", "==", userId),
+			db.collection(COLLECTIONS.NOTIFICATIONS).where("userId", "==", userId),
+			db.collection(COLLECTIONS.NOTIFICATIONS).where("triggeredById", "==", userId),
+			db.collection(COLLECTIONS.REVIEWS).where("studentUserId", "==", userId),
+			db.collection(COLLECTIONS.REVIEWS).where("lecturerUserId", "==", userId),
+			db.collection(COLLECTIONS.COMMENTS).where("userId", "==", userId),
+			db.collection(COLLECTIONS.INVITATIONS).where("inviterId", "==", userId),
+			db.collection("documentPermissions").where("userId", "==", userId),
+		];
+		if (user?.email) {
+			queries.push(db.collection(COLLECTIONS.INVITATIONS).where("email", "==", user.email));
+		}
+		const snaps = await Promise.all(queries.map((q) => q.get()));
+		for (const snap of snaps) {
+			snap.docs.forEach((doc) => batch.delete(doc.ref));
+		}
+		await batch.commit();
 		await this.collection.doc(userId).delete();
+		try {
+			await auth.deleteUser(userId);
+		} catch {}
 	}
 
 	/**

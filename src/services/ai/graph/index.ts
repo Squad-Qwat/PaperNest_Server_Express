@@ -1,10 +1,3 @@
-/**
- * LangGraph Agent Definition - Advanced Plan-and-Execute
-
- *
- * Compiles the StateGraph with Planner, Executor, Tool, and Reflector nodes.
- */
-
 import {
 	AIMessage,
 	type BaseMessage,
@@ -17,7 +10,7 @@ import {
 	type StreamEvent,
 	type ToolResult,
 } from "@/types/ai/agent.types";
-import { contentToText, extractTokenMetadata } from "../utils";
+import { contentToText, extractTokenMetadata, parseBase64Attachments } from "../utils";
 import { executorNode, plannerNode, reflectorNode, toolNode } from "./nodes";
 import {
 	ROUTES,
@@ -29,11 +22,6 @@ import { AgentState, type AgentStateType } from "./state";
 
 const toSafeText = contentToText;
 
-/**
- * Prune old messages to prevent history explosion
- * Keeps most recent N messages + original conversation turn
- * Removes old ToolMessages but preserves AIMessages for context
- */
 const pruneMessageHistory = (
 	messages: BaseMessage[],
 	maxMessages: number = 20,
@@ -42,19 +30,20 @@ const pruneMessageHistory = (
 		return messages;
 	}
 
-	// Keep: first message (user), last N messages
 	const firstMsg = messages[0];
 	const recentMessages = messages.slice(-Math.max(5, maxMessages - 2));
 
-	// Remove consecutive ToolMessages to reduce noise
 	const pruned: BaseMessage[] = [firstMsg, ...recentMessages];
 	const dedupedMessages: BaseMessage[] = [];
 
 	for (const msg of pruned) {
 		const prevMsg = dedupedMessages.at(-1);
 
-		// Skip consecutive ToolMessages (keep the latest one)
-		if (msg instanceof ToolMessage && prevMsg instanceof ToolMessage) {
+		if (
+			msg instanceof ToolMessage &&
+			prevMsg instanceof ToolMessage &&
+			msg.tool_call_id === prevMsg.tool_call_id
+		) {
 			dedupedMessages[dedupedMessages.length - 1] = msg;
 		} else {
 			dedupedMessages.push(msg);
@@ -67,54 +56,34 @@ const pruneMessageHistory = (
 	return dedupedMessages;
 };
 
-/**
- * Define the graph architecture
- */
 const graphBuilder = new StateGraph(AgentState)
-	// Add nodes
 	.addNode(ROUTES.PLANNER, plannerNode)
 	.addNode(ROUTES.EXECUTOR, executorNode)
 	.addNode(ROUTES.TOOLS, toolNode)
 	.addNode(ROUTES.REFLECTOR, reflectorNode)
-
-	// Define edges
 	.addEdge(START, ROUTES.PLANNER)
-
-	// Planner routing
 	.addConditionalEdges(ROUTES.PLANNER, routeAfterPlanner, {
 		[ROUTES.EXECUTOR]: ROUTES.EXECUTOR,
-		[ROUTES.REFLECTOR]: ROUTES.REFLECTOR, // Required for resumption short-circuit
+		[ROUTES.REFLECTOR]: ROUTES.REFLECTOR,
 		[ROUTES.END]: END,
 	})
-
-	// Executor routing: Tool execution → Reflector evaluation or Pause for FE
-	// FIXED: Now includes ROUTES.END to support client-side tool execution pause.
 	.addConditionalEdges(ROUTES.EXECUTOR, routeAfterExecutor, {
 		[ROUTES.TOOLS]: ROUTES.TOOLS,
 		[ROUTES.REFLECTOR]: ROUTES.REFLECTOR,
 		[ROUTES.END]: END,
 	})
-
-	// Tools -> Reflector
 	.addEdge(ROUTES.TOOLS, ROUTES.REFLECTOR)
-
-	// Reflector routing (Back loop or End)
 	.addConditionalEdges(ROUTES.REFLECTOR, routeAfterReflector, {
-		[ROUTES.PLANNER]: ROUTES.PLANNER, // Replan
-		[ROUTES.EXECUTOR]: ROUTES.EXECUTOR, // Next step
-		[ROUTES.END]: END, // Done
+		[ROUTES.PLANNER]: ROUTES.PLANNER,
+		[ROUTES.EXECUTOR]: ROUTES.EXECUTOR,
+		[ROUTES.END]: END,
 	});
 
-// Compile graph
 const checkpointer = new MemorySaver();
 export const graph = graphBuilder.compile({ checkpointer });
 
-// Type definitions
 export type { AgentStateType };
 
-/**
- * Stream the agent execution
- */
 export async function* streamAgent(
 	userMessage: string,
 	documentContent: string,
@@ -123,10 +92,12 @@ export async function* streamAgent(
 	conversationHistory: Array<{ role: string; content: string }> = [],
 	existingToolResults?: ToolResult[],
 	documentId?: string,
+	workspaceId?: string,
 	initialPlan?: any[],
 	reasoningEnabled: boolean = false,
 	providerId?: string,
 	modelId?: string,
+	files?: Array<{ filename: string; mediaType: string; url: string }>,
 ): AsyncGenerator<StreamEvent> {
 	console.log("[Graph] Starting Plan-and-Execute agent for thread:", threadId);
 
@@ -147,16 +118,10 @@ export async function* streamAgent(
 					: new AIMessage(msg.text),
 			);
 
-		// Prune history to prevent message explosion (cost & context size)
 		const prunedHistory = pruneMessageHistory(historyMessages);
 
-		// taskForGoal must always be the USER's message, never the AI's response.
-		// Using conversationHistory.at(-1) is wrong because history can end with an AI message.
 		const taskForGoal = userMessage;
 
-		// CRITICAL FIX: Don't reuse plan if all steps are already completed
-		// (happens when frontend sends plan from previous execution)
-		// New message = generate fresh plan
 		const shouldUseInitialPlan =
 			initialPlan &&
 			initialPlan.length > 0 &&
@@ -173,19 +138,39 @@ export async function* streamAgent(
 				: "GENERATING fresh plan",
 		});
 
+		let humanMessageInstance: HumanMessage;
+
+		if (files && files.length > 0) {
+			const parsedMedia = parseBase64Attachments(files);
+			const messageParts: any[] = [
+				{ type: "text", text: userMessage },
+				...parsedMedia,
+			];
+
+			humanMessageInstance = new HumanMessage({ content: messageParts });
+		} else {
+			humanMessageInstance = new HumanMessage(userMessage);
+		}
+
+		const lastMessageInHistory = prunedHistory.at(-1);
+		const lastMessageIsCurrentQuery =
+			lastMessageInHistory instanceof HumanMessage &&
+			contentToText(lastMessageInHistory.content).trim() === taskForGoal.trim();
+
 		const initialState: Partial<AgentStateType> = {
-			messages: [...prunedHistory, new HumanMessage(userMessage)],
+			messages: lastMessageIsCurrentQuery ? prunedHistory : [...prunedHistory, humanMessageInstance],
 			documentContent,
 			documentHTML,
 			cursorPosition: 0,
-			plan: shouldUseInitialPlan ? initialPlan : [], // Empty if already completed
-			pastSteps: [], // Initialize pastSteps for tracking
+			plan: shouldUseInitialPlan ? initialPlan : [],
+			pastSteps: [],
 			needsReplanning: false,
 			iteration: 0,
 			maxIterations: 15,
 			documentId: documentId || "",
-			isComplete: false, // Explicitly initialize
-			goal: taskForGoal, // Preserve task for replan cycles
+			workspaceId: workspaceId || "",
+			isComplete: false,
+			goal: taskForGoal,
 			reasoningEnabled,
 			providerId: providerId || "google-genai",
 			modelId: modelId || "gemma-4-31b-it",
@@ -202,8 +187,6 @@ export async function* streamAgent(
 
 			initialState.lastToolResults = normalizedToolResults;
 
-			// Reconstruct the AIMessage that triggered these tools
-			// Add placeholder content to avoid Gemini 400 error on empty messages
 			const toolCalls = normalizedToolResults.map((r) => ({
 				id: r.toolCallId,
 				name: r.name,
@@ -211,7 +194,7 @@ export async function* streamAgent(
 			}));
 
 			const toolCallMessage = new AIMessage({
-				content: "Executing tool...", // Avoid empty content
+				content: "Executing tool...",
 				tool_calls: toolCalls,
 			});
 
@@ -224,22 +207,15 @@ export async function* streamAgent(
 					}),
 			);
 
-			// Append [AIMessage(Call), ToolMessage(Result)] to history
 			initialState.messages = [
 				...(initialState.messages ?? []),
 				toolCallMessage,
 				...toolResultMessages,
 			];
 
-			// Prune again after adding tool results to prevent explosion
 			initialState.messages = pruneMessageHistory(initialState.messages, 25);
 		}
 
-		// IMPORTANT: Use a unique threadId per streamAgent invocation.
-		// Even though FE sends the same threadIdRef, we append a timestamp so MemorySaver
-		// starts fresh each round. State is carried via HTTP payload (plan, toolResults,
-		// conversationHistory), NOT via MemorySaver persistence between rounds.
-		// This prevents duplicate/accumulated messages in stored state.
 		const uniqueThreadId = `${threadId}_${Date.now()}`;
 		const config = {
 			configurable: { thread_id: uniqueThreadId },
@@ -260,7 +236,6 @@ export async function* streamAgent(
 			for (const [nodeName, nodeOutput] of entries) {
 				const output = nodeOutput as Partial<AgentStateType>;
 
-				// Stream Plan Updates
 				if (
 					(nodeName === ROUTES.PLANNER ||
 						nodeName === ROUTES.REFLECTOR ||
@@ -290,11 +265,7 @@ export async function* streamAgent(
 					};
 				}
 
-				// Handle Executor Output (LLM Content)
-				// IMPORTANT: With streamMode:'updates' + messagesStateReducer, output.messages is the
-				// FULL updated messages array (all messages appended). Use at(-1) but verify it's an AI msg.
 				if (nodeName === ROUTES.EXECUTOR && output.messages) {
-					// Find the last AI message specifically (not ToolMessage or HumanMessage)
 					const newAiMsg = [...output.messages]
 						.reverse()
 						.find(
@@ -314,7 +285,6 @@ export async function* streamAgent(
 						}
 
 						if (textContent && textContent.trim()) {
-							// CONSISTENCY FIX: Detect and filter out raw JSON tool calls from text content
 							const isJson =
 								textContent.trim().startsWith("{") &&
 								textContent.trim().endsWith("}");
@@ -347,7 +317,6 @@ export async function* streamAgent(
 			}
 		}
 
-		// Final state check for token logging
 		const finalState = await graph.getState(config);
 		const stateValues = finalState.values as AgentStateType;
 		const {
@@ -356,12 +325,8 @@ export async function* streamAgent(
 			reasoningTokens = 0,
 		} = stateValues;
 
-		// Cost calculation (Gemini 2.5 Flash pricing as of screenshot)
-		// Input: $0.15 / 1M tokens
-		// Output (incl. thinking): $1.25 / 1M tokens
-		// Exchange rate: ~$1 = Rp 16.000
 		const inputCostUsd = (inputTokens / 1_000_000) * 0.15;
-		const outputCostUsd = (outputTokens / 1_000_000) * 1.25; // Standard pricing usually higher, but using screenshot $1.25
+		const outputCostUsd = (outputTokens / 1_000_000) * 1.25;
 		const totalCostIdr = (inputCostUsd + outputCostUsd) * 16000;
 
 		console.log(`\n\x1b[32m[AI Stats] --------------------------------\x1b[0m`);
@@ -379,9 +344,6 @@ export async function* streamAgent(
 		);
 		console.log(`\x1b[32m[AI Stats] --------------------------------\n\x1b[0m`);
 
-		// hasMoreSteps: true if Executor called tools that FE needs to execute.
-		// FE loop (while shouldContinue) will send another request with toolResults.
-		// This is the correct client-side tool execution pattern.
 		yield {
 			type: "done",
 			fullContent: contentParts.join(""),
