@@ -68,6 +68,15 @@ export const reflectorNode = async (state: AgentStateType) => {
 		};
 	}
 
+	const lastAiMessage = [...(state.messages || [])]
+		.reverse()
+		.find((m) => m.getType?.() === "ai");
+	const aiText = lastAiMessage
+		? contentToText(lastAiMessage.content).trim()
+		: "";
+	const hasMeaningfulText = aiText.length > 0;
+	const lastExecutionOutcome = state.lastExecutionOutcome ?? "no_execution";
+
 	let resultText = "No tool result available";
 
 	console.log(
@@ -121,6 +130,16 @@ export const reflectorNode = async (state: AgentStateType) => {
 		}
 	}
 
+	const hasToolResult = resultText !== "No tool result available";
+
+	// Prefix AI response text to results so the Reflector isn't blind to text-only completions!
+	if (lastExecutionOutcome === "executed_text_only" && hasMeaningfulText) {
+		const prefix = `AI Text Response/Summary:\n"""\n${aiText}\n"""\n\n`;
+		resultText = resultText === "No tool result available"
+			? prefix
+			: prefix + `Associated Tool Result:\n${resultText}`;
+	}
+
 	console.log(
 		`[Reflector] Evaluating step with result: ${resultText.substring(0, 100)}...`,
 	);
@@ -147,16 +166,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 	let confidence = state.confidence ?? 1;
 	let replanAttempts = state.replanAttempts ?? 0;
 	let consecutiveNoExecutionCycles = state.consecutiveNoExecutionCycles ?? 0;
-
-	const lastExecutionOutcome = state.lastExecutionOutcome ?? "no_execution";
-	const hasToolResult = resultText !== "No tool result available";
-	const lastAiMessage = [...(state.messages || [])]
-		.reverse()
-		.find((m) => m.getType?.() === "ai");
-	const aiText = lastAiMessage
-		? contentToText(lastAiMessage.content).trim()
-		: "";
-	const hasMeaningfulText = aiText.length > 0;
 
 	const noExecutionDetected =
 		lastExecutionOutcome === "no_execution" &&
@@ -268,7 +277,16 @@ export const reflectorNode = async (state: AgentStateType) => {
 						}
 						pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
 					} else {
-						console.log(`[Reflector] Step ${activeStep?.id}: keeping active because it is the last step and needs CONTINUE`);
+						if (lastExecutionOutcome === "executed_text_only") {
+							plan[activeIndex] = {
+								...plan[activeIndex],
+								status: "completed" as const,
+							};
+							console.log(`[Reflector] Step ${activeStep?.id}: active → completed (last step completed on text response)`);
+							pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
+						} else {
+							console.log(`[Reflector] Step ${activeStep?.id}: keeping active because it is the last step and needs CONTINUE`);
+						}
 					}
 				} else {
 					console.log(
