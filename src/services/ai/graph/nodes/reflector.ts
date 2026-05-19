@@ -93,13 +93,20 @@ export const reflectorNode = async (state: AgentStateType) => {
 
 	if (state.lastToolResults && state.lastToolResults.length > 0) {
 		const stepTool = activeStep?.tool;
-		const resultForStep = stepTool
-			? state.lastToolResults.find((r) => r.name === stepTool)
-			: state.lastToolResults.at(-1);
+		const resultsForStep = stepTool
+			? state.lastToolResults.filter((r) => r.name === stepTool)
+			: [state.lastToolResults.at(-1)];
 
-		if (resultForStep?.result) {
-			resultText = resultForStep.result;
-			console.log(`[Reflector] Found result for tool '${resultForStep.name}'`);
+		const combinedResults = resultsForStep
+			.map((r) => r?.result)
+			.filter(Boolean)
+			.join("\n\n");
+
+		if (combinedResults) {
+			resultText = combinedResults;
+			console.log(
+				`[Reflector] Found ${resultsForStep.length} result(s) for tool '${stepTool || "fallback"}'`,
+			);
 		}
 	}
 
@@ -189,6 +196,7 @@ export const reflectorNode = async (state: AgentStateType) => {
 				? `### Reflector\nAI provided a text response but no document change was executed. Triggering replan to ensure the goal is met.`
 				: `### Reflector\nNo execution detected for step ${activeStep?.id}. Triggering replan to avoid infinite loop.`,
 			lastReasoningPhase: "reflector",
+			lastToolResults: [],
 		};
 	}
 
@@ -235,25 +243,37 @@ export const reflectorNode = async (state: AgentStateType) => {
 			reflectorReasoning = `**Step ${activeStep.id} Verdict:** COMPLETE (Goal achieved)`;
 		} else {
 			if (activeIndex !== -1) {
-				const hasMoreSteps = plan.slice(activeIndex + 1).some(
-					(s) => s.status === "pending" || s.status === "active",
-				);
+				const actionTools = ["apply_diff_edit", "replace_lines", "insert_content", "compile_latex"];
+				const isActionTool = actionTools.includes(activeStep?.tool || "");
+				const wasActionExecuted = state.lastToolResults?.some((r) => r.name === activeStep?.tool);
 
-				if (hasMoreSteps) {
-					if (plan[activeIndex].status === "active") {
-						plan[activeIndex] = {
-							...plan[activeIndex],
-							status: "completed" as const,
-						};
-						console.log(`[Reflector] Step ${activeStep?.id}: active → completed (proceeding to next step)`);
+				const shouldTransition = !isActionTool || wasActionExecuted;
+
+				if (shouldTransition) {
+					const hasMoreSteps = plan.slice(activeIndex + 1).some(
+						(s) => s.status === "pending" || s.status === "active",
+					);
+
+					if (hasMoreSteps) {
+						if (plan[activeIndex].status === "active") {
+							plan[activeIndex] = {
+								...plan[activeIndex],
+								status: "completed" as const,
+							};
+							console.log(`[Reflector] Step ${activeStep?.id}: active → completed (proceeding to next step)`);
+						} else {
+							console.warn(
+								`[Reflector] Step ${activeStep?.id}: already ${plan[activeIndex].status}, not transitioning`,
+							);
+						}
+						pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
 					} else {
-						console.warn(
-							`[Reflector] Step ${activeStep?.id}: already ${plan[activeIndex].status}, not transitioning`,
-						);
+						console.log(`[Reflector] Step ${activeStep?.id}: keeping active because it is the last step and needs CONTINUE`);
 					}
-					pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
 				} else {
-					console.log(`[Reflector] Step ${activeStep?.id}: keeping active because it is the last step and needs CONTINUE`);
+					console.log(
+						`[Reflector] Step ${activeStep?.id}: keeping active because planned action tool '${activeStep?.tool}' was not executed yet (only helper tools ran).`
+					);
 				}
 			}
 			needsReplanning = false;
@@ -299,5 +319,6 @@ export const reflectorNode = async (state: AgentStateType) => {
 		inputTokens: tokens.inputTokens,
 		outputTokens: tokens.outputTokens,
 		reasoningTokens: tokens.reasoningTokens,
+		lastToolResults: [],
 	};
 };

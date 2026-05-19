@@ -39,7 +39,11 @@ const pruneMessageHistory = (
 	for (const msg of pruned) {
 		const prevMsg = dedupedMessages.at(-1);
 
-		if (msg instanceof ToolMessage && prevMsg instanceof ToolMessage) {
+		if (
+			msg instanceof ToolMessage &&
+			prevMsg instanceof ToolMessage &&
+			msg.tool_call_id === prevMsg.tool_call_id
+		) {
 			dedupedMessages[dedupedMessages.length - 1] = msg;
 		} else {
 			dedupedMessages.push(msg);

@@ -134,11 +134,12 @@ export const AgentState = Annotation.Root({
 	lastToolResults: Annotation<ToolResult[]>({
 		reducer: (current, newResults) => {
 			if (!newResults) return current;
+			if (newResults.length === 0) return [];
 			// Merge results: keep existing ones, overwrite if name/ID matches, add new ones
 			const merged = [...current];
 			for (const res of newResults) {
 				const idx = merged.findIndex(
-					(r) => r.name === res.name || r.toolCallId === res.toolCallId,
+					(r) => r.toolCallId === res.toolCallId,
 				);
 				if (idx !== -1) {
 					merged[idx] = res;
