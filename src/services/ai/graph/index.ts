@@ -152,8 +152,13 @@ export async function* streamAgent(
 			humanMessageInstance = new HumanMessage(userMessage);
 		}
 
+		const lastMessageInHistory = prunedHistory.at(-1);
+		const lastMessageIsCurrentQuery =
+			lastMessageInHistory instanceof HumanMessage &&
+			contentToText(lastMessageInHistory.content).trim() === taskForGoal.trim();
+
 		const initialState: Partial<AgentStateType> = {
-			messages: [...prunedHistory, humanMessageInstance],
+			messages: lastMessageIsCurrentQuery ? prunedHistory : [...prunedHistory, humanMessageInstance],
 			documentContent,
 			documentHTML,
 			cursorPosition: 0,
