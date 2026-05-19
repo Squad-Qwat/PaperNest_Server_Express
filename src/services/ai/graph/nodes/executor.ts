@@ -37,11 +37,19 @@ export const executorNode = async (state: AgentStateType) => {
 		state.plan.find((s) => s.status === "pending");
 
 	const tools = getActiveToolsForState(state);
+	
+	const wasActionExecuted =
+		currentStep?.tool &&
+		state.lastToolResults?.some(
+			(r) => r.name === currentStep.tool && r.success !== false,
+		);
+
 	const isStepConversational =
 		!currentStep?.tool ||
 		currentStep.tool === "null" ||
 		currentStep.tool === "none" ||
-		currentStep.tool === "";
+		currentStep.tool === "" ||
+		!!wasActionExecuted;
 
 	const modelWithTools = isStepConversational
 		? model

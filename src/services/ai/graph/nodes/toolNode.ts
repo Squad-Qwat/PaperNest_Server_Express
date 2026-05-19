@@ -27,6 +27,7 @@ export const toolNode = async (state: AgentStateType) => {
 					name: msg.name,
 					result: msg.content,
 					toolCallId: msg.tool_call_id,
+					success: true,
 				}));
 
 				return {
