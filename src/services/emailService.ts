@@ -99,4 +99,54 @@ export class EmailService {
 			throw new Error("Failed to send invitation email: " + error.message);
 		}
 	}
+
+	static async sendCommentNotificationEmail(
+		to: string,
+		documentTitle: string,
+		commenterName: string,
+		commentContent: string,
+		documentUrl: string,
+	): Promise<void> {
+		try {
+			const response = await resend.emails.send({
+				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				to,
+				subject: `Komentar Baru: "${documentTitle}" di PaperNest`,
+				html: `
+					<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; color: #111827; line-height: 1.6; padding: 20px;">
+						<h1 style="color: #009689; font-size: 24px; margin-bottom: 24px;">PaperNest</h1>
+						<p style="font-size: 16px;">Halo,</p>
+						<p style="font-size: 16px;">
+							<strong>${commenterName}</strong> memberikan komentar baru pada dokumen <strong>${documentTitle}</strong>:
+						</p>
+						<div style="background-color: #f9fafb; border-left: 4px solid #009689; padding: 16px; margin: 24px 0; border-radius: 4px; font-style: italic;">
+							"${commentContent}"
+						</div>
+						<div style="margin: 32px 0;">
+							<a href="${documentUrl}" style="background-color: #009689; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">
+								Lihat Komentar
+							</a>
+						</div>
+						<p style="font-size: 12px; color: #6b7280; margin-top: 40px;">
+							Jika tombol di atas tidak berfungsi, salin tautan berikut ke browser Anda:
+						</p>
+						<p style="font-size: 12px; color: #009689; word-break: break-all;">
+							${documentUrl}
+						</p>
+						<hr style="border: none; border-top: 1px solid #f3f4f6; margin: 32px 0;">
+						<p style="font-size: 12px; color: #9ca3af; text-align: center;">
+							&copy; ${new Date().getFullYear()} PaperNest. All rights reserved.
+						</p>
+					</div>
+				`,
+			});
+
+			if (response.error) {
+				throw new Error(response.error.message);
+			}
+		} catch (error: any) {
+			logger.error("Failed to send comment email", { error: error.message });
+			throw new Error("Failed to send comment email: " + error.message);
+		}
+	}
 }
