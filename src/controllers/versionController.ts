@@ -2,7 +2,9 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../middlewares/errorHandler";
 import documentBodyRepository from "../repositories/documentBodyRepository";
 import documentRepository from "../repositories/documentRepository";
+import reviewRepository from "../repositories/reviewRepository";
 import userRepository from "../repositories/userRepository";
+import liveblocksWebhookService from "../services/liveblocksWebhookService";
 import { BadRequestError, NotFoundError } from "../utils/errorTypes";
 import logger from "../utils/logger";
 import { createdResponse, successResponse } from "../utils/responseFormatter";
@@ -168,34 +170,54 @@ export const revertToVersion = asyncHandler(
 			throw new NotFoundError("Version not found");
 		}
 
-		// Get current highest version number
-		const highestVersion =
-			await documentBodyRepository.getLatestVersionNumber(documentId);
-		const newVersionNumber = highestVersion + 1;
+		// HARD RESET APPROACH
+		// We delete all versions and their associated reviews that were created AFTER the target version.
+		// Then we set the target version as the current version.
 
-		// Mark all versions as not current
-		await documentBodyRepository.setAllVersionsNotCurrent(documentId);
-
-		// Create new version with content from target version
-		const newVersion = await documentBodyRepository.create({
+		// 1. Get all versions after the target version
+		const futureVersions = await documentBodyRepository.getVersionsAfter(
 			documentId,
-			userId,
-			content: targetVersion.content,
-			message: `Reverted to version ${versionNum}`,
-			isCurrentVersion: true,
-			versionNumber: newVersionNumber,
-		});
+			versionNum,
+		);
+		const futureVersionIds = futureVersions.map((v) => v.documentBodyId);
 
-		// Update document with reverted content
+		// 2. Delete associated reviews for the future versions
+		if (futureVersionIds.length > 0) {
+			await reviewRepository.deleteByDocumentBodyIds(futureVersionIds);
+		}
+
+		// 3. Delete the future versions
+		await documentBodyRepository.deleteVersionsAfter(documentId, versionNum);
+
+		// 4. Set the target version as the active version (this also marks others as false)
+		await documentBodyRepository.setVersionAsCurrent(
+			targetVersion.documentBodyId,
+		);
+
+		// 5. Update the main document with the reverted content
 		await documentRepository.updateContent(
 			documentId,
 			targetVersion.content,
-			newVersion.documentBodyId,
+			targetVersion.documentBodyId,
 		);
+
+		// 6. Delete the Liveblocks room to reset the Yjs CRDT state.
+		// When the user is redirected back to the editor, a new room will be created
+		// and it will seed the `initialContent` (which is now the reverted content) from Firestore.
+		try {
+			const roomId = `document:${documentId}`;
+			await liveblocksWebhookService.deleteRoom(roomId);
+			logger.info(`Deleted Liveblocks room ${roomId} during rollback`);
+		} catch (error: any) {
+			// Room might not exist or already be deleted, which is fine.
+			logger.warn(
+				`Failed to delete Liveblocks room during rollback: ${error.message}`,
+			);
+		}
 
 		return successResponse(
 			res,
-			{ version: newVersion, revertedFrom: targetVersion },
+			{ version: targetVersion, revertedFrom: null },
 			`Document reverted to version ${versionNum} successfully`,
 		);
 	},

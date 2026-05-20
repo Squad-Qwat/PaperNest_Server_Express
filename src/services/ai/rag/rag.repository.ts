@@ -1,53 +1,47 @@
+import { FieldValue } from "firebase-admin/firestore";
 import { COLLECTIONS } from "../../../config/constants";
 import { db } from "../../../config/firebase";
 import type { PDFChunk } from "./pdf.extractor";
 
 export interface StoredRAGChunk extends PDFChunk {
+	workspaceId: string;
 	documentId: string;
 	fileKey: string;
 	createdAt: Date;
 }
 
-/**
- * Repository for RAG Chunks stored in Firestore
- */
 export class RAGRepository {
 	private collection = db.collection(COLLECTIONS.RAG_CHUNKS);
 
-	/**
-	 * Batch save chunks for a document
-	 */
 	async saveChunks(
+		workspaceId: string,
 		documentId: string,
 		fileKey: string,
 		chunks: PDFChunk[],
+		embeddings: number[][],
 	): Promise<void> {
 		const batch = db.batch();
 		const now = new Date();
 
-		// Optionally: Delete old chunks for this fileKey first to avoid duplicates
 		await this.deleteChunksByFile(documentId, fileKey);
 
-		chunks.forEach((chunk) => {
+		chunks.forEach((chunk, i) => {
 			const docRef = this.collection.doc();
-			const data: StoredRAGChunk = {
+			const data = {
 				...chunk,
+				workspaceId,
 				documentId,
 				fileKey,
+				embedding: FieldValue.vector(embeddings[i]),
 				createdAt: now,
 			};
 			batch.set(docRef, data);
 		});
 
 		await batch.commit();
-		console.log(
-			`[RAGRepository] Saved ${chunks.length} chunks for document ${documentId}`,
-		);
+		console.log(`[RAGRepository] Saved ${chunks.length} chunks with vector embeddings`);
 	}
 
-	/**
-	 * Delete chunks for a specific file
-	 */
 	async deleteChunksByFile(documentId: string, fileKey: string): Promise<void> {
 		const snapshot = await this.collection
 			.where("documentId", "==", documentId)
@@ -64,46 +58,40 @@ export class RAGRepository {
 		console.log(`[RAGRepository] Deleted existing chunks for file ${fileKey}`);
 	}
 
-	/**
-	 * Search chunks for a document
-	 * Note: Simple keyword search for now as we don't have a vector index set up yet.
-	 * In a real system, this would use a vector database query.
-	 */
-	async search(
+	async searchVector(
 		documentId: string,
-		query: string,
+		queryVector: number[],
 		limit: number = 5,
 	): Promise<StoredRAGChunk[]> {
-		// Simple case-insensitive contains search is not natively supported by Firestore
-		// We will fetch more chunks and filter in memory for now,
-		// or just fetch most recent if no advanced search is available.
-		// For a true RAG, we would use embeddings.
-
-		const snapshot = await this.collection
+		const vectorQuery = this.collection
 			.where("documentId", "==", documentId)
-			.limit(100) // Fetch a reasonable subset to search in-memory
-			.get();
+			.findNearest({
+				vectorField: "embedding",
+				queryVector: FieldValue.vector(queryVector),
+				limit,
+				distanceMeasure: "COSINE",
+			});
 
-		const searchTerms = query.toLowerCase().split(/\s+/);
-		const results = snapshot.docs
-			.map((doc) => doc.data() as StoredRAGChunk)
-			.filter((chunk) => {
-				const text = chunk.text.toLowerCase();
-				return searchTerms.some((term) => text.includes(term));
-			})
-			// Sort by "relevance" (count of search terms matched)
-			.sort((a, b) => {
-				const aMatches = searchTerms.filter((t) =>
-					a.text.toLowerCase().includes(t),
-				).length;
-				const bMatches = searchTerms.filter((t) =>
-					b.text.toLowerCase().includes(t),
-				).length;
-				return bMatches - aMatches;
-			})
-			.slice(0, limit);
+		const snapshot = await vectorQuery.get();
+		return snapshot.docs.map((doc) => doc.data() as StoredRAGChunk);
+	}
 
-		return results;
+	async searchWorkspaceVector(
+		workspaceId: string,
+		queryVector: number[],
+		limit: number = 5,
+	): Promise<StoredRAGChunk[]> {
+		const vectorQuery = this.collection
+			.where("workspaceId", "==", workspaceId)
+			.findNearest({
+				vectorField: "embedding",
+				queryVector: FieldValue.vector(queryVector),
+				limit,
+				distanceMeasure: "COSINE",
+			});
+
+		const snapshot = await vectorQuery.get();
+		return snapshot.docs.map((doc) => doc.data() as StoredRAGChunk);
 	}
 }
 
