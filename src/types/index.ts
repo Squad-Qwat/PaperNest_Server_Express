@@ -17,4 +17,5 @@ export * from "./latex.types";
 export * from "./semanticScholar.types";
 export * from "./ai/agent.types";
 export * from "./ai/editor.types";
+export * from "./invitation.types";
 

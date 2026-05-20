@@ -23,7 +23,7 @@ For insertion or text edits:
 1. Call `search_text_lines` first to locate exact target lines/anchors.
 2. Use `replace_lines` for deterministic range updates.
 3. For insertion, prefer `insert_content` with `atLine` / `afterText` / `beforeText`.
-4. Use `apply_diff_edit` only when block boundaries are exact-match-safe.
+4. **BEST UX (PREFERRED)**: For ANY multi-line changes, block replacements, or multi-section edits, use `apply_diff_edit`. Group all your edits into a single `apply_diff_edit` call to provide the user with a single cohesive review batch.
 
 For LaTeX section insertion (e.g., "Kesimpulan"):
 1. Call `get_sections` first to confirm section order.

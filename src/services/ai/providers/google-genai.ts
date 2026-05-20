@@ -1,6 +1,6 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import type { AIProvider, AIProviderConfig, AIProviderID } from "./types";
+import { createRotatingGeminiModel } from "./gemini-rotator";
 
 export class GoogleGenAIProvider implements AIProvider {
 	id: AIProviderID = "google-genai";
@@ -16,32 +16,25 @@ export class GoogleGenAIProvider implements AIProvider {
 	}
 
 	createModel(config: AIProviderConfig): BaseChatModel {
-		const apiKey = process.env.GOOGLE_API_KEY;
-
-		if (!apiKey) {
-			throw new Error("GOOGLE_API_KEY is not set");
-		}
-
 		const modelName = config.model || "gemini-2.5-flash-lite";
-		console.log(`[GoogleGenAI] Creating model: ${modelName}`);
+		console.log(`[GoogleGenAI] Creating rotating model: ${modelName}`);
 
 		const shouldApplyThinking =
 			this.supportsThinkingConfig(modelName) && config.reasoningEnabled;
-		const thinkingBudget = 1024; // Minimum is 512, using 1024 as default for reasoning
+		const thinkingBudget = 1024;
 
-		return new ChatGoogleGenerativeAI({
-			apiKey,
+		return createRotatingGeminiModel({
 			model: modelName,
 			temperature: config.temperature,
 			maxOutputTokens: config.maxTokens,
 			streaming: config.streaming,
 			...(shouldApplyThinking
 				? {
-						thinkingConfig: {
-							includeThoughts: true,
-							thinkingBudget,
-						},
-					}
+					thinkingConfig: {
+						includeThoughts: true,
+						thinkingBudget,
+					},
+				}
 				: {}),
 		});
 	}
@@ -56,8 +49,15 @@ export class GoogleGenAIProvider implements AIProvider {
 	}
 
 	validateCredentials(): { valid: boolean; error?: string } {
-		if (!process.env.GOOGLE_API_KEY) {
-			return { valid: false, error: "GOOGLE_API_KEY is not set" };
+		if (
+			!process.env.GOOGLE_API_KEY &&
+			!process.env.GOOGLE_API_KEYS &&
+			!process.env.GEMINI_API_KEYS
+		) {
+			return {
+				valid: false,
+				error: "No Google or Gemini API keys configured in environment",
+			};
 		}
 		return { valid: true };
 	}

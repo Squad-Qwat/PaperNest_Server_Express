@@ -59,8 +59,8 @@ const startServer = async () => {
 startServer();
 
 // Global Exception Handlers
-process.on("unhandledRejection", (reason: Error, promise: Promise<any>) => {
-	logger.error("Unhandled Rejection at:", promise, "reason:", reason);
+process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
+	logger.error(`Unhandled Rejection at: ${promise} - reason: ${reason instanceof Error ? reason.stack : String(reason)}`);
 	if (env.NODE_ENV === "production") {
 		process.exit(1);
 	}

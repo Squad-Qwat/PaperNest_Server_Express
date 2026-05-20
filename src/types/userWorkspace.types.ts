@@ -1,10 +1,12 @@
+export type WorkspaceRole = "owner" | "editor" | "viewer" | "reviewer";
+
 export interface UserWorkspace {
-    userWorkspaceId: string;
-    userId: string;
-    workspaceId: string;
-    role: "owner" | "editor" | "viewer" | "reviewer";
-    invitationStatus: "pending" | "accepted" | "declined";
-    invitedBy: string;
-    createdAt: Date;
-    updatedAt: Date;
+	userWorkspaceId: string;
+	userId: string;
+	workspaceId: string;
+	role: WorkspaceRole;
+	invitationStatus: "pending" | "accepted" | "declined";
+	invitedBy: string;
+	createdAt: Date;
+	updatedAt: Date;
 }

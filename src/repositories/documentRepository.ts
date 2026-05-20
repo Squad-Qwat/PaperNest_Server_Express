@@ -134,14 +134,19 @@ export class DocumentRepository {
 	): Promise<Document[]> {
 		const lowerSearch = searchTerm.toLowerCase();
 
+		// Fetch all documents for the workspace (uses automatic single-field index)
 		const snapshot = await this.collection
 			.where("workspaceId", "==", workspaceId)
-			.where("title", ">=", lowerSearch)
-			.where("title", "<=", lowerSearch + "\uf8ff")
-			.limit(limit)
 			.get();
 
-		return snapshot.docs.map((doc) => doc.data() as Document);
+		const documents = snapshot.docs.map((doc) => doc.data() as Document);
+
+		// Perform case-insensitive search in memory to bypass composite index requirements
+		const filtered = documents.filter(doc => 
+			doc.title && doc.title.toLowerCase().includes(lowerSearch)
+		);
+
+		return filtered.slice(0, limit);
 	}
 }
 

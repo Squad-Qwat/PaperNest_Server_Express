@@ -1,18 +1,24 @@
 import Joi from "joi";
 import { USER_ROLES } from "../../config/constants";
 
-/**
- * Validation schema for user registration
- */
 export const registerSchema = Joi.object({
 	email: Joi.string().email().required().messages({
 		"string.email": "Please provide a valid email address",
 		"any.required": "Email is required",
 	}),
-	password: Joi.string().min(6).required().messages({
-		"string.min": "Password must be at least 6 characters long",
-		"any.required": "Password is required",
-	}),
+	password: Joi.string()
+		.min(8)
+		.pattern(/[a-z]/)
+		.pattern(/[A-Z]/)
+		.pattern(/[0-9]/)
+		.pattern(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/)
+		.required()
+		.messages({
+			"string.min": "Password must be at least 8 characters long",
+			"string.pattern.base":
+				"Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character",
+			"any.required": "Password is required",
+		}),
 	name: Joi.string().min(2).max(100).required().messages({
 		"string.min": "Name must be at least 2 characters long",
 		"string.max": "Name cannot exceed 100 characters",
@@ -37,7 +43,6 @@ export const registerSchema = Joi.object({
 			.min(3)
 			.when("mode", {
 				is: "create",
-				// biome-ignore lint/suspicious/noThenProperty: Joi uses "then" for conditional schemas.
 				then: Joi.required(),
 				otherwise: Joi.optional().allow(""),
 			})
@@ -51,7 +56,6 @@ export const registerSchema = Joi.object({
 		invitationCode: Joi.string()
 			.when("mode", {
 				is: "join",
-				// biome-ignore lint/suspicious/noThenProperty: Joi uses "then" for conditional schemas.
 				then: Joi.required(),
 				otherwise: Joi.optional().allow(""),
 			})
@@ -59,21 +63,17 @@ export const registerSchema = Joi.object({
 				"any.required": "Invitation code is required when joining a workspace",
 			}),
 	}).optional(),
+	turnstileToken: Joi.string().optional(),
 });
 
-/**
- * Validation schema for login with Firebase token
- */
 export const loginSchema = Joi.object({
 	firebaseToken: Joi.string().required().messages({
 		"any.required": "Firebase token is required",
 	}),
 	accessToken: Joi.string().optional(),
+	turnstileToken: Joi.string().optional(),
 });
 
-/**
- * Validation schema for login with email and password
- */
 export const loginWithEmailPasswordSchema = Joi.object({
 	email: Joi.string().email().required().messages({
 		"string.email": "Please provide a valid email address",
@@ -82,29 +82,21 @@ export const loginWithEmailPasswordSchema = Joi.object({
 	password: Joi.string().required().messages({
 		"any.required": "Password is required",
 	}),
+	turnstileToken: Joi.string().optional(),
 });
 
-/**
- * Validation schema for refresh token
- */
 export const refreshTokenSchema = Joi.object({
 	refreshToken: Joi.string().required().messages({
 		"any.required": "Refresh token is required",
 	}),
 });
 
-/**
- * Validation schema for verifying Firebase token
- */
 export const verifyTokenSchema = Joi.object({
 	token: Joi.string().required().messages({
 		"any.required": "Token is required",
 	}),
 });
 
-/**
- * Validation schema for updating user email
- */
 export const updateEmailSchema = Joi.object({
 	newEmail: Joi.string().email().required().messages({
 		"string.email": "Please provide a valid email address",
@@ -112,9 +104,6 @@ export const updateEmailSchema = Joi.object({
 	}),
 });
 
-/**
- * Validation schema for password reset request
- */
 export const passwordResetSchema = Joi.object({
 	email: Joi.string().email().required().messages({
 		"string.email": "Please provide a valid email address",
@@ -122,21 +111,22 @@ export const passwordResetSchema = Joi.object({
 	}),
 });
 
-/**
- * Validation schema for finalizing registration
- */
 export const finalizeRegistrationSchema = Joi.object({
 	firebaseToken: Joi.string().required().messages({
 		"any.required": "Firebase token is required",
 	}),
 });
 
-/**
- * Validation schema for checking email availability
- */
 export const checkEmailSchema = Joi.object({
 	email: Joi.string().email().required().messages({
 		"string.email": "Please provide a valid email address",
 		"any.required": "Email is required",
+	}),
+});
+
+export const verifyOTPSchema = Joi.object({
+	otp: Joi.string().length(6).required().messages({
+		"string.length": "OTP must be exactly 6 digits",
+		"any.required": "OTP is required",
 	}),
 });

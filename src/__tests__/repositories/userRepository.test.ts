@@ -171,9 +171,14 @@ describe("UserRepository", () => {
 			const userId = "user-123";
 
 			const mockDelete = (jest.fn() as any).mockResolvedValue(undefined);
+			const mockGet = (jest.fn() as any).mockResolvedValue({
+				exists: true,
+				data: () => mockUser,
+			});
 
 			mockCollection.doc = jest.fn().mockReturnValue({
 				delete: mockDelete,
+				get: mockGet,
 			});
 
 			await userRepository.delete(userId);

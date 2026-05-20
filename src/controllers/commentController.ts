@@ -3,6 +3,9 @@ import { asyncHandler } from "../middlewares/errorHandler";
 import commentRepository from "../repositories/commentRepository";
 import documentRepository from "../repositories/documentRepository";
 import notificationRepository from "../repositories/notificationRepository";
+import userRepository from "../repositories/userRepository";
+import { EmailService } from "../services/emailService";
+import { env } from "../config/env";
 import type { Comment } from "../types";
 import { NotFoundError } from "../utils/errorTypes";
 import logger from "../utils/logger";
@@ -38,8 +41,10 @@ export const createComment = asyncHandler(
 			isResolved: false,
 		});
 
-		// Create notification for document owner (if not the commenter)
 		const document = await documentRepository.findById(documentId);
+		const commenter = await userRepository.findById(userId);
+		const commenterName = commenter?.name || "Seseorang";
+
 		if (document && document.createdBy !== userId) {
 			await notificationRepository.create({
 				userId: document.createdBy,
@@ -49,12 +54,23 @@ export const createComment = asyncHandler(
 				relatedId: comment.commentId,
 				isRead: false,
 			});
+
+			const owner = await userRepository.findById(document.createdBy);
+			if (owner && owner.email) {
+				const documentUrl = `${env.FRONTEND_URL}/${document.workspaceId}/documents/${documentId}`;
+				await EmailService.sendCommentNotificationEmail(
+					owner.email,
+					document.title,
+					commenterName,
+					content,
+					documentUrl,
+				);
+			}
 		}
 
-		// If it's a reply, notify the parent comment author
 		if (parentCommentId) {
 			const parentComment = await commentRepository.findById(parentCommentId);
-			if (parentComment && parentComment.userId !== userId) {
+			if (parentComment && parentComment.userId !== userId && parentComment.userId !== document?.createdBy) {
 				await notificationRepository.create({
 					userId: parentComment.userId,
 					type: "comment",
@@ -63,6 +79,18 @@ export const createComment = asyncHandler(
 					relatedId: comment.commentId,
 					isRead: false,
 				});
+
+				const parentAuthor = await userRepository.findById(parentComment.userId);
+				if (parentAuthor && parentAuthor.email) {
+					const documentUrl = `${env.FRONTEND_URL}/${document!.workspaceId}/documents/${documentId}`;
+					await EmailService.sendCommentNotificationEmail(
+						parentAuthor.email,
+						document!.title,
+						commenterName,
+						content,
+						documentUrl,
+					);
+				}
 			}
 		}
 
