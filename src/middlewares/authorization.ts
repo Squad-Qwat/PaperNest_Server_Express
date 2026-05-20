@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import commentRepository from "../repositories/commentRepository";
 import documentRepository from "../repositories/documentRepository";
+import citationRepository from "../repositories/citationRepository";
 import reviewRepository from "../repositories/reviewRepository";
 import userWorkspaceRepository from "../repositories/userWorkspaceRepository";
 import workspaceRepository from "../repositories/workspaceRepository";
@@ -487,6 +488,125 @@ export const authorizeDocumentPermission = (
 	};
 };
 
+/**
+ * Check if user has access to a citation through workspace membership
+ */
+export const authorizeCitation = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const citationId = req.params.citationId as string;
+		const userId = req.userId;
+
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
+
+		if (!citationId) {
+			throw new Error("Citation ID is required");
+		}
+
+		// Get citation to find document
+		const citation = await citationRepository.findById(citationId);
+		if (!citation) {
+			throw new NotFoundError("Citation not found");
+		}
+
+		// Check workspace access directly using workspaceId in citation
+		const hasAccess = await userWorkspaceRepository.hasAccess(
+			userId,
+			citation.workspaceId,
+		);
+		if (!hasAccess) {
+			throw new ForbiddenError("You do not have access to this citation");
+		}
+
+		// Attach citation and workspace info to request
+		(req as any).citation = citation;
+		(req as any).workspaceId = citation.workspaceId;
+
+		// Optionally attach document if it exists
+		if (citation.documentId) {
+			const document = await documentRepository.findById(citation.documentId);
+			if (document) {
+				(req as any).document = document;
+			}
+		}
+
+		next();
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Check if user can edit a citation
+ */
+export const authorizeCitationEdit = async (
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const citationId = req.params.citationId as string;
+		const userId = req.userId;
+
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
+
+		if (!citationId) {
+			throw new Error("Citation ID is required");
+		}
+
+		const citation = await citationRepository.findById(citationId);
+		if (!citation) {
+			throw new NotFoundError("Citation not found");
+		}
+
+		// Get user's role in workspace directly using workspaceId in citation
+		const userRole = await userWorkspaceRepository.getUserRole(
+			userId,
+			citation.workspaceId,
+		);
+
+		let canEdit = userRole === "owner" || userRole === "editor";
+
+		// If citation has a document, also allow the document creator to edit
+		if (!canEdit && citation.documentId) {
+			const document = await documentRepository.findById(citation.documentId);
+			if (document && document.createdBy === userId) {
+				canEdit = true;
+				(req as any).document = document;
+			}
+		}
+
+		if (!canEdit) {
+			throw new ForbiddenError(
+				"You do not have permission to edit this citation",
+			);
+		}
+
+		// Attach citation and workspace info to request
+		(req as any).citation = citation;
+		(req as any).workspaceId = citation.workspaceId;
+
+		// Optionally attach document if it exists
+		if (citation.documentId) {
+			const document = await documentRepository.findById(citation.documentId);
+			if (document) {
+				(req as any).document = document;
+			}
+		}
+
+		next();
+	} catch (error) {
+		next(error);
+	}
+};
+
 export default {
 	authorizeWorkspace,
 	authorizeWorkspaceOwner,
@@ -498,4 +618,6 @@ export default {
 	authorizeReviewLecturer,
 	authorizeReviewStudent,
 	authorizeDocumentPermission,
+	authorizeCitation,
+	authorizeCitationEdit,
 };

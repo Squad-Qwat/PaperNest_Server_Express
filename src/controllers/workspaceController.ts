@@ -78,6 +78,7 @@ export const getUserWorkspaces = asyncHandler(
 		const workspaces = await Promise.all(
 			userWorkspaces.map(async (uw) => {
 				const workspace = await workspaceRepository.findById(uw.workspaceId);
+				if (!workspace) return null; // Skips the orphaned record of a workspace
 				return {
 					...workspace,
 					userRole: uw.role,
@@ -86,9 +87,11 @@ export const getUserWorkspaces = asyncHandler(
 			}),
 		);
 
+		const validWorkspaces = workspaces.filter(Boolean); // Necessary filter for workspace
+
 		return successResponse(
 			res,
-			{ workspaces, count: workspaces.length },
+			{ workspaces: validWorkspaces, count: workspaces.length },
 			"Workspaces retrieved successfully",
 		);
 	},
@@ -161,6 +164,9 @@ export const deleteWorkspace = asyncHandler(
 		const { workspaceId } = req.params;
 
 		logger.info("Delete workspace request", { workspaceId });
+
+		// Cascade delete all UserWorkspace records first
+		await userWorkspaceRepository.deleteByWorkspace(workspaceId as string);
 
 		// TODO: Implement cascade delete for documents, comments, etc.
 		await workspaceRepository.delete(workspaceId as string);

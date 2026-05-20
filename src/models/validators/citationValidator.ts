@@ -35,6 +35,12 @@ export const createCitationSchema = Joi.object({
 	cslJson: Joi.object().default({}).messages({
 		"object.base": "CSL JSON must be an object",
 	}),
+	workspaceId: Joi.string().required().messages({
+		"any.required": "Workspace ID is required",
+	}),
+	documentId: Joi.string().optional().messages({
+		"string.base": "Document ID must be a string",
+	}),
 });
 
 /**

@@ -17,13 +17,18 @@ import {
  */
 export const createCitation = asyncHandler(
 	async (req: Request, res: Response) => {
-		const documentId = req.params.documentId as string;
-		const citationData = req.body;
+		const documentId = (req.params.documentId || req.body.documentId) as string | undefined;
+		const workspaceId = (req.params.workspaceId || req.body.workspaceId) as string;
+		// const citationData = req.body;
 
-		logger.info("Create citation request", { documentId });
+		// destructure parts of citationData to prevent controlled value overwrite from spread
+		const {documentId: _bodyDocId, workspaceId: _bodyWorkspaceId, ...citationData} = req.body
+
+		logger.info("Create citation request", { documentId, workspaceId });
 
 		const citation = await citationRepository.create({
-			documentId,
+			workspaceId,
+			...(documentId ? {documentId} : {}), // Only include documentId if it's actually defined — omit it entirely otherwise
 			...citationData,
 		});
 
@@ -50,6 +55,29 @@ export const getDocumentCitations = asyncHandler(
 		} else {
 			citations = await citationRepository.findByDocument(documentId);
 		}
+
+		return successResponse(
+			res,
+			{ citations, count: citations.length },
+			"Citations retrieved successfully",
+		);
+	},
+);
+
+/**
+ * Get all citations for a workspace
+ * GET /api/workspaces/:workspaceId/citations
+ * Protected (requires workspace access)
+ */
+export const getWorkspaceCitations = asyncHandler(
+	async (req: Request, res: Response) => {
+		const workspaceId = req.params.workspaceId as string;
+		const type = req.query.type as string | undefined;
+
+		logger.info("Get workspace citations request", { workspaceId });
+
+		const allCitations = await citationRepository.findByWorkspace(workspaceId);
+        const citations = type ? allCitations.filter(c => c.type === type) : allCitations;
 
 		return successResponse(
 			res,
@@ -175,4 +203,5 @@ export default {
 	deleteCitation,
 	searchCitations,
 	getCitationByDOI,
+	getWorkspaceCitations,
 };
