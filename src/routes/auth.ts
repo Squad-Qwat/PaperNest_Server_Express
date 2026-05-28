@@ -12,8 +12,8 @@ import {
 	refreshTokenSchema,
 	registerSchema,
 	updateEmailSchema,
-	verifyTokenSchema,
 	verifyOTPSchema,
+	verifyTokenSchema,
 } from "../models/validators/authValidator";
 
 const router: Router = Router();
@@ -43,7 +43,7 @@ router.post(
 	"/login",
 	validateTurnstile,
 	validate({ body: loginSchema }),
-	authController.login
+	authController.login,
 );
 
 router.post(

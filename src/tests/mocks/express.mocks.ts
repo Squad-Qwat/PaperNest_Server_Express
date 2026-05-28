@@ -1,7 +1,6 @@
 import { jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
 
-
 // Extended Request type with user property
 interface RequestWithUser extends Request {
 	user?: any;

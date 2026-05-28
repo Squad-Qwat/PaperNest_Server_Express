@@ -1,15 +1,15 @@
 import { AIMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
-import { aiRegistry } from "../../providers/registry";
-import { createRAGTool } from "../../tools/rag.tool";
-import { createCodeMirrorTools } from "../../tools/schemas";
-import { semanticScholarTool } from "../../tools/semanticScholar.tool";
 import type {
 	AgentStreamParams,
 	StreamEvent,
 	ToolResult,
 } from "@/types/ai/agent.types";
-import type { IAgentProvider } from "../interface";
+import { aiRegistry } from "../../providers/registry";
+import { createRAGTool } from "../../tools/rag.tool";
+import { createCodeMirrorTools } from "../../tools/schemas";
+import { semanticScholarTool } from "../../tools/semanticScholar.tool";
 import { parseBase64Attachments } from "../../utils";
+import type { IAgentProvider } from "../interface";
 
 /**
  * DeepAgent Provider
@@ -68,10 +68,11 @@ export class DeepAgentProvider implements IAgentProvider {
 		});
 
 		// 4. Prepare Input
-		const inputMessages = params.conversationHistory.map((msg: { role: string; content: string }) =>
-			msg.role === "user"
-				? new HumanMessage(msg.content)
-				: new AIMessage(msg.content),
+		const inputMessages = params.conversationHistory.map(
+			(msg: { role: string; content: string }) =>
+				msg.role === "user"
+					? new HumanMessage(msg.content)
+					: new AIMessage(msg.content),
 		);
 
 		const lastUserMessage = params.message;
@@ -91,7 +92,7 @@ export class DeepAgentProvider implements IAgentProvider {
 
 		if (params.toolResults && params.toolResults.length > 0) {
 			// Reconstruct tool call sequence for LangGraph continuation
-			const toolCallId = params.toolResults[0].toolCallId;
+			const _toolCallId = params.toolResults[0].toolCallId;
 			const toolCallMsg = new AIMessage({
 				content: "",
 				tool_calls: params.toolResults.map((r: ToolResult) => ({

@@ -1,11 +1,11 @@
 import type { Request, Response } from "express";
+import { env } from "../config/env";
 import { asyncHandler } from "../middlewares/errorHandler";
 import commentRepository from "../repositories/commentRepository";
 import documentRepository from "../repositories/documentRepository";
 import notificationRepository from "../repositories/notificationRepository";
 import userRepository from "../repositories/userRepository";
 import { EmailService } from "../services/emailService";
-import { env } from "../config/env";
 import type { Comment } from "../types";
 import { NotFoundError } from "../utils/errorTypes";
 import logger from "../utils/logger";
@@ -56,7 +56,7 @@ export const createComment = asyncHandler(
 			});
 
 			const owner = await userRepository.findById(document.createdBy);
-			if (owner && owner.email) {
+			if (owner?.email) {
 				const documentUrl = `${env.FRONTEND_URL}/${document.workspaceId}/documents/${documentId}`;
 				await EmailService.sendCommentNotificationEmail(
 					owner.email,
@@ -70,7 +70,11 @@ export const createComment = asyncHandler(
 
 		if (parentCommentId) {
 			const parentComment = await commentRepository.findById(parentCommentId);
-			if (parentComment && parentComment.userId !== userId && parentComment.userId !== document?.createdBy) {
+			if (
+				parentComment &&
+				parentComment.userId !== userId &&
+				parentComment.userId !== document?.createdBy
+			) {
 				await notificationRepository.create({
 					userId: parentComment.userId,
 					type: "comment",
@@ -80,12 +84,14 @@ export const createComment = asyncHandler(
 					isRead: false,
 				});
 
-				const parentAuthor = await userRepository.findById(parentComment.userId);
-				if (parentAuthor && parentAuthor.email) {
-					const documentUrl = `${env.FRONTEND_URL}/${document!.workspaceId}/documents/${documentId}`;
+				const parentAuthor = await userRepository.findById(
+					parentComment.userId,
+				);
+				if (parentAuthor?.email) {
+					const documentUrl = `${env.FRONTEND_URL}/${document?.workspaceId}/documents/${documentId}`;
 					await EmailService.sendCommentNotificationEmail(
 						parentAuthor.email,
-						document!.title,
+						document?.title ?? "",
 						commenterName,
 						content,
 						documentUrl,

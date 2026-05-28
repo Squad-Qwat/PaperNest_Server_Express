@@ -7,7 +7,6 @@ jest.mock("../../config/firebase", () => ({
 
 import { db } from "../../config/firebase";
 import registrationService from "../../services/registrationService";
-import { mockUser } from "../../tests/fixtures";
 
 describe("RegistrationService", () => {
 	const mockUid = "user-123";

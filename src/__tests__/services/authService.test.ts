@@ -10,6 +10,7 @@ import { __mockAuth } from "../../../__mocks__/firebase-admin";
 import * as authMiddleware from "../../middlewares/auth";
 import userRepository from "../../repositories/userRepository";
 import authService from "../../services/authService";
+import { EmailService } from "../../services/emailService";
 import registrationService from "../../services/registrationService";
 import { mockUser } from "../../tests/fixtures";
 
@@ -17,11 +18,12 @@ jest.mock("axios");
 jest.mock("../../repositories/userRepository");
 jest.mock("../../services/registrationService");
 
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+const _mockedAxios = axios as jest.Mocked<typeof axios>;
 
 jest.mock("../../services/emailService", () => ({
 	EmailService: {
 		sendOTPEmail: jest.fn().mockImplementation(() => Promise.resolve()),
+		sendWelcomeEmail: jest.fn().mockImplementation(() => Promise.resolve()),
 	},
 }));
 
@@ -35,6 +37,8 @@ jest.mock("../../services/otpService", () => ({
 describe("AuthService", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		jest.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(undefined);
+		jest.mocked(EmailService.sendOTPEmail).mockResolvedValue(undefined);
 	});
 
 	describe("register", () => {
@@ -94,6 +98,10 @@ describe("AuthService", () => {
 
 			expect(result.user).toEqual(mockUser);
 			expect(result.token).toBe("mock-token");
+			expect(EmailService.sendWelcomeEmail).toHaveBeenCalledWith(
+				mockUser.email,
+				mockUser.name,
+			);
 		});
 
 		it("should throw error if email is not verified", async () => {

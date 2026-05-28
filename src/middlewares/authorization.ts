@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
+import citationRepository from "../repositories/citationRepository";
 import commentRepository from "../repositories/commentRepository";
 import documentRepository from "../repositories/documentRepository";
-import citationRepository from "../repositories/citationRepository";
 import reviewRepository from "../repositories/reviewRepository";
 import userWorkspaceRepository from "../repositories/userWorkspaceRepository";
 import workspaceRepository from "../repositories/workspaceRepository";
@@ -12,7 +12,6 @@ import {
 	NotFoundError,
 	UnauthorizedError,
 } from "../utils/errorTypes";
-import logger from "../utils/logger";
 
 /**
  * Check if user has access to a workspace with minimum role requirement
@@ -20,7 +19,7 @@ import logger from "../utils/logger";
 export const authorizeWorkspace = (
 	minRole?: "owner" | "editor" | "viewer" | "reviewer",
 ) => {
-	return async (req: Request, res: Response, next: NextFunction) => {
+	return async (req: Request, _res: Response, next: NextFunction) => {
 		try {
 			const workspaceId = req.params.workspaceId as string;
 			const userId = req.userId;
@@ -88,7 +87,7 @@ export const authorizeWorkspace = (
  */
 export const authorizeWorkspaceOwner = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -123,7 +122,7 @@ export const authorizeWorkspaceOwner = async (
  */
 export const authorizeDocument = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -168,7 +167,7 @@ export const authorizeDocument = async (
  */
 export const authorizeDocumentEdit = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -220,7 +219,7 @@ export const authorizeDocumentEdit = async (
  */
 export const authorizeCommentOwner = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -279,7 +278,7 @@ export const authorizeCommentOwner = async (
  */
 export const authorizeLecturer = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -308,7 +307,7 @@ export const authorizeLecturer = async (
  */
 export const authorizeReview = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -349,7 +348,7 @@ export const authorizeReview = async (
  */
 export const authorizeReviewLecturer = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -388,7 +387,7 @@ export const authorizeReviewLecturer = async (
  */
 export const authorizeReviewStudent = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -445,7 +444,7 @@ export const authorizeReviewStudent = async (
 export const authorizeDocumentPermission = (
 	requiredPermission: DocumentPermission,
 ) => {
-	return async (req: Request, res: Response, next: NextFunction) => {
+	return async (req: Request, _res: Response, next: NextFunction) => {
 		try {
 			const documentId = req.params.documentId as string;
 			const userId = req.userId;
@@ -493,7 +492,7 @@ export const authorizeDocumentPermission = (
  */
 export const authorizeCitation = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -546,7 +545,7 @@ export const authorizeCitation = async (
  */
 export const authorizeCitationEdit = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {

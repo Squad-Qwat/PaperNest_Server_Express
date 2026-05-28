@@ -25,7 +25,9 @@ export const streamAIResponse = async (
 			taggedDocumentIds = [],
 		} = req.body;
 
-		const { agentFactory } = await import("../services/ai/agents/agent.factory");
+		const { agentFactory } = await import(
+			"../services/ai/agents/agent.factory"
+		);
 		const { validateAICredentials } = await import("../services/ai/config");
 
 		const credentialsCheck = validateAICredentials(providerId);
@@ -75,26 +77,41 @@ export const streamAIResponse = async (
 				}
 			}, 15000);
 
-			let finalConversationHistory = [...conversationHistory];
+			const finalConversationHistory = [...conversationHistory];
 
-			const isToolContinuation = Array.isArray(toolResults) && toolResults.length > 0;
-			if (!isToolContinuation && Array.isArray(taggedDocumentIds) && taggedDocumentIds.length > 0) {
-				const { default: documentRepository } = await import("../repositories/documentRepository");
-				const { default: documentBodyRepository } = await import("../repositories/documentBodyRepository");
+			const isToolContinuation =
+				Array.isArray(toolResults) && toolResults.length > 0;
+			if (
+				!isToolContinuation &&
+				Array.isArray(taggedDocumentIds) &&
+				taggedDocumentIds.length > 0
+			) {
+				const { default: documentRepository } = await import(
+					"../repositories/documentRepository"
+				);
+				const { default: documentBodyRepository } = await import(
+					"../repositories/documentBodyRepository"
+				);
 
 				const fetchPromises = taggedDocumentIds.map(async (docId: string) => {
 					try {
 						const document = await documentRepository.findById(docId);
 						if (!document) return null;
-						if (workspaceId && document.workspaceId !== workspaceId) return null;
+						if (workspaceId && document.workspaceId !== workspaceId)
+							return null;
 						if (!document.currentVersionId) return null;
-						const body = await documentBodyRepository.findById(document.currentVersionId);
+						const body = await documentBodyRepository.findById(
+							document.currentVersionId,
+						);
 						return {
 							title: document.title,
 							content: body?.content || "",
 						};
 					} catch (error) {
-						console.error(`[AI Controller] Failed to fetch tagged document ${docId}:`, error);
+						console.error(
+							`[AI Controller] Failed to fetch tagged document ${docId}:`,
+							error,
+						);
 						return null;
 					}
 				});
@@ -103,7 +120,10 @@ export const streamAIResponse = async (
 
 				if (fetchedDocs.length > 0) {
 					const docsBlock = fetchedDocs
-						.map((d: any) => `Here is the content of document "${d.title}" for your reference:\n\n${d.content}`)
+						.map(
+							(d: any) =>
+								`Here is the content of document "${d.title}" for your reference:\n\n${d.content}`,
+						)
 						.join("\n\n---\n\n");
 
 					finalConversationHistory.unshift(
@@ -113,8 +133,9 @@ export const streamAIResponse = async (
 						},
 						{
 							role: "assistant",
-							content: "Understood. I have loaded the tagged documents into my memory and will use them to answer your questions.",
-						}
+							content:
+								"Understood. I have loaded the tagged documents into my memory and will use them to answer your questions.",
+						},
 					);
 				}
 			}

@@ -83,7 +83,7 @@ export class MockDocumentReference {
 export class MockQuery {
 	private filters: any[] = [];
 	private orderByFields: any[] = [];
-	private limitCount: number | null = null;
+	private limitCount = 0;
 
 	constructor(private collectionRef: MockCollectionReference) {}
 
@@ -129,7 +129,10 @@ export class MockCollectionReference extends MockQuery {
 	doc(id?: string) {
 		const docId = id || `mock-${Date.now()}`;
 		if (!this.docRefs.has(docId)) {
-			this.docRefs.set(docId, new MockDocumentReference(docId, `${this._path}/${docId}`));
+			this.docRefs.set(
+				docId,
+				new MockDocumentReference(docId, `${this._path}/${docId}`),
+			);
 		}
 		return this.docRefs.get(docId)!;
 	}
@@ -166,12 +169,13 @@ export class MockFirestore {
 	}
 
 	settings = jest.fn();
-	batch = () => ({
-		set: jest.fn().mockReturnThis(),
-		update: jest.fn().mockReturnThis(),
-		delete: jest.fn().mockReturnThis(),
-		commit: jest.fn(() => Promise.resolve([])),
-	}) as any;
+	batch = () =>
+		({
+			set: jest.fn().mockReturnThis(),
+			update: jest.fn().mockReturnThis(),
+			delete: jest.fn().mockReturnThis(),
+			commit: jest.fn(() => Promise.resolve([])),
+		}) as any;
 
 	// Helper to get collection for testing
 	getCollection(path: string) {

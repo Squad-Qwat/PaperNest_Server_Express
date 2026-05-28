@@ -135,9 +135,10 @@ export const reflectorNode = async (state: AgentStateType) => {
 	// Prefix AI response text to results so the Reflector isn't blind to text-only completions!
 	if (lastExecutionOutcome === "executed_text_only" && hasMeaningfulText) {
 		const prefix = `AI Text Response/Summary:\n"""\n${aiText}\n"""\n\n`;
-		resultText = resultText === "No tool result available"
-			? prefix
-			: prefix + `Associated Tool Result:\n${resultText}`;
+		resultText =
+			resultText === "No tool result available"
+				? prefix
+				: `${prefix}Associated Tool Result:\n${resultText}`;
 	}
 
 	console.log(
@@ -159,7 +160,7 @@ export const reflectorNode = async (state: AgentStateType) => {
 		.replace("{result}", resultText)
 		.replace("{remaining_steps}", remainingSteps);
 
-	const sysMsg = new SystemMessage(prompts.system + "\n\n" + reflectorPrompt);
+	const sysMsg = new SystemMessage(`${prompts.system}\n\n${reflectorPrompt}`);
 
 	const pastSteps = [...(state.pastSteps || [])];
 	let needsReplanning = false;
@@ -252,16 +253,23 @@ export const reflectorNode = async (state: AgentStateType) => {
 			reflectorReasoning = `**Step ${activeStep.id} Verdict:** COMPLETE (Goal achieved)`;
 		} else {
 			if (activeIndex !== -1) {
-				const actionTools = ["apply_diff_edit", "replace_lines", "insert_content", "compile_latex"];
+				const actionTools = [
+					"apply_diff_edit",
+					"replace_lines",
+					"insert_content",
+					"compile_latex",
+				];
 				const isActionTool = actionTools.includes(activeStep?.tool || "");
-				const wasActionExecuted = state.lastToolResults?.some((r) => r.name === activeStep?.tool);
+				const wasActionExecuted = state.lastToolResults?.some(
+					(r) => r.name === activeStep?.tool,
+				);
 
 				const shouldTransition = !isActionTool || wasActionExecuted;
 
 				if (shouldTransition) {
-					const hasMoreSteps = plan.slice(activeIndex + 1).some(
-						(s) => s.status === "pending" || s.status === "active",
-					);
+					const hasMoreSteps = plan
+						.slice(activeIndex + 1)
+						.some((s) => s.status === "pending" || s.status === "active");
 
 					if (hasMoreSteps) {
 						if (plan[activeIndex].status === "active") {
@@ -269,28 +277,40 @@ export const reflectorNode = async (state: AgentStateType) => {
 								...plan[activeIndex],
 								status: "completed" as const,
 							};
-							console.log(`[Reflector] Step ${activeStep?.id}: active → completed (proceeding to next step)`);
+							console.log(
+								`[Reflector] Step ${activeStep?.id}: active → completed (proceeding to next step)`,
+							);
 						} else {
 							console.warn(
 								`[Reflector] Step ${activeStep?.id}: already ${plan[activeIndex].status}, not transitioning`,
 							);
 						}
-						pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
+						pastSteps.push([
+							plan[activeIndex].id,
+							plan[activeIndex].description,
+						]);
 					} else {
 						if (lastExecutionOutcome === "executed_text_only") {
 							plan[activeIndex] = {
 								...plan[activeIndex],
 								status: "completed" as const,
 							};
-							console.log(`[Reflector] Step ${activeStep?.id}: active → completed (last step completed on text response)`);
-							pastSteps.push([plan[activeIndex].id, plan[activeIndex].description]);
+							console.log(
+								`[Reflector] Step ${activeStep?.id}: active → completed (last step completed on text response)`,
+							);
+							pastSteps.push([
+								plan[activeIndex].id,
+								plan[activeIndex].description,
+							]);
 						} else {
-							console.log(`[Reflector] Step ${activeStep?.id}: keeping active because it is the last step and needs CONTINUE`);
+							console.log(
+								`[Reflector] Step ${activeStep?.id}: keeping active because it is the last step and needs CONTINUE`,
+							);
 						}
 					}
 				} else {
 					console.log(
-						`[Reflector] Step ${activeStep?.id}: keeping active because planned action tool '${activeStep?.tool}' was not executed yet (only helper tools ran).`
+						`[Reflector] Step ${activeStep?.id}: keeping active because planned action tool '${activeStep?.tool}' was not executed yet (only helper tools ran).`,
 					);
 				}
 			}

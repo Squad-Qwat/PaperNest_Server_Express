@@ -2,16 +2,15 @@ import { Router } from "express";
 import * as citationController from "../controllers/citationController";
 import { authenticate } from "../middlewares/auth";
 import {
+	authorizeCitation,
+	authorizeCitationEdit,
 	authorizeDocument,
 	authorizeDocumentEdit,
 	authorizeWorkspace,
-	authorizeCitation,
-	authorizeCitationEdit,
 } from "../middlewares/authorization";
 import { validate } from "../middlewares/validation";
 import {
 	createCitationSchema,
-	filterCitationTypeSchema,
 	searchCitationSchema,
 	updateCitationSchema,
 } from "../models/validators/citationValidator";

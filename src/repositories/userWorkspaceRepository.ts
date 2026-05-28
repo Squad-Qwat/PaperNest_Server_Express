@@ -12,10 +12,11 @@ export class UserWorkspaceRepository {
 		data: Omit<UserWorkspace, "userWorkspaceId" | "createdAt" | "updatedAt">,
 	): Promise<UserWorkspace> {
 		const now = new Date();
-		const docRef = this.collection.doc();
+		const userWorkspaceId = `${data.userId}_${data.workspaceId}`;
+		const docRef = this.collection.doc(userWorkspaceId);
 
 		const userWorkspace: UserWorkspace = {
-			userWorkspaceId: docRef.id,
+			userWorkspaceId,
 			...data,
 			createdAt: now,
 			updatedAt: now,

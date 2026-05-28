@@ -1,15 +1,17 @@
-import type { Readable } from "stream";
+import type { Readable } from "node:stream";
+import documentRepository from "../../../repositories/documentRepository";
 import { StorageService } from "../../StorageService";
+import { generateEmbeddingsWithFailover } from "../providers/gemini-rotator";
 import { extractPDFChunks } from "./pdf.extractor";
 import ragRepository from "./rag.repository";
-import { generateEmbeddingsWithFailover } from "../providers/gemini-rotator";
-import documentRepository from "../../../repositories/documentRepository";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class RAGService {
 	async indexPDF(documentId: string, fileKey: string): Promise<void> {
-		console.log(`[RAGService] Starting vector indexing: document ${documentId}`);
+		console.log(
+			`[RAGService] Starting vector indexing: document ${documentId}`,
+		);
 
 		try {
 			const document = await documentRepository.findById(documentId);
@@ -41,11 +43,20 @@ export class RAGService {
 				}
 			}
 
-			await ragRepository.saveChunks(workspaceId, documentId, fileKey, chunks, embeddings);
+			await ragRepository.saveChunks(
+				workspaceId,
+				documentId,
+				fileKey,
+				chunks,
+				embeddings,
+			);
 
 			console.log(`[RAGService] Vector indexing complete: ${fileKey}`);
 		} catch (error) {
-			console.error(`[RAGService] Vector indexing failed for ${fileKey}:`, error);
+			console.error(
+				`[RAGService] Vector indexing failed for ${fileKey}:`,
+				error,
+			);
 			throw error;
 		}
 	}
@@ -61,12 +72,20 @@ export class RAGService {
 
 	async search(documentId: string, query: string, limit: number = 5) {
 		const queryEmbeddings = await generateEmbeddingsWithFailover([query]);
-		return await ragRepository.searchVector(documentId, queryEmbeddings[0], limit);
+		return await ragRepository.searchVector(
+			documentId,
+			queryEmbeddings[0],
+			limit,
+		);
 	}
 
 	async searchWorkspace(workspaceId: string, query: string, limit: number = 5) {
 		const queryEmbeddings = await generateEmbeddingsWithFailover([query]);
-		return await ragRepository.searchWorkspaceVector(workspaceId, queryEmbeddings[0], limit);
+		return await ragRepository.searchWorkspaceVector(
+			workspaceId,
+			queryEmbeddings[0],
+			limit,
+		);
 	}
 }
 

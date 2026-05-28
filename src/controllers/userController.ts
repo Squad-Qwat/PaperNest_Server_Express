@@ -3,7 +3,7 @@ import { asyncHandler } from "../middlewares/errorHandler";
 import userRepository from "../repositories/userRepository";
 import { ConflictError, NotFoundError } from "../utils/errorTypes";
 import logger from "../utils/logger";
-import { notFoundResponse, successResponse } from "../utils/responseFormatter";
+import { successResponse } from "../utils/responseFormatter";
 
 /**
  * Get user by ID

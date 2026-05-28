@@ -11,7 +11,6 @@ import {
 import { validate } from "../middlewares/validation";
 import {
 	createReviewSchema,
-	filterReviewStatusSchema,
 	updateReviewSchema,
 	updateReviewStatusSchema,
 } from "../models/validators/reviewValidator";

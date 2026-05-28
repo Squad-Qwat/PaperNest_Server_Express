@@ -2,6 +2,7 @@ import { Router } from "express";
 import Joi from "joi";
 import { compileLatex } from "../controllers/latexController";
 import { authenticate } from "../middlewares/auth";
+import { checkQuota } from "../middlewares/quotaLimiter";
 import { validate } from "../middlewares/validation";
 
 const router: Router = Router();
@@ -28,6 +29,7 @@ const compileSchema = Joi.object({
 router.post(
 	"/compile",
 	authenticate,
+	checkQuota("latex"),
 	validate({ body: compileSchema }),
 	compileLatex as any,
 );

@@ -4,9 +4,8 @@ import { templateService } from "../services/templateService";
 import logger from "../utils/logger";
 import { notFoundResponse, successResponse } from "../utils/responseFormatter";
 
-
 export const getTemplates = asyncHandler(
-	async (req: Request, res: Response) => {
+	async (_req: Request, res: Response) => {
 		logger.info("Get templates request");
 		const templates = await templateService.listTemplates();
 		return successResponse(
@@ -28,7 +27,6 @@ export const getTemplateById = asyncHandler(
 		if (!metadata) {
 			return notFoundResponse(res, "Template not found");
 		}
-
 
 		const content = await templateService.getTemplateContent(templateId);
 

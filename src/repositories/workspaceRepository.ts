@@ -1,8 +1,8 @@
 import { COLLECTIONS } from "../config/constants";
 import { db } from "../config/firebase";
-import type { Workspace } from "../types";
-import { StorageService } from "../services/StorageService";
 import liveblocksWebhookService from "../services/liveblocksWebhookService";
+import { StorageService } from "../services/StorageService";
+import type { Workspace } from "../types";
 
 export class WorkspaceRepository {
 	private collection = db.collection(COLLECTIONS.WORKSPACES);
@@ -63,38 +63,61 @@ export class WorkspaceRepository {
 	}
 
 	async delete(workspaceId: string): Promise<void> {
-		const docSnap = await db.collection(COLLECTIONS.DOCUMENTS).where("workspaceId", "==", workspaceId).get();
-		await Promise.all(docSnap.docs.map(async (doc) => {
-			try {
-				await StorageService.deleteFilesByPrefix(`latex-assets/${doc.id}/`);
-			} catch {}
-			const batch1 = db.batch();
-			const queries = [
-				db.collection(COLLECTIONS.DOCUMENT_BODIES).where("documentId", "==", doc.id),
-				db.collection(COLLECTIONS.CITATIONS).where("documentId", "==", doc.id),
-				db.collection(COLLECTIONS.COMMENTS).where("documentId", "==", doc.id),
-				db.collection(COLLECTIONS.REVIEWS).where("documentId", "==", doc.id),
-				db.collection("documentPermissions").where("documentId", "==", doc.id),
-				db.collection(COLLECTIONS.RAG_CHUNKS).where("documentId", "==", doc.id),
-			];
-			const snaps = await Promise.all(queries.map((q) => q.get()));
-			for (const snap of snaps) {
-				snap.docs.forEach((d) => batch1.delete(d.ref));
-			}
-			const filesSnap = await db.collection(COLLECTIONS.DOCUMENTS).doc(doc.id).collection("files").get();
-			filesSnap.docs.forEach((d) => batch1.delete(d.ref));
-			await batch1.commit();
-			await db.collection(COLLECTIONS.DOCUMENTS).doc(doc.id).delete();
-			try {
-				await liveblocksWebhookService.deleteRoom(`document:${doc.id}`);
-			} catch {}
-		}));
+		const docSnap = await db
+			.collection(COLLECTIONS.DOCUMENTS)
+			.where("workspaceId", "==", workspaceId)
+			.get();
+		await Promise.all(
+			docSnap.docs.map(async (doc) => {
+				try {
+					await StorageService.deleteFilesByPrefix(`latex-assets/${doc.id}/`);
+				} catch {}
+				const batch1 = db.batch();
+				const queries = [
+					db
+						.collection(COLLECTIONS.DOCUMENT_BODIES)
+						.where("documentId", "==", doc.id),
+					db
+						.collection(COLLECTIONS.CITATIONS)
+						.where("documentId", "==", doc.id),
+					db.collection(COLLECTIONS.COMMENTS).where("documentId", "==", doc.id),
+					db.collection(COLLECTIONS.REVIEWS).where("documentId", "==", doc.id),
+					db
+						.collection("documentPermissions")
+						.where("documentId", "==", doc.id),
+					db
+						.collection(COLLECTIONS.RAG_CHUNKS)
+						.where("documentId", "==", doc.id),
+				];
+				const snaps = await Promise.all(queries.map((q) => q.get()));
+				for (const snap of snaps) {
+					snap.docs.forEach((d) => batch1.delete(d.ref));
+				}
+				const filesSnap = await db
+					.collection(COLLECTIONS.DOCUMENTS)
+					.doc(doc.id)
+					.collection("files")
+					.get();
+				filesSnap.docs.forEach((d) => batch1.delete(d.ref));
+				await batch1.commit();
+				await db.collection(COLLECTIONS.DOCUMENTS).doc(doc.id).delete();
+				try {
+					await liveblocksWebhookService.deleteRoom(`document:${doc.id}`);
+				} catch {}
+			}),
+		);
 
 		const batch = db.batch();
 		const queries = [
-			db.collection(COLLECTIONS.USER_WORKSPACES).where("workspaceId", "==", workspaceId),
-			db.collection(COLLECTIONS.INVITATIONS).where("workspaceId", "==", workspaceId),
-			db.collection(COLLECTIONS.RAG_CHUNKS).where("workspaceId", "==", workspaceId),
+			db
+				.collection(COLLECTIONS.USER_WORKSPACES)
+				.where("workspaceId", "==", workspaceId),
+			db
+				.collection(COLLECTIONS.INVITATIONS)
+				.where("workspaceId", "==", workspaceId),
+			db
+				.collection(COLLECTIONS.RAG_CHUNKS)
+				.where("workspaceId", "==", workspaceId),
 		];
 		const snaps = await Promise.all(queries.map((q) => q.get()));
 		for (const snap of snaps) {

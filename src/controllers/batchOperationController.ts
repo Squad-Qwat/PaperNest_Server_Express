@@ -1,5 +1,8 @@
+import crypto from "node:crypto";
 import type { Request, Response } from "express";
-import { v4 as uuidv4 } from "uuid"; // @types/uuid should be in devDependencies
+
+const uuidv4 = () => crypto.randomUUID();
+
 import { asyncHandler } from "../middlewares/errorHandler";
 import documentBodyRepository from "../repositories/documentBodyRepository";
 import documentRepository from "../repositories/documentRepository";
@@ -52,8 +55,8 @@ export const executeBatchOperations = asyncHandler(
 			// Firestore transaction simulation
 			// For now, execute operations sequentially with rollback on failure
 			let savedContent = document.savedContent;
-			const updatedMetadata: any = {};
-			const versionCreated = false;
+			const _updatedMetadata: any = {};
+			const _versionCreated = false;
 
 			// Track what needs to be rolled back on failure
 			const rollbackState = {
@@ -237,7 +240,7 @@ async function executeSaveContentOperation(
 async function executeUpdateMetadataOperation(
 	documentId: string,
 	operation: BatchOperation,
-	document: any,
+	_document: any,
 	onSuccess: (metadata: any) => void,
 ): Promise<void> {
 	const payload = operation.payload as any;

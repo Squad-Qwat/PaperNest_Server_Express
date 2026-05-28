@@ -1,9 +1,7 @@
 import { COLLECTIONS } from "../config/constants";
-import { db, auth } from "../config/firebase";
+import { auth, db } from "../config/firebase";
 import type { User } from "../types";
 import workspaceRepository from "./workspaceRepository";
-
-
 
 export class UserRepository {
 	private collection = db.collection(COLLECTIONS.USERS);
@@ -114,14 +112,14 @@ export class UserRepository {
 		// Search by name
 		const nameSnapshot = await this.collection
 			.where("name", ">=", searchTerm)
-			.where("name", "<=", searchTerm + "\uf8ff")
+			.where("name", "<=", `${searchTerm}\uf8ff`)
 			.limit(limit)
 			.get();
 
 		// Search by email
 		const emailSnapshot = await this.collection
 			.where("email", ">=", searchTerm)
-			.where("email", "<=", searchTerm + "\uf8ff")
+			.where("email", "<=", `${searchTerm}\uf8ff`)
 			.limit(limit)
 			.get();
 
@@ -164,13 +162,20 @@ export class UserRepository {
 		const userSnap = await this.collection.doc(userId).get();
 		if (!userSnap.exists) return;
 		const user = userSnap.data() as User;
-		const ownedWorkspaces = await db.collection(COLLECTIONS.WORKSPACES).where("ownerId", "==", userId).get();
-		await Promise.all(ownedWorkspaces.docs.map((ws) => workspaceRepository.delete(ws.id)));
+		const ownedWorkspaces = await db
+			.collection(COLLECTIONS.WORKSPACES)
+			.where("ownerId", "==", userId)
+			.get();
+		await Promise.all(
+			ownedWorkspaces.docs.map((ws) => workspaceRepository.delete(ws.id)),
+		);
 		const batch = db.batch();
 		const queries = [
 			db.collection(COLLECTIONS.USER_WORKSPACES).where("userId", "==", userId),
 			db.collection(COLLECTIONS.NOTIFICATIONS).where("userId", "==", userId),
-			db.collection(COLLECTIONS.NOTIFICATIONS).where("triggeredById", "==", userId),
+			db
+				.collection(COLLECTIONS.NOTIFICATIONS)
+				.where("triggeredById", "==", userId),
 			db.collection(COLLECTIONS.REVIEWS).where("studentUserId", "==", userId),
 			db.collection(COLLECTIONS.REVIEWS).where("lecturerUserId", "==", userId),
 			db.collection(COLLECTIONS.COMMENTS).where("userId", "==", userId),
@@ -178,7 +183,9 @@ export class UserRepository {
 			db.collection("documentPermissions").where("userId", "==", userId),
 		];
 		if (user?.email) {
-			queries.push(db.collection(COLLECTIONS.INVITATIONS).where("email", "==", user.email));
+			queries.push(
+				db.collection(COLLECTIONS.INVITATIONS).where("email", "==", user.email),
+			);
 		}
 		const snaps = await Promise.all(queries.map((q) => q.get()));
 		for (const snap of snaps) {

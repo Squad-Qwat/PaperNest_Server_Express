@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import { SUCCESS_MESSAGES } from "../config/constants";
 import { asyncHandler } from "../middlewares/errorHandler";
 import * as authService from "../services/authService";
-import logger from "../utils/logger";
 import {
 	createdResponse,
 	noContentResponse,

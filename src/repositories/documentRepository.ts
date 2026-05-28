@@ -2,8 +2,6 @@ import { COLLECTIONS } from "../config/constants";
 import { db } from "../config/firebase";
 import type { Document } from "../types";
 
-
-
 export class DocumentRepository {
 	private collection = db.collection(COLLECTIONS.DOCUMENTS);
 
@@ -142,8 +140,8 @@ export class DocumentRepository {
 		const documents = snapshot.docs.map((doc) => doc.data() as Document);
 
 		// Perform case-insensitive search in memory to bypass composite index requirements
-		const filtered = documents.filter(doc => 
-			doc.title && doc.title.toLowerCase().includes(lowerSearch)
+		const filtered = documents.filter((doc) =>
+			doc.title?.toLowerCase().includes(lowerSearch),
 		);
 
 		return filtered.slice(0, limit);

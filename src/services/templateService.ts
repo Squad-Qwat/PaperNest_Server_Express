@@ -1,11 +1,9 @@
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
+import type { TemplateMetadata } from "@/types";
 import { TEMPLATE_LIMITS } from "../config/constants";
-
-
 import logger from "../utils/logger";
 import { getTemplatesDir, safeJoin } from "../utils/paths";
-import { TemplateMetadata } from "@/types";
 
 export class TemplateService {
 	private templatesDir = getTemplatesDir();
@@ -29,7 +27,7 @@ export class TemplateService {
 							...config,
 						});
 					}
-				} catch (e) {
+				} catch (_e) {
 					logger.debug(
 						`Skipping folder ${folder} in templates: No valid meta.json found`,
 					);

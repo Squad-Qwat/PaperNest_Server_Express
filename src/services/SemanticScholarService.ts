@@ -4,9 +4,6 @@ import type { SemanticScholarPaper } from "../types/semanticScholar.types";
 
 import logger from "../utils/logger";
 
-
-
-
 class SemanticScholarService {
 	private readonly baseUrl = "https://api.semanticscholar.org/graph/v1";
 	private readonly apiKey = env.SEMANTIC_SCHOLAR_API_KEY;

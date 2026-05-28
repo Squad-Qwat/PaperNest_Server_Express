@@ -8,7 +8,6 @@ import {
 import { validate } from "../middlewares/validation";
 import {
 	createCommentSchema,
-	filterCommentResolvedSchema,
 	updateCommentSchema,
 } from "../models/validators/commentValidator";
 

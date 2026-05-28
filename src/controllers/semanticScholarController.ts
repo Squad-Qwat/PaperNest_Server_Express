@@ -4,7 +4,6 @@ import { semanticScholarService } from "../services/SemanticScholarService";
 import logger from "../utils/logger";
 import { errorResponse, successResponse } from "../utils/responseFormatter";
 
-
 /**
  * Search papers on Semantic Scholar
  * GET /api/semantic-scholar/search?q=query
@@ -16,7 +15,6 @@ export const searchPapers = asyncHandler(
 		if (!q) {
 			return errorResponse(res, 'Query parameter "q" is required', 400);
 		}
-
 
 		logger.info(`[SemanticScholarController] Searching papers for: "${q}"`);
 

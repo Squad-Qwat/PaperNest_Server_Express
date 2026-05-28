@@ -22,7 +22,9 @@ export class CitationRepository {
 		};
 
 		// Strip undefined fields before writing, to prevent panic from Firestore side
-		const firestoreData = Object.fromEntries(Object.entries(citation).filter(([_, v]) => v !== undefined));
+		const firestoreData = Object.fromEntries(
+			Object.entries(citation).filter(([_, v]) => v !== undefined),
+		);
 
 		await docRef.set(firestoreData);
 		return citation;
@@ -65,8 +67,14 @@ export class CitationRepository {
 
 		// Sort in memory to avoid index requirement
 		return citations.sort((a, b) => {
-			const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : (a.createdAt as any).toDate().getTime();
-			const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : (b.createdAt as any).toDate().getTime();
+			const timeA =
+				a.createdAt instanceof Date
+					? a.createdAt.getTime()
+					: (a.createdAt as any).toDate().getTime();
+			const timeB =
+				b.createdAt instanceof Date
+					? b.createdAt.getTime()
+					: (b.createdAt as any).toDate().getTime();
 			return timeB - timeA;
 		});
 	}
@@ -115,7 +123,7 @@ export class CitationRepository {
 		const titleSnapshot = await this.collection
 			.where("documentId", "==", documentId)
 			.where("title", ">=", lowerSearch)
-			.where("title", "<=", lowerSearch + "\uf8ff")
+			.where("title", "<=", `${lowerSearch}\uf8ff`)
 			.limit(limit)
 			.get();
 
@@ -123,7 +131,7 @@ export class CitationRepository {
 		const authorSnapshot = await this.collection
 			.where("documentId", "==", documentId)
 			.where("author", ">=", lowerSearch)
-			.where("author", "<=", lowerSearch + "\uf8ff")
+			.where("author", "<=", `${lowerSearch}\uf8ff`)
 			.limit(limit)
 			.get();
 

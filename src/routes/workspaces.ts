@@ -7,15 +7,14 @@ import {
 } from "../middlewares/authorization";
 import { validate } from "../middlewares/validation";
 import {
+	acceptInvitationSchema,
+	sendInvitationsSchema,
+} from "../models/validators/invitationValidator";
+import {
 	createWorkspaceSchema,
-	updateInvitationStatusSchema,
 	updateMemberRoleSchema,
 	updateWorkspaceSchema,
 } from "../models/validators/workspaceValidator";
-import {
-	sendInvitationsSchema,
-	acceptInvitationSchema,
-} from "../models/validators/invitationValidator";
 
 const router: Router = Router();
 
@@ -100,10 +99,7 @@ router.post(
 	workspaceController.sendInvitations,
 );
 
-router.get(
-	"/invitations/:token",
-	workspaceController.getInvitationByToken,
-);
+router.get("/invitations/:token", workspaceController.getInvitationByToken);
 
 router.post(
 	"/invitations/:token/accept",
@@ -136,6 +132,5 @@ router.delete(
 	authorizeWorkspace(),
 	workspaceController.removeMember,
 );
-
 
 export default router;

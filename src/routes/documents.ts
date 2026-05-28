@@ -8,6 +8,7 @@ import {
 	authorizeDocumentPermission,
 	authorizeWorkspace,
 } from "../middlewares/authorization";
+import { checkQuota } from "../middlewares/quotaLimiter";
 import { validate } from "../middlewares/validation";
 import { batchOperationRequestSchema } from "../models/validators/batchOperationValidator";
 import {
@@ -16,9 +17,7 @@ import {
 	updateDocumentContentSchema,
 	updateDocumentSchema,
 } from "../models/validators/documentValidator";
-import {
-	createVersionSchema,
-} from "../models/validators/versionValidator";
+import { createVersionSchema } from "../models/validators/versionValidator";
 
 const router: Router = Router();
 
@@ -52,6 +51,7 @@ router.post(
 	"/workspaces/:workspaceId/documents",
 	authenticate,
 	authorizeWorkspace("editor"),
+	checkQuota("documents"),
 	validate({ body: createDocumentSchema }),
 	documentController.createDocument,
 );
@@ -178,8 +178,8 @@ router.post(
  * @route   POST /api/documents/:documentId/batch
  * @desc    Execute atomic batch operations
  * @access  Protected (requires editor permission on document)
- * 
- * IMPLEMENTATION: Uses lazy loading for the batch controller to prevent 
+ *
+ * IMPLEMENTATION: Uses lazy loading for the batch controller to prevent
  * startup dependency cycles.
  */
 router.post(
@@ -190,7 +190,9 @@ router.post(
 	async (req, res, next) => {
 		try {
 			// Dynamic import to break dependency cycle and heavy load at startup
-			const batchController = await import("../controllers/batchOperationController");
+			const batchController = await import(
+				"../controllers/batchOperationController"
+			);
 			// Since it's a default export of an object in the original file
 			const controller = (batchController as any).default || batchController;
 			return controller.executeBatchOperations(req, res, next);

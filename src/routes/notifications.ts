@@ -1,11 +1,6 @@
 import { Router } from "express";
 import * as notificationController from "../controllers/notificationController";
 import { authenticate } from "../middlewares/auth";
-import { validate } from "../middlewares/validation";
-import {
-	filterNotificationReadSchema,
-	filterNotificationTypeSchema,
-} from "../models/validators/notificationValidator";
 
 const router: Router = Router();
 

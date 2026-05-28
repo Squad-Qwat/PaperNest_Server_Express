@@ -1,5 +1,4 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
 import { env } from "../config/env";
 
 /**

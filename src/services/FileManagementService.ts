@@ -7,7 +7,11 @@ export class FileManagementService {
 	 * @param fileId The file document ID
 	 * @param newName The new name (virtual path)
 	 */
-	static async updateFileName(documentId: string, fileId: string, newName: string) {
+	static async updateFileName(
+		documentId: string,
+		fileId: string,
+		newName: string,
+	) {
 		const fileRef = db
 			.collection("documents")
 			.doc(documentId)
@@ -47,9 +51,9 @@ export class FileManagementService {
 		const data = fileSnap.data();
 		await fileRef.delete();
 
-		return { 
-			success: true, 
-			r2Key: data?.r2Key 
+		return {
+			success: true,
+			r2Key: data?.r2Key,
 		};
 	}
 

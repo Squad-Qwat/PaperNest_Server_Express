@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import documentFileRepository from "../repositories/documentFileRepository";
 import documentRepository from "../repositories/documentRepository";
-import permissionService from "../services/permissionService";
 import { latexService } from "../services/latexService";
+import permissionService from "../services/permissionService";
 import logger from "../utils/logger";
 import {
 	errorResponse,
@@ -10,21 +10,19 @@ import {
 	successResponse,
 } from "../utils/responseFormatter";
 
-
 /**
  * Controller to handle LaTeX-related requests.
  */
 export const compileLatex = async (
 	req: Request,
 	res: Response,
-	NextFunction: NextFunction,
+	_NextFunction: NextFunction,
 ) => {
 	const { content, mainFileName, assets, engine, documentId } = req.body;
 
 	if (!content) {
 		return errorResponse(res, "LaTeX content is required", 400);
 	}
-
 
 	try {
 		const userId = (req as any).userId;
@@ -39,7 +37,9 @@ export const compileLatex = async (
 		}));
 
 		if (documentId) {
-			logger.info(`[LatexController] Verifying permissions for document: ${documentId}`);
+			logger.info(
+				`[LatexController] Verifying permissions for document: ${documentId}`,
+			);
 			const document = await documentRepository.findById(documentId);
 			if (!document) {
 				logger.warn(`[LatexController] Document ${documentId} not found`);
@@ -78,7 +78,9 @@ export const compileLatex = async (
 			}
 		}
 
-		logger.info(`[LatexController] Starting LaTeX compilation with ${engine || "pdflatex"}...`);
+		logger.info(
+			`[LatexController] Starting LaTeX compilation with ${engine || "pdflatex"}...`,
+		);
 
 		const result = await latexService.compile({
 			content,
@@ -111,19 +113,18 @@ export const compileLatex = async (
 			// Compilation failed to produce a PDF, but we still return logs
 			// We provide the log in a format that the frontend can easily consume
 			return errorResponse(res, "LaTeX Compilation Failed", 422, [
-				{ 
-					log: result.log, 
+				{
+					log: result.log,
 					status: result.status,
-					message: "The LaTeX engine returned an error. Please check your syntax."
+					message:
+						"The LaTeX engine returned an error. Please check your syntax.",
 				},
 			]);
 		}
-
 	} catch (error: any) {
 		logger.error(
 			`[LatexController] Error during compilation: ${error.message}`,
 		);
 		return errorResponse(res, "Internal Server Error", 500);
 	}
-
 };

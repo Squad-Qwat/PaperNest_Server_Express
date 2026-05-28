@@ -1,23 +1,19 @@
 import axios from "axios";
 import type { Request, Response } from "express";
-import { db } from "../config/firebase";
-import { StorageService } from "../services/StorageService";
 import { FileManagementService } from "../services/FileManagementService";
+import { StorageService } from "../services/StorageService";
 import { errorResponse, successResponse } from "../utils/responseFormatter";
-
 
 export const getPresignedUrl = async (
 	req: Request,
 	res: Response,
 ): Promise<any> => {
-
 	try {
 		const { filename, contentType, folder } = req.body;
 
 		if (!filename || !contentType) {
 			return errorResponse(res, "Filename and contentType are required", 400);
 		}
-
 
 		// Default to 'latex-assets' if folder isn't provided
 		const targetFolder = folder || "latex-assets";
@@ -28,8 +24,11 @@ export const getPresignedUrl = async (
 			targetFolder,
 		);
 
-		return successResponse(res, result, "Pre-signed URL generated successfully");
-
+		return successResponse(
+			res,
+			result,
+			"Pre-signed URL generated successfully",
+		);
 	} catch (error: any) {
 		return errorResponse(
 			res,
@@ -37,20 +36,17 @@ export const getPresignedUrl = async (
 			500,
 		);
 	}
-
 };
 
 export const proxyDownload = async (
 	req: Request,
 	res: Response,
 ): Promise<any> => {
-
 	try {
 		const url = req.query.url as string;
 		if (!url) {
 			return errorResponse(res, "URL is required", 400);
 		}
-
 
 		console.log(`[ProxyDownload] Request: ${url}`);
 
@@ -120,14 +116,9 @@ export const proxyDownload = async (
 			[{ upstreamStatus: status }],
 		);
 	}
-
 };
 
-export const deleteFile = async (
-	req: Request,
-	res: Response,
-): Promise<any> => {
-
+export const deleteFile = async (req: Request, res: Response): Promise<any> => {
 	try {
 		const documentId = req.params.documentId as string;
 		const fileId = req.params.fileId as string;
@@ -136,13 +127,15 @@ export const deleteFile = async (
 			return errorResponse(res, "Document ID and File ID are required", 400);
 		}
 
-
 		console.log(
 			`[DeleteFile] Request to delete file ${fileId} from document ${documentId}`,
 		);
 
 		// 1. Get file metadata & delete from Firestore using Service
-		const result = await FileManagementService.deleteFileMetadata(documentId, fileId);
+		const result = await FileManagementService.deleteFileMetadata(
+			documentId,
+			fileId,
+		);
 		const r2Key = result.r2Key;
 
 		if (r2Key) {
@@ -162,19 +155,13 @@ export const deleteFile = async (
 			null,
 			"File deleted successfully from R2 and Firestore",
 		);
-
 	} catch (error: any) {
 		console.error(`[DeleteFile] Error:`, error.message);
 		return errorResponse(res, "Failed to delete file", 500);
 	}
-
 };
 
-export const renameFile = async (
-	req: Request,
-	res: Response,
-): Promise<any> => {
-
+export const renameFile = async (req: Request, res: Response): Promise<any> => {
 	try {
 		const documentId = req.params.documentId as string;
 		const fileId = req.params.fileId as string;
@@ -188,7 +175,6 @@ export const renameFile = async (
 			);
 		}
 
-
 		const sDocId = String(documentId).replace(/[\r\n]/g, " ");
 		const sFileId = String(fileId).replace(/[\r\n]/g, " ");
 		const sNewName = String(newName).replace(/[\r\n]/g, " ");
@@ -200,10 +186,8 @@ export const renameFile = async (
 		await FileManagementService.updateFileName(documentId, fileId, newName);
 
 		return successResponse(res, null, "File renamed successfully");
-
 	} catch (error: any) {
 		console.error(`[RenameFile] Error:`, error.message);
 		return errorResponse(res, "Failed to rename file", 500);
 	}
-
 };

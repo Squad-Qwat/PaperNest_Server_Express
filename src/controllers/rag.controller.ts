@@ -10,7 +10,11 @@ export const indexPDF = async (req: Request, res: Response): Promise<void> => {
 		const { documentId, fileKey } = req.body;
 
 		if (!documentId || !fileKey) {
-			errorResponse(res, "documentId and fileKey are required", HTTP_STATUS.BAD_REQUEST);
+			errorResponse(
+				res,
+				"documentId and fileKey are required",
+				HTTP_STATUS.BAD_REQUEST,
+			);
 			return;
 		}
 
@@ -36,7 +40,6 @@ export const indexPDF = async (req: Request, res: Response): Promise<void> => {
 			"PDF indexing started in background",
 			HTTP_STATUS.OK,
 		);
-
 	} catch (error: any) {
 		console.error("[RAGController] Error starting indexing:", error);
 		errorResponse(
@@ -45,6 +48,5 @@ export const indexPDF = async (req: Request, res: Response): Promise<void> => {
 			HTTP_STATUS.INTERNAL_SERVER_ERROR,
 			error instanceof Error ? [error.message] : undefined,
 		);
-
 	}
 };

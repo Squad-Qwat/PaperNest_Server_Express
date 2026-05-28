@@ -8,7 +8,6 @@ import {
 	mockRequest,
 	mockResponse,
 } from "../../tests/mocks/express.mocks";
-import { UnauthorizedError } from "../../utils/errorTypes";
 
 // Extended Request type with user property
 interface RequestWithUser extends Request {
@@ -52,7 +51,7 @@ describe("Auth Middleware", () => {
 				},
 			});
 
-			const mockDecodedToken = {
+			const _mockDecodedToken = {
 				userId: "user-123",
 				email: "test@example.com",
 			};
@@ -161,7 +160,7 @@ describe("Auth Middleware", () => {
 				},
 			});
 
-			const mockDecodedToken = {
+			const _mockDecodedToken = {
 				userId: "user-123",
 				email: "test@example.com",
 			};

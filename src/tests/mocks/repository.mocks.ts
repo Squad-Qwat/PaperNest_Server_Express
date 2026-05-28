@@ -1,16 +1,4 @@
 import { jest } from "@jest/globals";
-import {
-
-	Citation,
-	Comment,
-	Document,
-	DocumentBody,
-	Notification,
-	Review,
-	User,
-	UserWorkspace,
-	Workspace,
-} from "../../types";
 
 // Mock User Repository
 export const mockUserRepository = {
