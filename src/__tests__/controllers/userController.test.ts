@@ -131,6 +131,74 @@ describe("UserController", () => {
 			const error = next.mock.calls[0][0] as any;
 			expect(error.message).toBe("You can only update your own profile");
 		});
+
+		it("should update user username if not taken", async () => {
+			const updates = { username: "rina123" };
+			const updatedUser = { ...mockUser, ...updates };
+			jest.mocked(userRepository.findByUsername).mockResolvedValue(null);
+			jest.mocked(userRepository.update).mockResolvedValue(updatedUser);
+			mockReq.params = { userId: "user-123" };
+			mockReq.userId = "user-123";
+			mockReq.body = updates;
+
+			await userController.updateUser(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
+
+			expect(mockRes.status).toHaveBeenCalledWith(200);
+			expect(mockRes.json).toHaveBeenCalledWith(
+				expect.objectContaining({
+					success: true,
+					data: { user: updatedUser },
+				}),
+			);
+		});
+
+		it("should throw ConflictError if username is already taken by another user", async () => {
+			const updates = { username: "alex99" };
+			const existingUser = { ...mockUser, userId: "user-456", username: "alex99" };
+			jest.mocked(userRepository.findByUsername).mockResolvedValue(existingUser as any);
+			mockReq.params = { userId: "user-123" };
+			mockReq.userId = "user-123";
+			mockReq.body = updates;
+
+			await userController.updateUser(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
+
+			expect(next).toHaveBeenCalledWith(expect.any(Error));
+			const error = next.mock.calls[0][0] as any;
+			expect(error.message).toBe("Username already taken");
+		});
+
+		it("should update user username if username belongs to the same user", async () => {
+			const updates = { username: "rina123" };
+			const existingUser = { ...mockUser, userId: "user-123", username: "rina123" };
+			const updatedUser = { ...mockUser, ...updates };
+			jest.mocked(userRepository.findByUsername).mockResolvedValue(existingUser as any);
+			jest.mocked(userRepository.update).mockResolvedValue(updatedUser);
+			mockReq.params = { userId: "user-123" };
+			mockReq.userId = "user-123";
+			mockReq.body = updates;
+
+			await userController.updateUser(
+				mockReq as Request,
+				mockRes as Response,
+				next,
+			);
+
+			expect(mockRes.status).toHaveBeenCalledWith(200);
+			expect(mockRes.json).toHaveBeenCalledWith(
+				expect.objectContaining({
+					success: true,
+					data: { user: updatedUser },
+				}),
+			);
+		});
 	});
 
 	describe("deleteUser", () => {
