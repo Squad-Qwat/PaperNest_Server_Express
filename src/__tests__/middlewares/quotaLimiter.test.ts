@@ -21,7 +21,7 @@ import documentRepository from "../../repositories/documentRepository";
 import { ForbiddenError } from "../../utils/errorTypes";
 
 describe("QuotaLimiter Middleware", () => {
-	let req: Partial<Request>;
+	let req: any;
 	let res: Partial<Response>;
 	let next: NextFunction;
 
