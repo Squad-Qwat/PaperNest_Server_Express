@@ -2,6 +2,7 @@ import "./instrument";
 import app from "./app";
 import { env } from "./config/env";
 import { firebaseAdmin } from "./config/firebase";
+import { initCronJobs } from "./services/cronService";
 import logger from "./utils/logger";
 
 /**
@@ -20,6 +21,9 @@ const startServer = async () => {
 			logger.info(`📝 Environment: ${env.NODE_ENV}`);
 			logger.info(`🔥 Firebase initialized: ${isFirebaseReady ? "Yes" : "No"}`);
 			logger.info(`✅ API available at: http://localhost:${PORT}/api`);
+
+			// Initialize scheduled jobs
+			initCronJobs();
 		});
 
 		server.on("error", (error: any) => {
