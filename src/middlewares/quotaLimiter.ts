@@ -7,7 +7,7 @@ import logger from "../utils/logger";
 export const TIER_LIMITS = {
 	free: {
 		documents: 3,
-		latexCompilations: 5,
+		latexCompilations: Infinity,
 		aiRequests: 10,
 	},
 	pro: {

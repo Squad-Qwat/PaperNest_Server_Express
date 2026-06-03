@@ -112,7 +112,7 @@ describe("QuotaLimiter Middleware", () => {
 			expect(next).toHaveBeenCalledWith();
 		});
 
-		it("should block latex compilation if limit exceeded", async () => {
+		it("should NOT block latex compilation even if count is high (since limit is Infinity)", async () => {
 			req = {
 				userId: "user-free",
 				user: {
@@ -121,12 +121,12 @@ describe("QuotaLimiter Middleware", () => {
 				} as any,
 			};
 
-			jest.mocked(redis.incr).mockResolvedValue(6);
+			jest.mocked(redis.incr).mockResolvedValue(100);
 
 			const middleware = checkQuota("latex");
 			await middleware(req as Request, res as Response, next);
 
-			expect(next).toHaveBeenCalledWith(expect.any(ForbiddenError));
+			expect(next).toHaveBeenCalledWith();
 		});
 
 		it("should set expiry on first compile key", async () => {
