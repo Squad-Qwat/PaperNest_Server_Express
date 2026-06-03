@@ -39,9 +39,7 @@ export class LatexService {
 			/\\openin/i,
 		];
 
-		const useDocker =
-			process.env.USE_DOCKER_SANDBOX === "true" ||
-			env.NODE_ENV === "production";
+		const useDocker = process.env.USE_DOCKER_SANDBOX === "true";
 		if (!useDocker) {
 			for (const regex of maliciousCommands) {
 				if (regex.test(content)) {
@@ -234,9 +232,7 @@ export class LatexService {
 		args: string[],
 		cwd: string,
 	): Promise<{ output: string; status: number }> {
-		const useDocker =
-			process.env.USE_DOCKER_SANDBOX === "true" ||
-			env.NODE_ENV === "production";
+		const useDocker = process.env.USE_DOCKER_SANDBOX === "true";
 		const dockerImage =
 			process.env.LATEX_DOCKER_IMAGE ||
 			(binary === "tectonic"
