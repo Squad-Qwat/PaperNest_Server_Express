@@ -1,6 +1,8 @@
 import { exec } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import zlib from "node:zlib";
+import { promisify } from "node:util";
 import logger from "../utils/logger";
 
 export class SynctexService {
@@ -17,6 +19,43 @@ export class SynctexService {
 				}
 			});
 		});
+	}
+
+	/**
+	 * Resolves the actual input path registered in the .synctex.gz file.
+	 */
+	private async resolveInputPath(
+		persistentDir: string,
+		targetFilename: string,
+	): Promise<string> {
+		try {
+			const files = await fs.readdir(persistentDir);
+			const synctexFile = files.find((f) => f.toLowerCase().endsWith(".synctex.gz"));
+			if (!synctexFile) return targetFilename;
+
+			const synctexPath = path.join(persistentDir, synctexFile);
+			const compressedData = await fs.readFile(synctexPath);
+			
+			const gunzip = promisify(zlib.gunzip);
+			const decompressed = await gunzip(compressedData);
+			const content = decompressed.toString("utf-8");
+
+			const lines = content.split(/\r?\n/);
+			for (const line of lines) {
+				const match = line.match(/^Input:(\d+):(.+)/i);
+				if (match) {
+					const registeredPath = match[2].trim();
+					const registeredBase = path.basename(registeredPath);
+					if (registeredBase.toLowerCase() === targetFilename.toLowerCase()) {
+						logger.info(`[SynctexService] Resolved input path: ${targetFilename} -> ${registeredPath}`);
+						return registeredPath;
+					}
+				}
+			}
+		} catch (error: any) {
+			logger.error(`[SynctexService] Error resolving input path: ${error.message}`);
+		}
+		return targetFilename;
 	}
 
 	/**
@@ -84,7 +123,8 @@ export class SynctexService {
 			}
 
 			const pdfPath = path.join(persistentDir, pdfFile);
-			const cmd = `synctex view -i "${line}:${column}:${file}" -o "${pdfPath}"`;
+			const resolvedInputPath = await this.resolveInputPath(persistentDir, file);
+			const cmd = `synctex view -i "${line}:${column}:${resolvedInputPath}" -o "${pdfPath}"`;
 			logger.info(`[SynctexService] Executing: ${cmd}`);
 			const output = await this.executeCommand(cmd);
 
