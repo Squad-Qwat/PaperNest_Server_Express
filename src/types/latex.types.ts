@@ -3,6 +3,7 @@ export interface LatexCompileOptions {
 	mainFileName?: string;
 	assets?: Array<{ name: string; url: string; r2Key?: string }>;
 	engine?: "tectonic" | "pdflatex";
+	documentId?: string;
 }
 
 export interface LatexCompileResult {

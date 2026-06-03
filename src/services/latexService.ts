@@ -28,6 +28,7 @@ export class LatexService {
 			mainFileName = "main.tex",
 			assets = [],
 			engine = "pdflatex",
+			documentId,
 		} = options;
 
 		// Basic security filtering for malicious LaTeX commands (RCE protection)
@@ -129,6 +130,7 @@ export class LatexService {
 			if (engine === "pdflatex") {
 				const pdflatexArgs = [
 					"-interaction=nonstopmode",
+					"-synctex=1",
 					`-output-directory=${workDir}`,
 					mainPath,
 				];
@@ -171,7 +173,7 @@ export class LatexService {
 				}
 			} else {
 				// Tectonic handles multiple passes internally
-				const tectonicArgs = [mainPath, "--outdir", workDir];
+				const tectonicArgs = [mainPath, "--outdir", workDir, "--synctex"];
 				const res = await this.executeCommand(
 					"tectonic",
 					tectonicArgs,
@@ -183,6 +185,8 @@ export class LatexService {
 
 			const pdfFileName = `${mainFileName.replace(/\.(tex|ltx)$/i, "")}.pdf`;
 			const pdfPath = path.join(workDir, pdfFileName);
+			const synctexFileName = `${mainFileName.replace(/\.(tex|ltx)$/i, "")}.synctex.gz`;
+			const synctexPath = path.join(workDir, synctexFileName);
 
 			let pdfBuffer: Buffer | undefined;
 			try {
@@ -190,6 +194,18 @@ export class LatexService {
 				logger.info(
 					`[LatexService] PDF generated successfully: ${pdfFileName}`,
 				);
+
+				if (documentId) {
+					const persistentDir = path.join(tempRoot, "compiled", documentId);
+					await fs.mkdir(persistentDir, { recursive: true });
+					try {
+						await fs.copyFile(pdfPath, path.join(persistentDir, pdfFileName));
+						await fs.copyFile(synctexPath, path.join(persistentDir, synctexFileName));
+						logger.info(`[LatexService] Saved pdf and synctex to persistent cache for document: ${documentId}`);
+					} catch (err: any) {
+						logger.warn(`[LatexService] Failed to copy pdf or synctex to cache: ${err.message}`);
+					}
+				}
 			} catch (_e) {
 				logger.error(
 					`[LatexService] PDF not found after compilation: ${pdfPath}`,

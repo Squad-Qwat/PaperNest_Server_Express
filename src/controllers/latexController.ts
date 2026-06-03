@@ -87,6 +87,7 @@ export const compileLatex = async (
 			mainFileName,
 			assets: resolvedAssets,
 			engine,
+			documentId,
 		});
 
 		if (result.pdf) {
