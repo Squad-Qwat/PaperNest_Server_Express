@@ -21,6 +21,16 @@ export const validateTurnstile = async (
 		const secretKey = process.env.TURNSTILE_SECRET_KEY;
 		const remoteIp = req.ip || req.socket.remoteAddress;
 
+		// Bypass validation for dummy/testing keys and tokens
+		if (
+			secretKey === "1x00000000000000000000000000000000AA" ||
+			turnstileToken === "XXXX.DUMMY.TOKEN.XXXX"
+		) {
+			logger.info("Turnstile validation bypassed for dummy/testing credentials");
+			next();
+			return;
+		}
+
 		const response = await axios.post(
 			"https://challenges.cloudflare.com/turnstile/v0/siteverify",
 			{
