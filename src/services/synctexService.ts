@@ -110,7 +110,15 @@ export class SynctexService {
 		file: string,
 		line: number,
 		column: number,
-	): Promise<{ page: number; x: number; y: number } | null> {
+	): Promise<{
+		page: number;
+		x: number;
+		y: number;
+		h?: number;
+		v?: number;
+		width?: number;
+		height?: number;
+	} | null> {
 		const tempRoot = path.join(process.cwd(), "temp");
 		const persistentDir = path.join(tempRoot, "compiled", documentId);
 
@@ -131,12 +139,20 @@ export class SynctexService {
 			const pageMatch = output.match(/Page:(\d+)/i);
 			const xMatch = output.match(/x:([+-]?([0-9]*[.])?[0-9]+)/i);
 			const yMatch = output.match(/y:([+-]?([0-9]*[.])?[0-9]+)/i);
+			const hMatch = output.match(/h:([+-]?([0-9]*[.])?[0-9]+)/i);
+			const vMatch = output.match(/v:([+-]?([0-9]*[.])?[0-9]+)/i);
+			const widthMatch = output.match(/W:([+-]?([0-9]*[.])?[0-9]+)/i);
+			const heightMatch = output.match(/H:([+-]?([0-9]*[.])?[0-9]+)/i);
 
 			if (pageMatch && xMatch && yMatch) {
 				return {
 					page: parseInt(pageMatch[1], 10),
 					x: parseFloat(xMatch[1]),
 					y: parseFloat(yMatch[1]),
+					h: hMatch ? parseFloat(hMatch[1]) : parseFloat(xMatch[1]),
+					v: vMatch ? parseFloat(vMatch[1]) : parseFloat(yMatch[1]),
+					width: widthMatch ? parseFloat(widthMatch[1]) : 0,
+					height: heightMatch ? parseFloat(heightMatch[1]) : 0,
 				};
 			}
 		} catch (error: any) {
