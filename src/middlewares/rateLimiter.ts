@@ -11,7 +11,12 @@ const createStore = (prefix: string) => {
 	}
 	return new RedisStore({
 		sendCommand: async (...args: string[]) => {
-			return await redis.exec(args as [string, ...string[]]);
+			return await Promise.race([
+				redis.exec(args as [string, ...string[]]),
+				new Promise<any>((_, reject) =>
+					setTimeout(() => reject(new Error("Redis timeout")), 1500)
+				),
+			]);
 		},
 		prefix: `rate_limit:${prefix}:`,
 	});
