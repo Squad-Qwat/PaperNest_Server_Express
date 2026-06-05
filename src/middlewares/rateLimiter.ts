@@ -5,12 +5,17 @@ import { HTTP_STATUS } from "../config/constants";
 import { env } from "../config/env";
 import { errorResponse } from "../utils/responseFormatter";
 
-const createStore = (prefix: string) => new RedisStore({
-	sendCommand: async (...args: string[]) => {
-		return await redis.exec(args as [string, ...string[]]);
-	},
-	prefix: `rate_limit:${prefix}:`,
-});
+const createStore = (prefix: string) => {
+	if (env.NODE_ENV !== "production" && env.NODE_ENV !== "test") {
+		return undefined;
+	}
+	return new RedisStore({
+		sendCommand: async (...args: string[]) => {
+			return await redis.exec(args as [string, ...string[]]);
+		},
+		prefix: `rate_limit:${prefix}:`,
+	});
+};
 
 export const globalRateLimiter = rateLimit({
 	windowMs: env.RATE_LIMIT_WINDOW_MS,
