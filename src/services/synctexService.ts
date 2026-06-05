@@ -25,10 +25,11 @@ export class SynctexService {
 		persistentDir: string,
 		targetFilename: string,
 	): Promise<string> {
+		const sanitizedTarget = targetFilename.replace(/[^a-zA-Z0-9_\-\.]/g, "");
 		try {
 			const files = await fs.readdir(persistentDir);
 			const synctexFile = files.find((f) => f.toLowerCase().endsWith(".synctex.gz"));
-			if (!synctexFile) return targetFilename;
+			if (!synctexFile) return sanitizedTarget;
 
 			const synctexPath = path.join(persistentDir, synctexFile);
 			const compressedData = await fs.readFile(synctexPath);
@@ -43,16 +44,16 @@ export class SynctexService {
 				if (match) {
 					const registeredPath = match[2].trim();
 					const registeredBase = path.basename(registeredPath);
-					if (registeredBase.toLowerCase() === targetFilename.toLowerCase()) {
-						logger.info(`[SynctexService] Resolved input path: ${targetFilename} -> ${registeredPath}`);
-						return registeredPath;
+					if (registeredBase.toLowerCase() === sanitizedTarget.toLowerCase()) {
+						logger.info(`[SynctexService] Resolved input path: ${sanitizedTarget} -> ${registeredPath}`);
+						return registeredPath.replace(/[^a-zA-Z0-9_\-\.\/]/g, "");
 					}
 				}
 			}
 		} catch (error: any) {
 			logger.error(`[SynctexService] Error resolving input path: ${error.message}`);
 		}
-		return targetFilename;
+		return sanitizedTarget;
 	}
 
 	private async getPdfPathAndDir(
@@ -156,7 +157,8 @@ export class SynctexService {
 			if (!resolved) return null;
 
 			const { pdfPath, persistentDir } = resolved;
-			const safeFile = path.basename(file);
+			const sanitizedFile = file.replace(/[^a-zA-Z0-9_\-\.\/]/g, "");
+			const safeFile = path.basename(sanitizedFile).replace(/[^a-zA-Z0-9_\-\.]/g, "");
 			const resolvedInputPath = await this.resolveInputPath(persistentDir, safeFile);
 			logger.info(`[SynctexService] Executing synctex view for document ${documentId}`);
 			const output = await this.executeCommand("synctex", [
