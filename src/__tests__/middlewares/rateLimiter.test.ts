@@ -70,7 +70,7 @@ describe("Rate Limiter Middleware", () => {
 
 			expect(next).not.toHaveBeenCalled();
 			expect(res.status).toHaveBeenCalledWith(400);
-			res.json;
+			expect(res.json).toHaveBeenCalled();
 		});
 
 		it("should fail-open and allow request if Redis store throws an error", async () => {

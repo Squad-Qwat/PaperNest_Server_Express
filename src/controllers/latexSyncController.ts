@@ -23,6 +23,9 @@ export const syncToCode = async (req: Request, res: Response) => {
 	try {
 		const userId = (req as any).userId;
 		const docIdStr = String(documentId);
+		if (!/^[a-zA-Z0-9_-]+$/.test(docIdStr)) {
+			return errorResponse(res, "Invalid documentId format", 400);
+		}
 
 		const document = await documentRepository.findById(docIdStr);
 		if (!document) {
@@ -72,6 +75,9 @@ export const syncToPdf = async (req: Request, res: Response) => {
 	try {
 		const userId = (req as any).userId;
 		const docIdStr = String(documentId);
+		if (!/^[a-zA-Z0-9_-]+$/.test(docIdStr)) {
+			return errorResponse(res, "Invalid documentId format", 400);
+		}
 
 		const document = await documentRepository.findById(docIdStr);
 		if (!document) {
