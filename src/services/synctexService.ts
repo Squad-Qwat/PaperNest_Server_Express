@@ -1,4 +1,4 @@
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -6,12 +6,9 @@ import { promisify } from "node:util";
 import logger from "../utils/logger";
 
 export class SynctexService {
-	/**
-	 * Executes a terminal command.
-	 */
-	private executeCommand(cmd: string): Promise<string> {
+	private executeCommand(file: string, args: string[]): Promise<string> {
 		return new Promise((resolve, reject) => {
-			exec(cmd, (error, stdout, stderr) => {
+			execFile(file, args, (error, stdout, stderr) => {
 				if (error) {
 					reject(new Error(stderr || error.message));
 				} else {
@@ -21,9 +18,6 @@ export class SynctexService {
 		});
 	}
 
-	/**
-	 * Resolves the actual input path registered in the .synctex.gz file.
-	 */
 	private async resolveInputPath(
 		persistentDir: string,
 		targetFilename: string,
@@ -58,15 +52,17 @@ export class SynctexService {
 		return targetFilename;
 	}
 
-	/**
-	 * Maps PDF coordinates (page, x, y) back to the original source line.
-	 */
 	async syncToCode(
 		documentId: string,
 		page: number,
 		x: number,
 		y: number,
 	): Promise<{ file: string; line: number; column: number } | null> {
+		if (!/^[a-zA-Z0-9_-]+$/.test(documentId)) {
+			logger.error(`[SynctexService] Invalid documentId: ${documentId}`);
+			return null;
+		}
+
 		const tempRoot = path.join(process.cwd(), "temp");
 		const persistentDir = path.join(tempRoot, "compiled", documentId);
 
@@ -79,9 +75,12 @@ export class SynctexService {
 			}
 
 			const pdfPath = path.join(persistentDir, pdfFile);
-			const cmd = `synctex edit -o "${page}:${x}:${y}:${pdfPath}"`;
-			logger.info(`[SynctexService] Executing: ${cmd}`);
-			const output = await this.executeCommand(cmd);
+			logger.info(`[SynctexService] Executing synctex edit for document ${documentId}`);
+			const output = await this.executeCommand("synctex", [
+				"edit",
+				"-o",
+				`${page}:${x}:${y}:${pdfPath}`,
+			]);
 
 			const fileMatch = output.match(/Input:(.+)/i);
 			const lineMatch = output.match(/Line:(\d+)/i);
@@ -102,9 +101,6 @@ export class SynctexService {
 		return null;
 	}
 
-	/**
-	 * Maps a source line back to PDF coordinates (page, x, y).
-	 */
 	async syncToPdf(
 		documentId: string,
 		file: string,
@@ -119,6 +115,11 @@ export class SynctexService {
 		width?: number;
 		height?: number;
 	} | null> {
+		if (!/^[a-zA-Z0-9_-]+$/.test(documentId)) {
+			logger.error(`[SynctexService] Invalid documentId: ${documentId}`);
+			return null;
+		}
+
 		const tempRoot = path.join(process.cwd(), "temp");
 		const persistentDir = path.join(tempRoot, "compiled", documentId);
 
@@ -131,10 +132,16 @@ export class SynctexService {
 			}
 
 			const pdfPath = path.join(persistentDir, pdfFile);
-			const resolvedInputPath = await this.resolveInputPath(persistentDir, file);
-			const cmd = `synctex view -i "${line}:${column}:${resolvedInputPath}" -o "${pdfPath}"`;
-			logger.info(`[SynctexService] Executing: ${cmd}`);
-			const output = await this.executeCommand(cmd);
+			const safeFile = path.basename(file);
+			const resolvedInputPath = await this.resolveInputPath(persistentDir, safeFile);
+			logger.info(`[SynctexService] Executing synctex view for document ${documentId}`);
+			const output = await this.executeCommand("synctex", [
+				"view",
+				"-i",
+				`${line}:${column}:${resolvedInputPath}`,
+				"-o",
+				pdfPath,
+			]);
 
 			const pageMatch = output.match(/Page:(\d+)/i);
 			const xMatch = output.match(/x:([+-]?([0-9]*[.])?[0-9]+)/i);

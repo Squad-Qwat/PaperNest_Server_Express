@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
 
+const mockSecret = require("crypto").randomBytes(16).toString("hex");
+
 jest.mock("../../config/env", () => ({
 	env: {
-		LEMONSQUEEZY_WEBHOOK_SECRET: "test_secret",
+		LEMONSQUEEZY_WEBHOOK_SECRET: mockSecret,
 		LEMONSQUEEZY_API_KEY: "test_api_key",
 		LEMONSQUEEZY_STORE_ID: "test_store_id",
 		LEMONSQUEEZY_VARIANT_ID_PRO: "111",
@@ -35,7 +37,7 @@ describe("WebhookController - Lemon Squeezy", () => {
 		jest.clearAllMocks();
 		res = mockResponse();
 		next = mockNext();
-		process.env.LEMONSQUEEZY_WEBHOOK_SECRET = "test_secret";
+		process.env.LEMONSQUEEZY_WEBHOOK_SECRET = mockSecret;
 	});
 
 	it("should return 400 if rawBody is missing", async () => {
@@ -93,7 +95,7 @@ describe("WebhookController - Lemon Squeezy", () => {
 
 		const rawBodyStr = JSON.stringify(payload);
 		const hmac = crypto
-			.createHmac("sha256", "test_secret")
+			.createHmac("sha256", mockSecret)
 			.update(Buffer.from(rawBodyStr))
 			.digest("hex");
 
@@ -142,7 +144,7 @@ describe("WebhookController - Lemon Squeezy", () => {
 
 		const rawBodyStr = JSON.stringify(payload);
 		const hmac = crypto
-			.createHmac("sha256", "test_secret")
+			.createHmac("sha256", mockSecret)
 			.update(Buffer.from(rawBodyStr))
 			.digest("hex");
 
