@@ -97,7 +97,6 @@ export const syncToPdf = async (req: Request, res: Response) => {
 		return errorResponse(res, "Invalid file parameter format", 400);
 	}
 
-	// Apply explicit replace sanitization to satisfy static analysis taint flows
 	const sanitizedFile = fileStr.replace(/[^a-zA-Z0-9_\-\.\/]/g, "");
 
 	if (!/^\d+$/.test(lineStr)) {

@@ -102,6 +102,10 @@ export class LatexService {
 								logger.debug(
 									`[LatexService] Downloading asset via URL: ${asset.url}`,
 								);
+								const { isSafeUrl } = await import("../utils/ssrfFilter");
+								if (!(await isSafeUrl(asset.url))) {
+									throw new Error("SSRF Blocked: URL target is forbidden");
+								}
 								const response = await axios.get(asset.url, {
 									responseType: "arraybuffer",
 								});

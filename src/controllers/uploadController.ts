@@ -50,12 +50,18 @@ export const proxyDownload = async (
 
 		console.log(`[ProxyDownload] Request: ${url}`);
 
+		let urlObj: URL;
+		try {
+			urlObj = new URL(url);
+		} catch {
+			return errorResponse(res, "Invalid URL format", 400);
+		}
+
 		// Check if it's an R2 asset (belongs to our public domain)
 		const publicDomain = process.env.R2_PUBLIC_DOMAIN || "assets.papernest.com";
-		if (url.includes(publicDomain)) {
+		if (urlObj.hostname === publicDomain) {
 			try {
-				// Extract the key from the URL (everything after the domain//)
-				const urlObj = new URL(url);
+				// Extract the key from the URL
 				let key = urlObj.pathname;
 				if (key.startsWith("/")) key = key.substring(1);
 
@@ -86,6 +92,11 @@ export const proxyDownload = async (
 				);
 				// Fallback to public fetch if authenticated fails (just in case)
 			}
+		}
+
+		const { isSafeUrl } = await import("../utils/ssrfFilter");
+		if (!(await isSafeUrl(url))) {
+			return errorResponse(res, "Access to the requested URL is forbidden (SSRF Blocked)", 403);
 		}
 
 		// Fallback: Generic fetch with axios (useful for non-R2 assets or if R2 fetch failed)
