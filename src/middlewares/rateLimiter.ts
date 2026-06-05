@@ -60,7 +60,7 @@ export const authRateLimiter = makeLimiter({
 
 export const apiRateLimiter = makeLimiter({
 	windowMs: 15 * 60 * 1000,
-	max: 100,
+	max: 300,
 	message: "Too many API requests, please try again later",
 	standardHeaders: true,
 	legacyHeaders: false,
@@ -92,7 +92,7 @@ export const aiRateLimiter = makeLimiter({
 
 export const uploadRateLimiter = makeLimiter({
 	windowMs: 15 * 60 * 1000,
-	max: 10,
+	max: 30,
 	message: "Too many file uploads, please try again later",
 	store: createStore("upload"),
 	passOnStoreError: true,
@@ -101,6 +101,26 @@ export const uploadRateLimiter = makeLimiter({
 			res,
 			"Too many file uploads, please try again later",
 			HTTP_STATUS.BAD_REQUEST,
+		);
+	},
+});
+
+/**
+ * Rate limiter for file edit/overwrite operations and proxy downloads.
+ * Much more lenient than uploadRateLimiter since these happen frequently
+ * during normal editing (autosave, file fetching, etc.)
+ */
+export const editFileLimiter = makeLimiter({
+	windowMs: 15 * 60 * 1000,
+	max: 500,
+	message: "Too many edit requests, please try again later",
+	store: createStore("edit"),
+	passOnStoreError: true,
+	handler: (_req: Request, res: Response) => {
+		errorResponse(
+			res,
+			"Too many edit requests, please slow down",
+			HTTP_STATUS.TOO_MANY_REQUESTS,
 		);
 	},
 });

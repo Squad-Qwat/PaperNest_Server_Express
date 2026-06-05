@@ -38,6 +38,42 @@ export const getPresignedUrl = async (
 	}
 };
 
+/**
+ * Generates a presigned PUT URL that targets an EXISTING R2 key so the file
+ * is overwritten in-place instead of creating an orphan object.
+ * Body: { r2Key: string, contentType: string }
+ */
+export const getOverwritePresignedUrl = async (
+	req: Request,
+	res: Response,
+): Promise<any> => {
+	try {
+		const { r2Key, contentType } = req.body;
+
+		if (!r2Key || !contentType) {
+			return errorResponse(res, "r2Key and contentType are required", 400);
+		}
+
+		// Security: r2Key must not contain path traversal sequences
+		if (r2Key.includes("..") || r2Key.startsWith("/")) {
+			return errorResponse(res, "Invalid r2Key", 400);
+		}
+
+		const result = await StorageService.generateOverwritePresignedUrl(
+			r2Key,
+			contentType,
+		);
+
+		return successResponse(res, result, "Overwrite URL generated successfully");
+	} catch (error: any) {
+		return errorResponse(
+			res,
+			error.message || "Failed to generate overwrite URL",
+			500,
+		);
+	}
+};
+
 export const proxyDownload = async (
 	req: Request,
 	res: Response,
@@ -72,17 +108,13 @@ export const proxyDownload = async (
 					const contentType =
 						response.ContentType || "application/octet-stream";
 					res.setHeader("Content-Type", contentType);
-					res.setHeader("Cache-Control", "public, max-age=3600");
+					res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+					res.setHeader("Pragma", "no-cache");
+					res.setHeader("Expires", "0");
 
-					// Stream the response body if it's a readable stream
 					const body = response.Body as any;
-					if (typeof body.pipe === "function") {
-						body.pipe(res);
-					} else {
-						// For other body types (like Uint8Array from SDK v3 in some environments)
-						const buffer = Buffer.from(await body.transformToByteArray());
-						res.send(buffer);
-					}
+					const buffer = Buffer.from(await body.transformToByteArray());
+					res.send(buffer);
 					return;
 				}
 			} catch (r2Error: any) {
@@ -113,7 +145,9 @@ export const proxyDownload = async (
 		const contentType =
 			response.headers["content-type"] || "application/octet-stream";
 		res.setHeader("Content-Type", contentType);
-		res.setHeader("Cache-Control", "public, max-age=3600");
+		res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+		res.setHeader("Pragma", "no-cache");
+		res.setHeader("Expires", "0");
 		res.send(Buffer.from(response.data));
 	} catch (error: any) {
 		const status = error.response?.status || 500;
