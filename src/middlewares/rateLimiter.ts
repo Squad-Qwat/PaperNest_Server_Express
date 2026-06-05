@@ -5,11 +5,11 @@ import { HTTP_STATUS } from "../config/constants";
 import { env } from "../config/env";
 import { errorResponse } from "../utils/responseFormatter";
 
-const store = new RedisStore({
+const createStore = (prefix: string) => new RedisStore({
 	sendCommand: async (...args: string[]) => {
 		return await redis.exec(args as [string, ...string[]]);
 	},
-	prefix: "rate_limit:",
+	prefix: `rate_limit:${prefix}:`,
 });
 
 export const globalRateLimiter = rateLimit({
@@ -18,7 +18,7 @@ export const globalRateLimiter = rateLimit({
 	message: "Too many requests from this IP, please try again later",
 	standardHeaders: true,
 	legacyHeaders: false,
-	store,
+	store: createStore("global"),
 	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
@@ -34,7 +34,7 @@ export const authRateLimiter = rateLimit({
 	max: 5,
 	message: "Too many authentication attempts, please try again later",
 	skipSuccessfulRequests: true,
-	store,
+	store: createStore("auth"),
 	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
@@ -51,7 +51,7 @@ export const apiRateLimiter = rateLimit({
 	message: "Too many API requests, please try again later",
 	standardHeaders: true,
 	legacyHeaders: false,
-	store,
+	store: createStore("api"),
 	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
@@ -66,7 +66,7 @@ export const aiRateLimiter = rateLimit({
 	windowMs: 60 * 60 * 1000,
 	max: 20,
 	message: "AI API rate limit exceeded, please try again later",
-	store,
+	store: createStore("ai"),
 	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
@@ -81,7 +81,7 @@ export const uploadRateLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000,
 	max: 10,
 	message: "Too many file uploads, please try again later",
-	store,
+	store: createStore("upload"),
 	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
