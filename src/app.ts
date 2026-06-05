@@ -6,6 +6,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { RATE_LIMIT_CONFIG } from "./config/constants";
 import { env } from "./config/env";
+import { apiRateLimiter } from "./middlewares/rateLimiter";
 import templateController from "./controllers/templateController";
 import { authenticate } from "./middlewares/auth";
 import { errorHandler, notFound } from "./middlewares/errorHandler";
@@ -42,13 +43,13 @@ app.use(
 
 app.use(
 	express.json({
-		limit: "10mb",
+		limit: "2mb",
 		verify: (req: any, _res, buf) => {
 			req.rawBody = buf;
 		},
 	}),
 );
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 if (env.NODE_ENV === "development") {
 	app.use(morgan("dev"));
@@ -65,6 +66,8 @@ if (env.NODE_ENV === "development") {
 app.use(sanitize);
 
 app.use("/api/webhooks", webhookRoutes);
+
+app.use("/api", apiRateLimiter);
 
 app.get("/health", (_req, res) => {
 	return successResponse(
