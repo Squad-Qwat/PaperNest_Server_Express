@@ -6,26 +6,22 @@ import { HTTP_STATUS } from "../config/constants";
 import { env } from "../config/env";
 import { errorResponse } from "../utils/responseFormatter";
 
-const isTest = env.NODE_ENV === "test";
+const sendCommandWithTimeout = async (...args: string[]) => {
+	const timeoutPromise = new Promise((_, reject) =>
+		setTimeout(() => reject(new Error("Redis request timeout")), 1500),
+	);
+	const redisPromise = redis.exec(args as [string, ...string[]]);
+	return (await Promise.race([redisPromise, timeoutPromise])) as any;
+};
 
 const createStore = (prefix: string) => {
-	if (!isTest) {
-		return undefined;
-	}
 	return new RedisStore({
-		sendCommand: async (...args: string[]) => {
-			return await redis.exec(args as [string, ...string[]]);
-		},
+		sendCommand: sendCommandWithTimeout,
 		prefix: `rate_limit:${prefix}:`,
 	});
 };
 
 const makeLimiter = (options: any) => {
-	if (!isTest) {
-		return (_req: Request, _res: Response, next: NextFunction): void => {
-			next();
-		};
-	}
 	return rateLimit(options);
 };
 
