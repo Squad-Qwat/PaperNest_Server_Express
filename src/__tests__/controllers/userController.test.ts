@@ -93,15 +93,7 @@ describe("UserController", () => {
 	});
 
 	describe("updateUser", () => {
-		it("should update user if authorized", async () => {
-			const updates = { name: "John Updated" };
-			const updatedUser = { ...mockUser, ...updates };
-			jest.mocked(userRepository.findByUsername).mockResolvedValue(null);
-			jest.mocked(userRepository.update).mockResolvedValue(updatedUser);
-			mockReq.params = { userId: "user-123" };
-			mockReq.userId = "user-123";
-			mockReq.body = updates;
-
+		const verifyUserUpdateSuccess = async (updatedUser: any) => {
 			await userController.updateUser(
 				mockReq as Request,
 				mockRes as Response,
@@ -115,6 +107,18 @@ describe("UserController", () => {
 					data: { user: updatedUser },
 				}),
 			);
+		};
+
+		it("should update user if authorized", async () => {
+			const updates = { name: "John Updated" };
+			const updatedUser = { ...mockUser, ...updates };
+			jest.mocked(userRepository.findByUsername).mockResolvedValue(null);
+			jest.mocked(userRepository.update).mockResolvedValue(updatedUser);
+			mockReq.params = { userId: "user-123" };
+			mockReq.userId = "user-123";
+			mockReq.body = updates;
+
+			await verifyUserUpdateSuccess(updatedUser);
 		});
 
 		it("should throw error if updating another user's profile", async () => {
@@ -141,19 +145,7 @@ describe("UserController", () => {
 			mockReq.userId = "user-123";
 			mockReq.body = updates;
 
-			await userController.updateUser(
-				mockReq as Request,
-				mockRes as Response,
-				next,
-			);
-
-			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(mockRes.json).toHaveBeenCalledWith(
-				expect.objectContaining({
-					success: true,
-					data: { user: updatedUser },
-				}),
-			);
+			await verifyUserUpdateSuccess(updatedUser);
 		});
 
 		it("should throw ConflictError if username is already taken by another user", async () => {
@@ -185,19 +177,7 @@ describe("UserController", () => {
 			mockReq.userId = "user-123";
 			mockReq.body = updates;
 
-			await userController.updateUser(
-				mockReq as Request,
-				mockRes as Response,
-				next,
-			);
-
-			expect(mockRes.status).toHaveBeenCalledWith(200);
-			expect(mockRes.json).toHaveBeenCalledWith(
-				expect.objectContaining({
-					success: true,
-					data: { user: updatedUser },
-				}),
-			);
+			await verifyUserUpdateSuccess(updatedUser);
 		});
 	});
 

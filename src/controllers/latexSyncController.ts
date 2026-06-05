@@ -9,39 +9,46 @@ import {
 	successResponse,
 } from "../utils/responseFormatter";
 
-/**
- * Maps PDF coordinates (page, x, y) back to the code line.
- * GET /api/latex/sync/code?documentId=xxx&page=1&x=100&y=200
- */
-export const syncToCode = async (req: Request, res: Response) => {
-	const { documentId, page, x, y } = req.query;
+const getDocumentWithAccess = async (req: Request, res: Response, userId: string): Promise<string | null> => {
+	const { documentId } = req.query;
+	const docIdStr = String(documentId);
+	if (!/^[a-zA-Z0-9_-]+$/.test(docIdStr)) {
+		errorResponse(res, "Invalid documentId format", 400);
+		return null;
+	}
 
-	if (!documentId || !page || !x || !y) {
-		return errorResponse(res, "Missing parameters (documentId, page, x, y)", 400);
+	const document = await documentRepository.findById(docIdStr);
+	if (!document) {
+		errorResponse(res, "Document not found", 404);
+		return null;
+	}
+
+	const hasAccess = await permissionService.hasMinimumPermission(
+		userId,
+		docIdStr,
+		document.workspaceId,
+		"viewer",
+	);
+
+	if (!hasAccess) {
+		forbiddenResponse(res, "Unauthorized access to document");
+		return null;
+	}
+
+	return docIdStr;
+};
+
+export const syncToCode = async (req: Request, res: Response) => {
+	const { page, x, y } = req.query;
+
+	if (!page || !x || !y) {
+		return errorResponse(res, "Missing parameters (page, x, y)", 400);
 	}
 
 	try {
 		const userId = (req as any).userId;
-		const docIdStr = String(documentId);
-		if (!/^[a-zA-Z0-9_-]+$/.test(docIdStr)) {
-			return errorResponse(res, "Invalid documentId format", 400);
-		}
-
-		const document = await documentRepository.findById(docIdStr);
-		if (!document) {
-			return errorResponse(res, "Document not found", 404);
-		}
-
-		const hasAccess = await permissionService.hasMinimumPermission(
-			userId,
-			docIdStr,
-			document.workspaceId,
-			"viewer",
-		);
-
-		if (!hasAccess) {
-			return forbiddenResponse(res, "Unauthorized access to document");
-		}
+		const docIdStr = await getDocumentWithAccess(req, res, userId);
+		if (!docIdStr) return;
 
 		const result = await synctexService.syncToCode(
 			docIdStr,
@@ -61,39 +68,17 @@ export const syncToCode = async (req: Request, res: Response) => {
 	}
 };
 
-/**
- * Maps source file line/column back to PDF page coordinates.
- * GET /api/latex/sync/pdf?documentId=xxx&file=main.tex&line=15&column=1
- */
 export const syncToPdf = async (req: Request, res: Response) => {
-	const { documentId, file, line, column } = req.query;
+	const { file, line, column } = req.query;
 
-	if (!documentId || !file || !line) {
-		return errorResponse(res, "Missing parameters (documentId, file, line)", 400);
+	if (!file || !line) {
+		return errorResponse(res, "Missing parameters (file, line)", 400);
 	}
 
 	try {
 		const userId = (req as any).userId;
-		const docIdStr = String(documentId);
-		if (!/^[a-zA-Z0-9_-]+$/.test(docIdStr)) {
-			return errorResponse(res, "Invalid documentId format", 400);
-		}
-
-		const document = await documentRepository.findById(docIdStr);
-		if (!document) {
-			return errorResponse(res, "Document not found", 404);
-		}
-
-		const hasAccess = await permissionService.hasMinimumPermission(
-			userId,
-			docIdStr,
-			document.workspaceId,
-			"viewer",
-		);
-
-		if (!hasAccess) {
-			return forbiddenResponse(res, "Unauthorized access to document");
-		}
+		const docIdStr = await getDocumentWithAccess(req, res, userId);
+		if (!docIdStr) return;
 
 		const colVal = column ? parseInt(String(column), 10) : 0;
 		const result = await synctexService.syncToPdf(

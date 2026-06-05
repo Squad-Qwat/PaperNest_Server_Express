@@ -52,12 +52,9 @@ export class SynctexService {
 		return targetFilename;
 	}
 
-	async syncToCode(
+	private async getPdfPathAndDir(
 		documentId: string,
-		page: number,
-		x: number,
-		y: number,
-	): Promise<{ file: string; line: number; column: number } | null> {
+	): Promise<{ pdfPath: string; persistentDir: string } | null> {
 		if (!/^[a-zA-Z0-9_-]+$/.test(documentId)) {
 			logger.error(`[SynctexService] Invalid documentId: ${documentId}`);
 			return null;
@@ -66,15 +63,30 @@ export class SynctexService {
 		const tempRoot = path.join(process.cwd(), "temp");
 		const persistentDir = path.join(tempRoot, "compiled", documentId);
 
-		try {
-			const files = await fs.readdir(persistentDir);
-			const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf"));
-			if (!pdfFile) {
-				logger.warn(`[SynctexService] No PDF found in persistent dir for document ${documentId}`);
-				return null;
-			}
+		const files = await fs.readdir(persistentDir);
+		const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf"));
+		if (!pdfFile) {
+			logger.warn(`[SynctexService] No PDF found in persistent dir for document ${documentId}`);
+			return null;
+		}
 
-			const pdfPath = path.join(persistentDir, pdfFile);
+		return {
+			pdfPath: path.join(persistentDir, pdfFile),
+			persistentDir,
+		};
+	}
+
+	async syncToCode(
+		documentId: string,
+		page: number,
+		x: number,
+		y: number,
+	): Promise<{ file: string; line: number; column: number } | null> {
+		try {
+			const resolved = await this.getPdfPathAndDir(documentId);
+			if (!resolved) return null;
+
+			const { pdfPath } = resolved;
 			logger.info(`[SynctexService] Executing synctex edit for document ${documentId}`);
 			const output = await this.executeCommand("synctex", [
 				"edit",
@@ -115,23 +127,11 @@ export class SynctexService {
 		width?: number;
 		height?: number;
 	} | null> {
-		if (!/^[a-zA-Z0-9_-]+$/.test(documentId)) {
-			logger.error(`[SynctexService] Invalid documentId: ${documentId}`);
-			return null;
-		}
-
-		const tempRoot = path.join(process.cwd(), "temp");
-		const persistentDir = path.join(tempRoot, "compiled", documentId);
-
 		try {
-			const files = await fs.readdir(persistentDir);
-			const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf"));
-			if (!pdfFile) {
-				logger.warn(`[SynctexService] No PDF found in persistent dir for document ${documentId}`);
-				return null;
-			}
+			const resolved = await this.getPdfPathAndDir(documentId);
+			if (!resolved) return null;
 
-			const pdfPath = path.join(persistentDir, pdfFile);
+			const { pdfPath, persistentDir } = resolved;
 			const safeFile = path.basename(file);
 			const resolvedInputPath = await this.resolveInputPath(persistentDir, safeFile);
 			logger.info(`[SynctexService] Executing synctex view for document ${documentId}`);
