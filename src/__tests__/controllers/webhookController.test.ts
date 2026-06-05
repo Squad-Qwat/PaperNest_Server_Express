@@ -74,7 +74,10 @@ describe("WebhookController - Lemon Squeezy", () => {
 		);
 	});
 
-	it("should process webhook and update user subscription if signature is valid", async () => {
+	it.each([
+		[111, "pro" as const],
+		[999, "enterprise" as const],
+	])("should process webhook and update user subscription if signature is valid (variant: %i)", async (variantId, expectedPlan) => {
 		const payload = {
 			meta: {
 				event_name: "subscription_created",
@@ -87,7 +90,7 @@ describe("WebhookController - Lemon Squeezy", () => {
 				attributes: {
 					customer_id: 888,
 					status: "active",
-					variant_id: 111,
+					variant_id: variantId,
 					renews_at: "2026-06-25T00:00:00Z",
 				},
 			},
@@ -110,56 +113,7 @@ describe("WebhookController - Lemon Squeezy", () => {
 		await handleLemonSqueezyWebhook(req as Request, res as Response, next);
 
 		expect(userRepository.update).toHaveBeenCalledWith("user-123", {
-			subscriptionPlan: "pro",
-			lemonSqueezyCustomerId: "888",
-			lemonSqueezySubscriptionId: "sub_999",
-			billingPeriodEnd: new Date("2026-06-25T00:00:00Z"),
-		});
-
-		expect(res.status).toHaveBeenCalledWith(200);
-		expect(res.json).toHaveBeenCalledWith(
-			expect.objectContaining({ success: true }),
-		);
-	});
-
-	it("should process webhook and update user subscription to enterprise if variant matches", async () => {
-		process.env.LEMONSQUEEZY_VARIANT_ID_ENTERPRISE = "999";
-		const payload = {
-			meta: {
-				event_name: "subscription_created",
-				custom_data: {
-					user_id: "user-123",
-				},
-			},
-			data: {
-				id: "sub_999",
-				attributes: {
-					customer_id: 888,
-					status: "active",
-					variant_id: 999,
-					renews_at: "2026-06-25T00:00:00Z",
-				},
-			},
-		};
-
-		const rawBodyStr = JSON.stringify(payload);
-		const hmac = crypto
-			.createHmac("sha256", mockSecret)
-			.update(Buffer.from(rawBodyStr))
-			.digest("hex");
-
-		req = mockRequest({
-			headers: {
-				"x-signature": hmac,
-			},
-			body: payload,
-		});
-		(req as any).rawBody = Buffer.from(rawBodyStr);
-
-		await handleLemonSqueezyWebhook(req as Request, res as Response, next);
-
-		expect(userRepository.update).toHaveBeenCalledWith("user-123", {
-			subscriptionPlan: "enterprise",
+			subscriptionPlan: expectedPlan,
 			lemonSqueezyCustomerId: "888",
 			lemonSqueezySubscriptionId: "sub_999",
 			billingPeriodEnd: new Date("2026-06-25T00:00:00Z"),
