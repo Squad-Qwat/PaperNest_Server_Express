@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { __mockFirestore } from "../../../__mocks__/firebase-admin";
 import { UserRepository } from "../../repositories/userRepository";
-import { mockUser, mockUsers } from "../../tests/fixtures";
-import { User } from "../../types";
+import { mockUser } from "../../tests/fixtures";
 
 // Mock firebase config
 jest.mock("../../config/firebase", () => ({

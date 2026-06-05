@@ -2,7 +2,11 @@ import { resend } from "../config/resend";
 import logger from "../utils/logger";
 
 export class EmailService {
-	static async sendOTPEmail(to: string, name: string, otp: string): Promise<void> {
+	static async sendOTPEmail(
+		to: string,
+		name: string,
+		otp: string,
+	): Promise<void> {
 		try {
 			const { error } = await resend.emails.send({
 				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
@@ -49,7 +53,7 @@ export class EmailService {
 			}
 		} catch (error: any) {
 			logger.error("Failed to send OTP email", { error: error.message });
-			throw new Error("Failed to send verification email: " + error.message);
+			throw new Error(`Failed to send verification email: ${error.message}`);
 		}
 	}
 
@@ -96,7 +100,7 @@ export class EmailService {
 			}
 		} catch (error: any) {
 			logger.error("Failed to send invitation email", { error: error.message });
-			throw new Error("Failed to send invitation email: " + error.message);
+			throw new Error(`Failed to send invitation email: ${error.message}`);
 		}
 	}
 
@@ -146,7 +150,62 @@ export class EmailService {
 			}
 		} catch (error: any) {
 			logger.error("Failed to send comment email", { error: error.message });
-			throw new Error("Failed to send comment email: " + error.message);
+			throw new Error(`Failed to send comment email: ${error.message}`);
+		}
+	}
+
+	static async sendWelcomeEmail(to: string, name: string): Promise<void> {
+		try {
+			const response = await resend.emails.send({
+				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				to,
+				subject: "Welcome to PaperNest! 🚀",
+				html: `
+					<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; color: #111827; margin: 0; padding: 40px 20px;">
+						<div style="max-width: 480px; margin: 0 auto;">
+							<div style="margin-bottom: 32px;">
+								<h1 style="font-size: 24px; font-weight: 700; color: #009689; margin: 0; letter-spacing: -0.02em;">PaperNest</h1>
+							</div>
+							
+							<div style="margin-bottom: 24px;">
+								<h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #111827;">Welcome to PaperNest, ${name}! 🎉</h2>
+								<p style="font-size: 15px; line-height: 24px; color: #4b5563; margin: 0;">
+									We are thrilled to have you join our collaborative academic document platform. PaperNest is designed to make writing research papers, reports, and academic works simple, fast, and elegant.
+								</p>
+							</div>
+
+							<div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+								<h3 style="font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 12px; color: #111827;">Here is what you can do next:</h3>
+								<ul style="font-size: 14px; line-height: 22px; color: #4b5563; padding-left: 20px; margin: 0;">
+									<li style="margin-bottom: 8px;"><strong>Create Workspaces:</strong> Organize your research projects and papers with ease.</li>
+									<li style="margin-bottom: 8px;"><strong>Collaborate in Real-Time:</strong> Invite classmates or colleagues to write and review documents together.</li>
+									<li style="margin-bottom: 8px;"><strong>Use Sandboxed LaTeX:</strong> Build beautifully-formatted papers without complex local environments.</li>
+									<li style="margin-bottom: 8px;"><strong>AI Writing Assistant:</strong> Leverage AI context and semantic search to draft and format content instantly.</li>
+								</ul>
+							</div>
+
+							<div style="text-align: center; margin-bottom: 32px;">
+								<a href="${process.env.FRONTEND_URL || "http://localhost:3001"}" style="background-color: #009689; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">
+									Get Started Now
+								</a>
+							</div>
+
+							<div style="border-top: 1px solid #f3f4f6; padding-top: 24px; text-align: left;">
+								<p style="font-size: 12px; color: #9ca3af; margin: 0;">
+									&copy; ${new Date().getFullYear()} PaperNest. All rights reserved.
+								</p>
+							</div>
+						</div>
+					</div>
+				`,
+			});
+
+			if (response.error) {
+				throw new Error(response.error.message);
+			}
+		} catch (error: any) {
+			logger.error("Failed to send welcome email", { error: error.message });
+			// Don't throw welcome email errors to prevent blocking the user registration flow
 		}
 	}
 }

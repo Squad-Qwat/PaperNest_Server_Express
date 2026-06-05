@@ -1,6 +1,5 @@
 import * as admin from "firebase-admin";
-
-const firestore = admin.firestore();
+import { db as firestore } from "../config/firebase";
 
 import type {
 	DocumentPermission,

@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import citationRepository from "../repositories/citationRepository";
 import commentRepository from "../repositories/commentRepository";
 import documentRepository from "../repositories/documentRepository";
 import reviewRepository from "../repositories/reviewRepository";
@@ -11,7 +12,6 @@ import {
 	NotFoundError,
 	UnauthorizedError,
 } from "../utils/errorTypes";
-import logger from "../utils/logger";
 
 /**
  * Check if user has access to a workspace with minimum role requirement
@@ -19,7 +19,7 @@ import logger from "../utils/logger";
 export const authorizeWorkspace = (
 	minRole?: "owner" | "editor" | "viewer" | "reviewer",
 ) => {
-	return async (req: Request, res: Response, next: NextFunction) => {
+	return async (req: Request, _res: Response, next: NextFunction) => {
 		try {
 			const workspaceId = req.params.workspaceId as string;
 			const userId = req.userId;
@@ -87,7 +87,7 @@ export const authorizeWorkspace = (
  */
 export const authorizeWorkspaceOwner = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -122,7 +122,7 @@ export const authorizeWorkspaceOwner = async (
  */
 export const authorizeDocument = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -167,7 +167,7 @@ export const authorizeDocument = async (
  */
 export const authorizeDocumentEdit = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -219,7 +219,7 @@ export const authorizeDocumentEdit = async (
  */
 export const authorizeCommentOwner = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -278,7 +278,7 @@ export const authorizeCommentOwner = async (
  */
 export const authorizeLecturer = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -307,7 +307,7 @@ export const authorizeLecturer = async (
  */
 export const authorizeReview = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -348,7 +348,7 @@ export const authorizeReview = async (
  */
 export const authorizeReviewLecturer = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -387,7 +387,7 @@ export const authorizeReviewLecturer = async (
  */
 export const authorizeReviewStudent = async (
 	req: Request,
-	res: Response,
+	_res: Response,
 	next: NextFunction,
 ) => {
 	try {
@@ -444,7 +444,7 @@ export const authorizeReviewStudent = async (
 export const authorizeDocumentPermission = (
 	requiredPermission: DocumentPermission,
 ) => {
-	return async (req: Request, res: Response, next: NextFunction) => {
+	return async (req: Request, _res: Response, next: NextFunction) => {
 		try {
 			const documentId = req.params.documentId as string;
 			const userId = req.userId;
@@ -487,6 +487,125 @@ export const authorizeDocumentPermission = (
 	};
 };
 
+/**
+ * Check if user has access to a citation through workspace membership
+ */
+export const authorizeCitation = async (
+	req: Request,
+	_res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const citationId = req.params.citationId as string;
+		const userId = req.userId;
+
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
+
+		if (!citationId) {
+			throw new Error("Citation ID is required");
+		}
+
+		// Get citation to find document
+		const citation = await citationRepository.findById(citationId);
+		if (!citation) {
+			throw new NotFoundError("Citation not found");
+		}
+
+		// Check workspace access directly using workspaceId in citation
+		const hasAccess = await userWorkspaceRepository.hasAccess(
+			userId,
+			citation.workspaceId,
+		);
+		if (!hasAccess) {
+			throw new ForbiddenError("You do not have access to this citation");
+		}
+
+		// Attach citation and workspace info to request
+		(req as any).citation = citation;
+		(req as any).workspaceId = citation.workspaceId;
+
+		// Optionally attach document if it exists
+		if (citation.documentId) {
+			const document = await documentRepository.findById(citation.documentId);
+			if (document) {
+				(req as any).document = document;
+			}
+		}
+
+		next();
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Check if user can edit a citation
+ */
+export const authorizeCitationEdit = async (
+	req: Request,
+	_res: Response,
+	next: NextFunction,
+) => {
+	try {
+		const citationId = req.params.citationId as string;
+		const userId = req.userId;
+
+		if (!userId) {
+			throw new UnauthorizedError("Authentication required");
+		}
+
+		if (!citationId) {
+			throw new Error("Citation ID is required");
+		}
+
+		const citation = await citationRepository.findById(citationId);
+		if (!citation) {
+			throw new NotFoundError("Citation not found");
+		}
+
+		// Get user's role in workspace directly using workspaceId in citation
+		const userRole = await userWorkspaceRepository.getUserRole(
+			userId,
+			citation.workspaceId,
+		);
+
+		let canEdit = userRole === "owner" || userRole === "editor";
+
+		// If citation has a document, also allow the document creator to edit
+		if (!canEdit && citation.documentId) {
+			const document = await documentRepository.findById(citation.documentId);
+			if (document && document.createdBy === userId) {
+				canEdit = true;
+				(req as any).document = document;
+			}
+		}
+
+		if (!canEdit) {
+			throw new ForbiddenError(
+				"You do not have permission to edit this citation",
+			);
+		}
+
+		// Attach citation and workspace info to request
+		(req as any).citation = citation;
+		(req as any).workspaceId = citation.workspaceId;
+
+		// Optionally attach document if it exists
+		if (citation.documentId) {
+			const document = await documentRepository.findById(citation.documentId);
+			if (document) {
+				(req as any).document = document;
+			}
+		}
+
+		next();
+	} catch (error) {
+		next(error);
+	}
+};
+
 export default {
 	authorizeWorkspace,
 	authorizeWorkspaceOwner,
@@ -498,4 +617,6 @@ export default {
 	authorizeReviewLecturer,
 	authorizeReviewStudent,
 	authorizeDocumentPermission,
+	authorizeCitation,
+	authorizeCitationEdit,
 };

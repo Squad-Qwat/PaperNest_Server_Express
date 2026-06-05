@@ -20,7 +20,7 @@ describe("WorkspaceRepository", () => {
 
 	describe("create", () => {
 		it("should create a new workspace successfully", async () => {
-			const collection = __mockFirestore.collection("workspaces");
+			const _collection = __mockFirestore.collection("workspaces");
 
 			const result = await workspaceRepository.create(mockWorkspaceData);
 

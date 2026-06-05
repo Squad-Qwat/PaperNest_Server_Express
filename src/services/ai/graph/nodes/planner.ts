@@ -36,13 +36,12 @@ export const plannerNode = async (state: AgentStateType) => {
 		streaming: false,
 	});
 
-	const taskMessage =
-		state.goal && state.goal.trim()
-			? state.goal
-			: state.messages.at(-1)?.content &&
-				typeof state.messages.at(-1)!.content === "string"
-				? (state.messages.at(-1)!.content as string).trim()
-				: "";
+	const taskMessage = state.goal?.trim()
+		? state.goal
+		: state.messages.at(-1)?.content &&
+				typeof state.messages.at(-1)?.content === "string"
+			? (state.messages.at(-1)?.content as string).trim()
+			: "";
 
 	if (!taskMessage) {
 		console.warn("[Planner] No task message provided, cannot create plan");
@@ -84,7 +83,7 @@ export const plannerNode = async (state: AgentStateType) => {
 		};
 	}
 
-	const sysMsg = new SystemMessage(prompts.system + "\n\n" + plannerPrompt);
+	const sysMsg = new SystemMessage(`${prompts.system}\n\n${plannerPrompt}`);
 
 	try {
 		const modelWithStructure = (model as any).withStructuredOutput(PlanSchema, {
@@ -106,7 +105,9 @@ export const plannerNode = async (state: AgentStateType) => {
 				? new HumanMessage({
 						content: [
 							{ type: "text", text: `Plan this task: ${taskMessage}` },
-							...lastUserMsg.content.filter((part: any) => part.type !== "text"),
+							...lastUserMsg.content.filter(
+								(part: any) => part.type !== "text",
+							),
 						],
 					})
 				: new HumanMessage(`Plan this task: ${taskMessage}`);
@@ -119,7 +120,7 @@ export const plannerNode = async (state: AgentStateType) => {
 		const parsedPlan = response.parsed;
 		const rawMsg = response.raw;
 
-		if (!parsedPlan || !parsedPlan.steps) {
+		if (!parsedPlan?.steps) {
 			console.error(
 				"[Planner] Structured output returned success but parsedPlan or steps is null/undefined. Falling back.",
 			);
@@ -143,7 +144,7 @@ export const plannerNode = async (state: AgentStateType) => {
 
 		const plannerReasoning =
 			typeof parsedPlan.reasoning === "string" &&
-				parsedPlan.reasoning.trim().length > 0
+			parsedPlan.reasoning.trim().length > 0
 				? `### Planner\n${parsedPlan.reasoning.trim()}`
 				: `### Planner\nGenerated ${plan.length} step(s) to accomplish the task.`;
 

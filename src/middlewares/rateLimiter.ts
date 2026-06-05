@@ -1,17 +1,25 @@
 import rateLimit from "express-rate-limit";
+import { RedisStore } from "rate-limit-redis";
+import { redis } from "../config/redis";
 import { HTTP_STATUS } from "../config/constants";
 import { env } from "../config/env";
 import { errorResponse } from "../utils/responseFormatter";
 
-/**
- * Global rate limiter
- */
+const store = new RedisStore({
+	sendCommand: async (...args: string[]) => {
+		return await redis.exec(args as [string, ...string[]]);
+	},
+	prefix: "rate_limit:",
+});
+
 export const globalRateLimiter = rateLimit({
 	windowMs: env.RATE_LIMIT_WINDOW_MS,
 	max: env.RATE_LIMIT_MAX_REQUESTS,
 	message: "Too many requests from this IP, please try again later",
 	standardHeaders: true,
 	legacyHeaders: false,
+	store,
+	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
 			res,
@@ -21,14 +29,13 @@ export const globalRateLimiter = rateLimit({
 	},
 });
 
-/**
- * Auth rate limiter (stricter for authentication endpoints)
- */
 export const authRateLimiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 5, // 5 requests per windowMs
+	windowMs: 15 * 60 * 1000,
+	max: 5,
 	message: "Too many authentication attempts, please try again later",
 	skipSuccessfulRequests: true,
+	store,
+	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
 			res,
@@ -38,15 +45,14 @@ export const authRateLimiter = rateLimit({
 	},
 });
 
-/**
- * API rate limiter (for general API endpoints)
- */
 export const apiRateLimiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100, // 100 requests per windowMs
+	windowMs: 15 * 60 * 1000,
+	max: 100,
 	message: "Too many API requests, please try again later",
 	standardHeaders: true,
 	legacyHeaders: false,
+	store,
+	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
 			res,
@@ -56,13 +62,12 @@ export const apiRateLimiter = rateLimit({
 	},
 });
 
-/**
- * AI rate limiter (stricter for AI endpoints due to cost)
- */
 export const aiRateLimiter = rateLimit({
-	windowMs: 60 * 60 * 1000, // 1 hour
-	max: 20, // 20 requests per hour
+	windowMs: 60 * 60 * 1000,
+	max: 20,
 	message: "AI API rate limit exceeded, please try again later",
+	store,
+	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
 			res,
@@ -72,13 +77,12 @@ export const aiRateLimiter = rateLimit({
 	},
 });
 
-/**
- * File upload rate limiter
- */
 export const uploadRateLimiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 10, // 10 uploads per windowMs
+	windowMs: 15 * 60 * 1000,
+	max: 10,
 	message: "Too many file uploads, please try again later",
+	store,
+	passOnStoreError: true,
 	handler: (_req, res) => {
 		errorResponse(
 			res,

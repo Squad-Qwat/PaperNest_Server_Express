@@ -72,14 +72,14 @@ export const getVersionByNumber = asyncHandler(
 	async (req: Request, res: Response) => {
 		const documentId = req.params.documentId as string;
 		const versionNumber = req.params.versionNumber as string;
-		const versionNum = parseInt(versionNumber);
+		const versionNum = parseInt(versionNumber, 10);
 
 		logger.info("Get version by number request", {
 			documentId,
 			versionNumber: versionNum,
 		});
 
-		if (isNaN(versionNum) || versionNum < 1) {
+		if (Number.isNaN(versionNum) || versionNum < 1) {
 			throw new BadRequestError("Invalid version number");
 		}
 
@@ -148,7 +148,7 @@ export const revertToVersion = asyncHandler(
 		const documentId = req.params.documentId as string;
 		const versionNumber = req.params.versionNumber as string;
 		const userId = req.userId!;
-		const versionNum = parseInt(versionNumber);
+		const versionNum = parseInt(versionNumber, 10);
 
 		logger.info("Revert to version request", {
 			documentId,
@@ -156,7 +156,7 @@ export const revertToVersion = asyncHandler(
 			userId,
 		});
 
-		if (isNaN(versionNum) || versionNum < 1) {
+		if (Number.isNaN(versionNum) || versionNum < 1) {
 			throw new BadRequestError("Invalid version number");
 		}
 

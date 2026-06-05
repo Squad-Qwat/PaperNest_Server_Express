@@ -1,6 +1,6 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import type { AIProvider, AIProviderConfig, AIProviderID } from "./types";
 import { createRotatingGeminiModel } from "./gemini-rotator";
+import type { AIProvider, AIProviderConfig, AIProviderID } from "./types";
 
 export class GoogleGenAIProvider implements AIProvider {
 	id: AIProviderID = "google-genai";
@@ -30,11 +30,11 @@ export class GoogleGenAIProvider implements AIProvider {
 			streaming: config.streaming,
 			...(shouldApplyThinking
 				? {
-					thinkingConfig: {
-						includeThoughts: true,
-						thinkingBudget,
-					},
-				}
+						thinkingConfig: {
+							includeThoughts: true,
+							thinkingBudget,
+						},
+					}
 				: {}),
 		});
 	}

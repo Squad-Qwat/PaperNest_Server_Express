@@ -1,19 +1,18 @@
+import crypto from "node:crypto";
 import type { Request, Response } from "express";
+import { env } from "../config/env";
 import { asyncHandler } from "../middlewares/errorHandler";
+import invitationRepository from "../repositories/invitationRepository";
 import notificationRepository from "../repositories/notificationRepository";
 import userRepository from "../repositories/userRepository";
 import userWorkspaceRepository from "../repositories/userWorkspaceRepository";
 import workspaceRepository from "../repositories/workspaceRepository";
+import { EmailService } from "../services/emailService";
 import {
-	ConflictError,
+	BadRequestError,
 	ForbiddenError,
 	NotFoundError,
-	BadRequestError,
 } from "../utils/errorTypes";
-import crypto from "crypto";
-import invitationRepository from "../repositories/invitationRepository";
-import { EmailService } from "../services/emailService";
-import { env } from "../config/env";
 import logger from "../utils/logger";
 import {
 	createdResponse,
@@ -78,6 +77,7 @@ export const getUserWorkspaces = asyncHandler(
 		const workspaces = await Promise.all(
 			userWorkspaces.map(async (uw) => {
 				const workspace = await workspaceRepository.findById(uw.workspaceId);
+				if (!workspace) return null; // Skips the orphaned record of a workspace
 				return {
 					...workspace,
 					userRole: uw.role,
@@ -86,9 +86,11 @@ export const getUserWorkspaces = asyncHandler(
 			}),
 		);
 
+		const validWorkspaces = workspaces.filter(Boolean); // Necessary filter for workspace
+
 		return successResponse(
 			res,
-			{ workspaces, count: workspaces.length },
+			{ workspaces: validWorkspaces, count: workspaces.length },
 			"Workspaces retrieved successfully",
 		);
 	},
@@ -161,6 +163,9 @@ export const deleteWorkspace = asyncHandler(
 		const { workspaceId } = req.params;
 
 		logger.info("Delete workspace request", { workspaceId });
+
+		// Cascade delete all UserWorkspace records first
+		await userWorkspaceRepository.deleteByWorkspace(workspaceId as string);
 
 		// TODO: Implement cascade delete for documents, comments, etc.
 		await workspaceRepository.delete(workspaceId as string);
@@ -323,7 +328,9 @@ export const getInvitationByToken = asyncHandler(
 			throw new BadRequestError("Invitation has expired");
 		}
 
-		const workspace = await workspaceRepository.findById(invitation.workspaceId as string);
+		const workspace = await workspaceRepository.findById(
+			invitation.workspaceId as string,
+		);
 		const inviter = await userRepository.findById(invitation.inviterId);
 
 		return successResponse(
@@ -405,7 +412,10 @@ export const acceptInvitation = asyncHandler(
 			});
 		}
 
-		await invitationRepository.updateStatus(invitation.invitationId, "accepted");
+		await invitationRepository.updateStatus(
+			invitation.invitationId,
+			"accepted",
+		);
 
 		return successResponse(res, null, "Successfully joined workspace");
 	},
@@ -568,7 +578,6 @@ export const updateInvitationStatus = asyncHandler(
 		);
 	},
 );
-
 
 export default {
 	createWorkspace,

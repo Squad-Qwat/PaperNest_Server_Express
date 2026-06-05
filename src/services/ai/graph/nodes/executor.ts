@@ -37,7 +37,7 @@ export const executorNode = async (state: AgentStateType) => {
 		state.plan.find((s) => s.status === "pending");
 
 	const tools = getActiveToolsForState(state);
-	
+
 	const wasActionExecuted =
 		currentStep?.tool &&
 		state.lastToolResults?.some(
@@ -121,7 +121,7 @@ export const executorNode = async (state: AgentStateType) => {
 
 	const contextContent = `\n[CURRENT DOCUMENT STATE]\n${state.documentContent || "(empty)"}\n`;
 	const sysMsg = new SystemMessage(
-		prompts.system + "\n\n" + executorPrompt + "\n\n" + contextContent,
+		`${prompts.system}\n\n${executorPrompt}\n\n${contextContent}`,
 	);
 
 	const fullInput = [sysMsg, ...state.messages];
@@ -159,9 +159,9 @@ export const executorNode = async (state: AgentStateType) => {
 
 		const fallbackHuman = new HumanMessage(
 			lastUserText ||
-			currentStep?.description ||
-			state.goal ||
-			"Continue with the current plan.",
+				currentStep?.description ||
+				state.goal ||
+				"Continue with the current plan.",
 		);
 
 		response = await modelWithTools.invoke([sysMsg, fallbackHuman]);

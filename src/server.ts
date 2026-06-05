@@ -1,6 +1,8 @@
+import "./instrument";
 import app from "./app";
 import { env } from "./config/env";
 import { firebaseAdmin } from "./config/firebase";
+import { initCronJobs } from "./services/cronService";
 import logger from "./utils/logger";
 
 /**
@@ -19,6 +21,9 @@ const startServer = async () => {
 			logger.info(`📝 Environment: ${env.NODE_ENV}`);
 			logger.info(`🔥 Firebase initialized: ${isFirebaseReady ? "Yes" : "No"}`);
 			logger.info(`✅ API available at: http://localhost:${PORT}/api`);
+
+			// Initialize scheduled jobs
+			initCronJobs();
 		});
 
 		server.on("error", (error: any) => {
@@ -48,7 +53,6 @@ const startServer = async () => {
 
 		process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 		process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-
 	} catch (error) {
 		logger.error("--- FATAL STARTUP ERROR ---", error);
 		process.exit(1);
@@ -60,7 +64,9 @@ startServer();
 
 // Global Exception Handlers
 process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
-	logger.error(`Unhandled Rejection at: ${promise} - reason: ${reason instanceof Error ? reason.stack : String(reason)}`);
+	logger.error(
+		`Unhandled Rejection at: ${promise} - reason: ${reason instanceof Error ? reason.stack : String(reason)}`,
+	);
 	if (env.NODE_ENV === "production") {
 		process.exit(1);
 	}

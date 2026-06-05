@@ -1,12 +1,5 @@
-import {
-	describe,
-	expect,
-	it,
-	jest,
-	beforeEach,
-} from "@jest/globals";
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { templateService } from "../../services/templateService";
 
 // Mock fs/promises
@@ -67,10 +60,12 @@ describe("TemplateService", () => {
 			// Mock listTemplates behavior
 			mockedFs.readdir.mockResolvedValue(["template1"] as any);
 			mockedFs.stat.mockResolvedValue({ isFile: () => true } as any);
-			mockedFs.readFile.mockResolvedValueOnce(JSON.stringify({
-				name: "Test",
-				mainFile: "main.tex"
-			}));
+			mockedFs.readFile.mockResolvedValueOnce(
+				JSON.stringify({
+					name: "Test",
+					mainFile: "main.tex",
+				}),
+			);
 			// Second call to readFile for the main file content
 			mockedFs.readFile.mockResolvedValueOnce("LaTeX content");
 
@@ -83,9 +78,9 @@ describe("TemplateService", () => {
 		it("should throw error if template does not exist", async () => {
 			mockedFs.readdir.mockResolvedValue([] as any);
 
-			await expect(templateService.getTemplateContent("invalid")).rejects.toThrow(
-				"Template with id invalid not found",
-			);
+			await expect(
+				templateService.getTemplateContent("invalid"),
+			).rejects.toThrow("Template with id invalid not found");
 		});
 	});
 });

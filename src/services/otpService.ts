@@ -1,6 +1,5 @@
 import { randomInt } from "node:crypto";
 import { redis } from "../config/redis";
-import logger from "../utils/logger";
 
 export class OTPService {
 	private static TTL = 300;
@@ -11,13 +10,13 @@ export class OTPService {
 
 	static async saveOTP(uid: string, otp: string): Promise<void> {
 		const key = `otp:${uid}`;
-		await redis.set(key, otp, { ex: this.TTL });
+		await redis.set(key, otp, { ex: OTPService.TTL });
 	}
 
 	static async verifyOTP(uid: string, inputOtp: string): Promise<boolean> {
 		const key = `otp:${uid}`;
 		const storedOtp = await redis.get<string>(key);
-		
+
 		if (!storedOtp) return false;
 
 		return String(storedOtp) === String(inputOtp);

@@ -91,6 +91,11 @@ export const finalizeRegistration = async (
 
 		const user = await registrationService.finalize(decodedToken.uid);
 
+		// Trigger welcome email asynchronously
+		EmailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
+			logger.error("Failed to send welcome email during finalization:", err);
+		});
+
 		return {
 			user,
 			token: generateToken({
@@ -212,7 +217,7 @@ const fetchGithubEmail = async (
 			return verified ? verified.email : response.data[0]?.email || null;
 		}
 		return null;
-	} catch (error) {
+	} catch (_error) {
 		return null;
 	}
 };
@@ -309,6 +314,14 @@ export const completeSocialRegistration = async (
 			username: data.username,
 			role: data.role,
 			photoURL: picture || null,
+		});
+
+		// Trigger welcome email asynchronously
+		EmailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
+			logger.error(
+				"Failed to send welcome email during social registration:",
+				err,
+			);
 		});
 
 		return {

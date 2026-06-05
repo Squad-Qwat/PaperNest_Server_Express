@@ -21,7 +21,7 @@ export const createRAGTool = (documentId: string) => {
 				}
 
 				const formattedResults = results
-					.map((chunk, idx) => {
+					.map((chunk, _idx) => {
 						return `[Source: ${chunk.fileKey.split("/").pop()} (Chunk ${chunk.chunkIndex})]\n${chunk.text}`;
 					})
 					.join("\n\n---\n\n");

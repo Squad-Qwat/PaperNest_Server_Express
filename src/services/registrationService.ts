@@ -6,9 +6,6 @@ import {
 import { db } from "../config/firebase";
 import type { User, Workspace } from "../types";
 
-
-import logger from "../utils/logger";
-
 export interface PendingRegistration {
 	uid: string;
 	email: string;

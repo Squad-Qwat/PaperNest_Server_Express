@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
+
+jest.mock("../../config/firebase", () => ({
+	db: require("../../../__mocks__/firebase-admin").__mockFirestore,
+}));
+
 import * as citationController from "../../controllers/citationController";
 import citationRepository from "../../repositories/citationRepository";
 import { mockCitation, mockCitations } from "../../tests/fixtures";

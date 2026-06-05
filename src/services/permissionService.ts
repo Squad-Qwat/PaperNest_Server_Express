@@ -88,7 +88,7 @@ class PermissionService {
 				userId,
 				workspaceId,
 			);
-			
+
 			if (!workspaceRole) {
 				return null;
 			}
@@ -120,17 +120,17 @@ class PermissionService {
 				documentId,
 				workspaceId,
 			);
-			
+
 			if (!effective) {
 				return false;
 			}
 
-			const HIERARCHY: Record<DocumentPermission, number> = { 
-				viewer: 1, 
-				editor: 2, 
-				admin: 3 
+			const HIERARCHY: Record<DocumentPermission, number> = {
+				viewer: 1,
+				editor: 2,
+				admin: 3,
 			};
-			
+
 			return HIERARCHY[effective.permission] >= HIERARCHY[minPermission];
 		} catch (error) {
 			logger.error("Error checking minimum permission:", error);

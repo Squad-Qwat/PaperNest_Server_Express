@@ -20,6 +20,7 @@ describe("CitationRepository", () => {
 	describe("create", () => {
 		it("should create a new citation successfully", async () => {
 			const citationData = {
+				workspaceId: "workspace-123",
 				documentId: "doc-123",
 				type: "article-journal",
 				title: "Test Article",
@@ -47,6 +48,7 @@ describe("CitationRepository", () => {
 
 		it("should include optional doi when provided", async () => {
 			const citationData = {
+				workspaceId: "workspace-123",
 				documentId: "doc-123",
 				type: "article",
 				title: "Test Article",

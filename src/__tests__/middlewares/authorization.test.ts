@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
-import {
-	authorizeDocument,
-	authorizeWorkspace,
-} from "../../middlewares/authorization";
+
+jest.mock("../../config/firebase", () => ({
+	db: require("../../../__mocks__/firebase-admin").__mockFirestore,
+}));
+
+import { authorizeWorkspace } from "../../middlewares/authorization";
 import userWorkspaceRepository from "../../repositories/userWorkspaceRepository";
 import workspaceRepository from "../../repositories/workspaceRepository";
 import {

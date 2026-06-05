@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import workspaceController from "../../controllers/workspaceController";
 import invitationRepository from "../../repositories/invitationRepository";
-import notificationRepository from "../../repositories/notificationRepository";
 import userRepository from "../../repositories/userRepository";
 import userWorkspaceRepository from "../../repositories/userWorkspaceRepository";
 import workspaceRepository from "../../repositories/workspaceRepository";
@@ -20,11 +19,7 @@ jest.mock("../../repositories/invitationRepository");
 jest.mock("../../services/emailService");
 jest.mock("../../utils/logger");
 
-import {
-	ConflictError,
-	ForbiddenError,
-	NotFoundError,
-} from "../../utils/errorTypes";
+import { ForbiddenError, NotFoundError } from "../../utils/errorTypes";
 
 import { createMockExpress } from "../testUtils";
 
@@ -66,12 +61,20 @@ describe("WorkspaceController", () => {
 			mockReq.body = { emails: ["invited@example.com"], role: "editor" };
 			mockReq.userId = "owner-id";
 
-			jest.mocked(workspaceRepository.findById).mockResolvedValue(mockWorkspace);
-			jest.mocked(userRepository.findById).mockResolvedValue({ name: "Owner" } as any);
+			jest
+				.mocked(workspaceRepository.findById)
+				.mockResolvedValue(mockWorkspace);
+			jest
+				.mocked(userRepository.findById)
+				.mockResolvedValue({ name: "Owner" } as any);
 			jest.mocked(userRepository.findByEmail).mockResolvedValue(null);
-			jest.mocked(invitationRepository.findByEmailAndWorkspace).mockResolvedValue(null);
+			jest
+				.mocked(invitationRepository.findByEmailAndWorkspace)
+				.mockResolvedValue(null);
 			jest.mocked(invitationRepository.create).mockResolvedValue({} as any);
-			jest.mocked(EmailService.sendWorkspaceInvitationEmail).mockResolvedValue(undefined as any);
+			jest
+				.mocked(EmailService.sendWorkspaceInvitationEmail)
+				.mockResolvedValue(undefined as any);
 
 			await workspaceController.sendInvitations(mockReq, mockRes, next);
 

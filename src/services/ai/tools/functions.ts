@@ -285,7 +285,7 @@ export const executeEditorTool = async (
 	editor: any,
 	toolName: string,
 	args: any,
-	documentId?: string,
+	_documentId?: string,
 ): Promise<any> => {
 	if (!editor) return "Error: Editor not available";
 

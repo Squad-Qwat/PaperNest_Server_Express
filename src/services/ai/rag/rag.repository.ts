@@ -39,7 +39,9 @@ export class RAGRepository {
 		});
 
 		await batch.commit();
-		console.log(`[RAGRepository] Saved ${chunks.length} chunks with vector embeddings`);
+		console.log(
+			`[RAGRepository] Saved ${chunks.length} chunks with vector embeddings`,
+		);
 	}
 
 	async deleteChunksByFile(documentId: string, fileKey: string): Promise<void> {

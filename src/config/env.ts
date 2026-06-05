@@ -8,8 +8,7 @@ export const env = {
 
 	FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || "",
 	FIREBASE_PRIVATE_KEY:
-		process.env.FIREBASE_PRIVATE_KEY
-			?.replace(/\\n/g, "\n")
+		process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n")
 			.replace(/\\/g, "")
 			.replace(/^['"]|['"]$/g, "") || "",
 	FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || "",
@@ -64,6 +63,12 @@ export const env = {
 	UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || "",
 	UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || "",
 	RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+	LEMONSQUEEZY_API_KEY: process.env.LEMONSQUEEZY_API_KEY || "",
+	LEMONSQUEEZY_STORE_ID: process.env.LEMONSQUEEZY_STORE_ID || "",
+	LEMONSQUEEZY_WEBHOOK_SECRET: process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "",
+	LEMONSQUEEZY_VARIANT_ID_PRO: process.env.LEMONSQUEEZY_VARIANT_ID_PRO || "",
+	LEMONSQUEEZY_VARIANT_ID_ENTERPRISE: process.env.LEMONSQUEEZY_VARIANT_ID_ENTERPRISE || "",
+	SENTRY_DSN: process.env.SENTRY_DSN || "",
 };
 
 const requiredEnvVars = [
@@ -76,6 +81,11 @@ const requiredEnvVars = [
 	"UPSTASH_REDIS_REST_URL",
 	"UPSTASH_REDIS_REST_TOKEN",
 	"RESEND_API_KEY",
+	"LEMONSQUEEZY_API_KEY",
+	"LEMONSQUEEZY_STORE_ID",
+	"LEMONSQUEEZY_WEBHOOK_SECRET",
+	"LEMONSQUEEZY_VARIANT_ID_PRO",
+	"LEMONSQUEEZY_VARIANT_ID_ENTERPRISE",
 ];
 
 requiredEnvVars.forEach((varName) => {

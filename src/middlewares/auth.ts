@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { auth } from "../config/firebase";
 import userRepository from "../repositories/userRepository";
-import logger from "../utils/logger";
 import { unauthorizedResponse } from "../utils/responseFormatter";
 
 export interface JwtPayload {
@@ -20,7 +19,7 @@ export const authenticate = async (
 	try {
 		const authHeader = req.headers.authorization;
 
-		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		if (!authHeader?.startsWith("Bearer ")) {
 			return unauthorizedResponse(res, "No token provided") as any;
 		}
 
@@ -44,7 +43,7 @@ export const authenticate = async (
 			req.userId = user.userId;
 
 			return next();
-		} catch (firebaseError) {
+		} catch (_firebaseError) {
 			try {
 				const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
 				const user = await userRepository.findById(decoded.userId);
@@ -57,11 +56,11 @@ export const authenticate = async (
 				req.userId = user.userId;
 
 				return next();
-			} catch (jwtError) {
+			} catch (_jwtError) {
 				return unauthorizedResponse(res, "Invalid or expired token") as any;
 			}
 		}
-	} catch (error) {
+	} catch (_error) {
 		return unauthorizedResponse(res, "Authentication failed") as any;
 	}
 };
@@ -74,7 +73,7 @@ export const authenticateFirebase = async (
 	try {
 		const authHeader = req.headers.authorization;
 
-		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		if (!authHeader?.startsWith("Bearer ")) {
 			return unauthorizedResponse(res, "No token provided") as any;
 		}
 
@@ -84,10 +83,13 @@ export const authenticateFirebase = async (
 			const decodedToken = await auth.verifyIdToken(token);
 			req.firebaseUid = decodedToken.uid;
 			return next();
-		} catch (error) {
-			return unauthorizedResponse(res, "Invalid or expired Firebase token") as any;
+		} catch (_error) {
+			return unauthorizedResponse(
+				res,
+				"Invalid or expired Firebase token",
+			) as any;
 		}
-	} catch (error) {
+	} catch (_error) {
 		return unauthorizedResponse(res, "Authentication failed") as any;
 	}
 };
@@ -100,7 +102,7 @@ export const optionalAuthenticate = async (
 	try {
 		const authHeader = req.headers.authorization;
 
-		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		if (!authHeader?.startsWith("Bearer ")) {
 			return next();
 		}
 
@@ -125,12 +127,11 @@ export const optionalAuthenticate = async (
 					req.user = user;
 					req.userId = user.userId;
 				}
-			} catch {
-			}
+			} catch {}
 		}
 
 		next();
-	} catch (error) {
+	} catch (_error) {
 		next();
 	}
 };

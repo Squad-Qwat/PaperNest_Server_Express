@@ -73,7 +73,7 @@ export function routeAfterExecutor(state: AgentStateType): RouteType {
 	return ROUTES.REFLECTOR;
 }
 
-export function routeAfterTools(state: AgentStateType): RouteType {
+export function routeAfterTools(_state: AgentStateType): RouteType {
 	return ROUTES.REFLECTOR;
 }
 

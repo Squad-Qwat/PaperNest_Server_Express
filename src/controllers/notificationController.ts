@@ -199,7 +199,7 @@ export const deleteAllNotifications = asyncHandler(
 export const cleanupOldNotifications = asyncHandler(
 	async (req: Request, res: Response) => {
 		const userId = req.userId!;
-		const days = parseInt(req.query.days as string) || 30;
+		const days = parseInt(req.query.days as string, 10) || 30;
 
 		logger.info("Cleanup old notifications request", { userId, days });
 

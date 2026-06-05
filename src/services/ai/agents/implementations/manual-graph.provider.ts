@@ -11,7 +11,7 @@ export class ManualGraphProvider implements IAgentProvider {
 	async *stream(params: AgentStreamParams): AsyncGenerator<StreamEvent> {
 		// DYNAMIC IMPORT: Load heavy graph logic only when streaming starts
 		const { streamAgent } = await import("../../graph");
-		
+
 		yield* streamAgent(
 			params.message,
 			params.documentContent,

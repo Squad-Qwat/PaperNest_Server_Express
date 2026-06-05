@@ -1,15 +1,18 @@
+import { spawn } from "node:child_process";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import axios from "axios";
-import { spawn } from "child_process";
-import fs from "fs/promises";
-import os from "os";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
+
+const uuidv4 = () => crypto.randomUUID();
+
 import { env } from "../config/env";
-import type { LatexCompileOptions, LatexCompileResult } from "../types/latex.types";
+import type {
+	LatexCompileOptions,
+	LatexCompileResult,
+} from "../types/latex.types";
 
 import logger from "../utils/logger";
-
-
 
 /**
  * Service to handle LaTeX compilation using Tectonic.
@@ -25,7 +28,32 @@ export class LatexService {
 			mainFileName = "main.tex",
 			assets = [],
 			engine = "pdflatex",
+			documentId,
 		} = options;
+
+		// Basic security filtering for malicious LaTeX commands (RCE protection)
+		const maliciousCommands = [
+			/\\write18/i,
+			/\\shellescape/i,
+			/\\openout/i,
+			/\\openin/i,
+		];
+
+		const useDocker = process.env.USE_DOCKER_SANDBOX === "true";
+		if (!useDocker) {
+			for (const regex of maliciousCommands) {
+				if (regex.test(content)) {
+					logger.warn(
+						`[LatexService] Security validation failed for local compilation: ${regex.source}`,
+					);
+					return {
+						pdf: undefined,
+						log: `Security Error: Malicious command detected in LaTeX content: ${regex.source}`,
+						status: -1,
+					};
+				}
+			}
+		}
 
 		const tempRoot = path.join(process.cwd(), "temp");
 		const workDir = path.join(tempRoot, `papernest-latex-${uuidv4()}`);
@@ -43,7 +71,9 @@ export class LatexService {
 				await Promise.all(
 					assets.map(async (asset) => {
 						try {
-							const safeName = asset.name.replace(/\.\.+/g, ".").replace(/^[\/\\]+/, "");
+							const safeName = asset.name
+								.replace(/\.\.+/g, ".")
+								.replace(/^[/\\]+/, "");
 							const assetPath = path.join(workDir, safeName);
 							const assetDir = path.dirname(assetPath);
 
@@ -58,7 +88,9 @@ export class LatexService {
 							let fileData: Buffer;
 
 							if (asset.r2Key) {
-								logger.debug(`[LatexService] Fetching asset via R2 Key: ${asset.r2Key}`);
+								logger.debug(
+									`[LatexService] Fetching asset via R2 Key: ${asset.r2Key}`,
+								);
 								const response = await StorageService.getObject(asset.r2Key);
 								const chunks: any[] = [];
 								const stream = response.Body as any;
@@ -67,7 +99,9 @@ export class LatexService {
 								}
 								fileData = Buffer.concat(chunks);
 							} else {
-								logger.debug(`[LatexService] Downloading asset via URL: ${asset.url}`);
+								logger.debug(
+									`[LatexService] Downloading asset via URL: ${asset.url}`,
+								);
 								const response = await axios.get(asset.url, {
 									responseType: "arraybuffer",
 								});
@@ -87,52 +121,93 @@ export class LatexService {
 
 			let log = "";
 			let status = 0;
-			const hasBibFile = assets.some((a) => a.name.toLowerCase().endsWith(".bib"));
+			const hasBibFile = assets.some((a) =>
+				a.name.toLowerCase().endsWith(".bib"),
+			);
 
 			if (engine === "pdflatex") {
 				const pdflatexArgs = [
 					"-interaction=nonstopmode",
+					"-synctex=1",
 					`-output-directory=${workDir}`,
 					mainPath,
 				];
 
 				// Pass 1: Initial compilation
-				const res1 = await this.executeCommand("pdflatex", pdflatexArgs, workDir);
+				const res1 = await this.executeCommand(
+					"pdflatex",
+					pdflatexArgs,
+					workDir,
+				);
 				log += res1.output;
 				status = res1.status;
 
 				if (hasBibFile && status === 0) {
 					const auxName = mainFileName.replace(/\.(tex|ltx)$/i, "");
-					
+
 					// BibTeX pass
-					const resBib = await this.executeCommand("bibtex", [auxName], workDir);
-					log += "\n--- BibTeX Log ---\n" + resBib.output;
+					const resBib = await this.executeCommand(
+						"bibtex",
+						[auxName],
+						workDir,
+					);
+					log += `\n--- BibTeX Log ---\n${resBib.output}`;
 
 					// Pass 2 & 3: Resolve citations and references
-					const res2 = await this.executeCommand("pdflatex", pdflatexArgs, workDir);
-					log += "\n--- Pass 2 Log ---\n" + res2.output;
-					
-					const res3 = await this.executeCommand("pdflatex", pdflatexArgs, workDir);
-					log += "\n--- Pass 3 Log ---\n" + res3.output;
+					const res2 = await this.executeCommand(
+						"pdflatex",
+						pdflatexArgs,
+						workDir,
+					);
+					log += `\n--- Pass 2 Log ---\n${res2.output}`;
+
+					const res3 = await this.executeCommand(
+						"pdflatex",
+						pdflatexArgs,
+						workDir,
+					);
+					log += `\n--- Pass 3 Log ---\n${res3.output}`;
 					status = res3.status;
 				}
 			} else {
 				// Tectonic handles multiple passes internally
-				const tectonicArgs = [mainPath, "--outdir", workDir];
-				const res = await this.executeCommand("tectonic", tectonicArgs, workDir);
+				const tectonicArgs = [mainPath, "--outdir", workDir, "--synctex"];
+				const res = await this.executeCommand(
+					"tectonic",
+					tectonicArgs,
+					workDir,
+				);
 				log = res.output;
 				status = res.status;
 			}
 
-			const pdfFileName = mainFileName.replace(/\.(tex|ltx)$/i, "") + ".pdf";
+			const pdfFileName = `${mainFileName.replace(/\.(tex|ltx)$/i, "")}.pdf`;
 			const pdfPath = path.join(workDir, pdfFileName);
+			const synctexFileName = `${mainFileName.replace(/\.(tex|ltx)$/i, "")}.synctex.gz`;
+			const synctexPath = path.join(workDir, synctexFileName);
 
 			let pdfBuffer: Buffer | undefined;
 			try {
 				pdfBuffer = await fs.readFile(pdfPath);
-				logger.info(`[LatexService] PDF generated successfully: ${pdfFileName}`);
-			} catch (e) {
-				logger.error(`[LatexService] PDF not found after compilation: ${pdfPath}`);
+				logger.info(
+					`[LatexService] PDF generated successfully: ${pdfFileName}`,
+				);
+
+				if (documentId) {
+					const persistentDir = path.join(tempRoot, "compiled", documentId);
+					await fs.mkdir(persistentDir, { recursive: true });
+					try {
+						await fs.copyFile(pdfPath, path.join(persistentDir, pdfFileName));
+						await fs.copyFile(synctexPath, path.join(persistentDir, synctexFileName));
+						logger.info(`[LatexService] Saved pdf and synctex to persistent cache for document: ${documentId}`);
+					} catch (err: any) {
+						logger.warn(`[LatexService] Failed to copy pdf or synctex to cache: ${err.message}`);
+					}
+				}
+			} catch (_e) {
+				logger.error(
+					`[LatexService] PDF not found after compilation: ${pdfPath}`,
+				);
 			}
 
 			return { pdf: pdfBuffer, log, status };
@@ -141,7 +216,10 @@ export class LatexService {
 				await fs.rm(workDir, { recursive: true, force: true });
 				logger.info(`[LatexService] Cleaned up work directory: ${workDir}`);
 			} catch (cleanupError) {
-				logger.error(`[LatexService] Cleanup failed for ${workDir}:`, cleanupError);
+				logger.error(
+					`[LatexService] Cleanup failed for ${workDir}:`,
+					cleanupError,
+				);
 			}
 		}
 	}
@@ -154,22 +232,79 @@ export class LatexService {
 		args: string[],
 		cwd: string,
 	): Promise<{ output: string; status: number }> {
-		logger.info(`[LatexService] Executing: "${binary}" ${args.join(" ")}`);
+		const useDocker = process.env.USE_DOCKER_SANDBOX === "true";
+		const dockerImage =
+			process.env.LATEX_DOCKER_IMAGE ||
+			(binary === "tectonic"
+				? "dxjoke/tectonic-docker:latest"
+				: "blang/latex:ubuntu");
+
+		let finalBinary = binary;
+		let finalArgs = args;
+
+		if (useDocker) {
+			finalBinary = "docker";
+			const mappedArgs = args.map((arg) => {
+				const normalizedCwd = cwd.replace(/\\/g, "/");
+				const normalizedArg = arg.replace(/\\/g, "/");
+				return normalizedArg.replace(
+					new RegExp(normalizedCwd, "g"),
+					"/workspace",
+				);
+			});
+
+			finalArgs = [
+				"run",
+				"--rm",
+				"--network",
+				"none",
+				"-v",
+				`${cwd}:/workspace`,
+				"-w",
+				"/workspace",
+				dockerImage,
+				binary,
+				...mappedArgs,
+			];
+		}
+
+		logger.info(
+			`[LatexService] Executing: "${finalBinary}" ${finalArgs.slice(0, 10).join(" ")}`,
+		);
 
 		return new Promise((resolve) => {
 			let output = "";
-			const proc = spawn(binary, args, { cwd, env: process.env });
+			const proc = spawn(finalBinary, finalArgs, { cwd, env: process.env });
+
+			const timeoutMs = parseInt(
+				process.env.LATEX_COMPILE_TIMEOUT || "30000",
+				10,
+			);
+			const timeoutId = setTimeout(() => {
+				logger.warn(
+					`[LatexService] Compilation timed out for command: ${finalBinary} ${finalArgs.slice(0, 5).join(" ")}`,
+				);
+				proc.kill("SIGKILL");
+				resolve({
+					output: `${output}\nError: Compilation timed out after ${timeoutMs / 1000} seconds.\n`,
+					status: -1,
+				});
+			}, timeoutMs);
 
 			proc.stdout.on("data", (data) => (output += data.toString()));
 			proc.stderr.on("data", (data) => (output += data.toString()));
 
 			proc.on("close", (code) => {
+				clearTimeout(timeoutId);
 				resolve({ output, status: code || 0 });
 			});
 
 			proc.on("error", (err) => {
-				logger.error(`[LatexService] Failed to start ${binary}: ${err.message}`);
-				resolve({ output: `Error: ${err.message}\n` + output, status: -1 });
+				clearTimeout(timeoutId);
+				logger.error(
+					`[LatexService] Failed to start command ${finalBinary}: ${err.message}`,
+				);
+				resolve({ output: `Error: ${err.message}\n${output}`, status: -1 });
 			});
 		});
 	}

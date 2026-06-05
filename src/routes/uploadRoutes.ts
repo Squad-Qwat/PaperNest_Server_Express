@@ -6,6 +6,7 @@ import {
 	renameFile,
 } from "../controllers/uploadController";
 import { authenticate } from "../middlewares/auth";
+import { uploadRateLimiter } from "../middlewares/rateLimiter";
 
 const router: Router = Router();
 
@@ -14,13 +15,13 @@ const router: Router = Router();
  * @desc    Generate a pre-signed URL for direct Cloudflare R2 uploads
  * @access  Protected
  */
-router.post("/presigned-url", authenticate, getPresignedUrl);
+router.post("/presigned-url", authenticate, uploadRateLimiter, getPresignedUrl);
 
 /**
  * @route   GET /api/upload/download
  * @desc    Proxy asset download to bypass CORS for LaTeX compilation assets
  */
-router.get("/download", authenticate, proxyDownload);
+router.get("/download", authenticate, uploadRateLimiter, proxyDownload);
 
 /**
  * @route   DELETE /api/upload/file/:documentId/:fileId

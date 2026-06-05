@@ -5,12 +5,8 @@ import {
 	ToolMessage,
 } from "@langchain/core/messages";
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
-import {
-	AgentStreamParams,
-	type StreamEvent,
-	type ToolResult,
-} from "@/types/ai/agent.types";
-import { contentToText, extractTokenMetadata, parseBase64Attachments } from "../utils";
+import type { StreamEvent, ToolResult } from "@/types/ai/agent.types";
+import { contentToText, parseBase64Attachments } from "../utils";
 import { executorNode, plannerNode, reflectorNode, toolNode } from "./nodes";
 import {
 	ROUTES,
@@ -158,7 +154,9 @@ export async function* streamAgent(
 			contentToText(lastMessageInHistory.content).trim() === taskForGoal.trim();
 
 		const initialState: Partial<AgentStateType> = {
-			messages: lastMessageIsCurrentQuery ? prunedHistory : [...prunedHistory, humanMessageInstance],
+			messages: lastMessageIsCurrentQuery
+				? prunedHistory
+				: [...prunedHistory, humanMessageInstance],
 			documentContent,
 			documentHTML,
 			cursorPosition: 0,
@@ -249,7 +247,7 @@ export async function* streamAgent(
 					}
 				}
 
-				if (output.lastReasoningSummary && output.lastReasoningSummary.trim()) {
+				if (output.lastReasoningSummary?.trim()) {
 					const phase = (output.lastReasoningPhase || nodeName) as
 						| "planner"
 						| "executor"
@@ -284,7 +282,7 @@ export async function* streamAgent(
 								.join("");
 						}
 
-						if (textContent && textContent.trim()) {
+						if (textContent?.trim()) {
 							const isJson =
 								textContent.trim().startsWith("{") &&
 								textContent.trim().endsWith("}");

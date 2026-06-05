@@ -12,8 +12,8 @@ import {
 	refreshTokenSchema,
 	registerSchema,
 	updateEmailSchema,
-	verifyTokenSchema,
 	verifyOTPSchema,
+	verifyTokenSchema,
 } from "../models/validators/authValidator";
 
 const router: Router = Router();
@@ -41,28 +41,36 @@ router.post(
 
 router.post(
 	"/login",
+	authRateLimiter,
 	validateTurnstile,
 	validate({ body: loginSchema }),
-	authController.login
+	authController.login,
 );
 
 router.post(
 	"/social",
+	authRateLimiter,
 	validateTurnstile,
 	validate({ body: loginSchema }),
 	authController.socialLogin,
 );
 
-router.post("/social/complete", authController.completeSocialRegistration);
+router.post(
+	"/social/complete",
+	authRateLimiter,
+	authController.completeSocialRegistration,
+);
 
 router.post(
 	"/refresh",
+	authRateLimiter,
 	validate({ body: refreshTokenSchema }),
 	authController.refreshToken,
 );
 
 router.post(
 	"/verify",
+	authRateLimiter,
 	validate({ body: verifyTokenSchema }),
 	authController.verifyToken,
 );
@@ -95,6 +103,7 @@ router.post(
 router.post(
 	"/otp/verify",
 	authenticateFirebase,
+	authRateLimiter,
 	validate({ body: verifyOTPSchema }),
 	authController.verifyOTP,
 );

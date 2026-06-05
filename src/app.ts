@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import cors from "cors";
 import express, { type Application } from "express";
 import rateLimit from "express-rate-limit";
@@ -5,14 +6,15 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { RATE_LIMIT_CONFIG } from "./config/constants";
 import { env } from "./config/env";
+import { apiRateLimiter } from "./middlewares/rateLimiter";
 import templateController from "./controllers/templateController";
 import { authenticate } from "./middlewares/auth";
 import { errorHandler, notFound } from "./middlewares/errorHandler";
-import { globalRateLimiter } from "./middlewares/rateLimiter";
 import { sanitize, validate } from "./middlewares/validation";
 import { templateValidator } from "./models/validators/templateValidator";
 import aiRoutes from "./routes/ai.routes";
 import authRoutes from "./routes/auth";
+import billingRoutes from "./routes/billing";
 import citationRoutes from "./routes/citations";
 import commentRoutes from "./routes/comments";
 import documentRoutes from "./routes/documents";
@@ -39,8 +41,15 @@ app.use(
 	}),
 );
 
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(
+	express.json({
+		limit: "2mb",
+		verify: (req: any, _res, buf) => {
+			req.rawBody = buf;
+		},
+	}),
+);
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 if (env.NODE_ENV === "development") {
 	app.use(morgan("dev"));
@@ -58,6 +67,8 @@ app.use(sanitize);
 
 app.use("/api/webhooks", webhookRoutes);
 
+app.use("/api", apiRateLimiter);
+
 app.get("/health", (_req, res) => {
 	return successResponse(
 		res,
@@ -70,7 +81,6 @@ app.get("/health", (_req, res) => {
 	);
 });
 
-
 app.get("/api", (_req, res) => {
 	return successResponse(
 		res,
@@ -82,7 +92,6 @@ app.get("/api", (_req, res) => {
 		"API information retrieved",
 	);
 });
-
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -105,7 +114,7 @@ app.get(
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api", documentRoutes);
-app.use("/api/documents", citationRoutes);
+app.use("/api", citationRoutes);
 app.use("/api", commentRoutes);
 app.use("/api", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
@@ -113,6 +122,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/latex", latexRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/semantic-scholar", semanticScholarRoutes);
+app.use("/api/billing", billingRoutes);
 
 app.all("/socket.io/", (req, res) => {
 	logger.info(`[SocketDiagnostic] Request received from ${req.ip}`);
@@ -132,6 +142,12 @@ app.all("/socket.io/", (req, res) => {
 	);
 });
 
+app.get("/debug-sentry", (_req, _res) => {
+	throw new Error("My first Sentry error!");
+});
+
+// Sentry error handler (must run before 404 and global error handler)
+Sentry.setupExpressErrorHandler(app);
 
 // Handle 404
 app.use(notFound);

@@ -2,9 +2,6 @@ import type { Response } from "express";
 import { HTTP_STATUS } from "../config/constants";
 import type { ApiResponse } from "../types/api.types";
 
-
-
-
 /**
  * Send success response
  */

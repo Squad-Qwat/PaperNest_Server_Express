@@ -7,9 +7,10 @@ import { BadRequestError } from "../utils/errorTypes";
 import logger from "../utils/logger";
 import { successResponse } from "../utils/responseFormatter";
 
-const WEBHOOK_SECRET = env.LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET;
+const WEBHOOK_SECRET =
+	env.LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET || "whsec_dummy_key_for_testing";
 
-if (!WEBHOOK_SECRET) {
+if (!env.LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET) {
 	logger.error("LIVEBLOCKS_USER_LEFT_WEBHOOK_SECRET not configured");
 }
 
@@ -74,7 +75,7 @@ export const handleLiveblocksWebhook = asyncHandler(
 );
 
 export const webhookHealthCheck = asyncHandler(
-	async (req: Request, res: Response) => {
+	async (_req: Request, res: Response) => {
 		return successResponse(
 			res,
 			{
@@ -84,5 +85,102 @@ export const webhookHealthCheck = asyncHandler(
 			},
 			"Webhook endpoint is active",
 		);
+	},
+);
+
+export const handleLemonSqueezyWebhook = asyncHandler(
+	async (req: Request, res: Response) => {
+		const secret = env.LEMONSQUEEZY_WEBHOOK_SECRET;
+
+		if (!secret) {
+			logger.error("[Webhook] LEMONSQUEEZY_WEBHOOK_SECRET is not configured");
+			return res.status(500).json({ error: "Webhook secret not configured" });
+		}
+
+		const rawBody = (req as any).rawBody;
+		if (!rawBody) {
+			logger.error("[Webhook] Missing raw body for signature verification");
+			throw new BadRequestError("Missing raw body");
+		}
+
+		const crypto = await import("node:crypto");
+		const hmac = crypto.createHmac("sha256", secret);
+		const digest = Buffer.from(hmac.update(rawBody).digest("hex"), "utf8");
+		const signature = Buffer.from(req.get("X-Signature") || "", "utf8");
+
+		if (
+			signature.length === 0 ||
+			digest.length !== signature.length ||
+			!crypto.timingSafeEqual(digest, signature)
+		) {
+			logger.warn(
+				"[Webhook] Invalid signature received on Lemon Squeezy webhook",
+			);
+			throw new BadRequestError("Invalid signature");
+		}
+
+		const payload = req.body;
+		const eventName = payload.meta?.event_name;
+		const customData = payload.meta?.custom_data;
+		const userId = customData?.user_id;
+
+		logger.info(`[Webhook] Lemon Squeezy event received: ${eventName}`, {
+			userId,
+			payloadId: payload.data?.id,
+		});
+
+		if (!userId) {
+			logger.info(
+				"[Webhook] Lemon Squeezy event has no associated user_id, skipping update",
+			);
+			return successResponse(res, null, "Event received but no user_id found");
+		}
+
+		if (
+			eventName === "subscription_created" ||
+			eventName === "subscription_updated" ||
+			eventName === "subscription_cancelled" ||
+			eventName === "subscription_expired"
+		) {
+			const userRepository = (await import("../repositories/userRepository"))
+				.default;
+			const attributes = payload.data?.attributes;
+			const subscriptionId = String(payload.data?.id);
+			const customerId = String(attributes?.customer_id);
+			const status = attributes?.status;
+
+			const isPaid = status === "active" || status === "on_trial";
+			let subscriptionPlan: "free" | "pro" | "enterprise" = "free";
+
+			if (isPaid) {
+				const variantId = String(attributes?.variant_id);
+				if (variantId === env.LEMONSQUEEZY_VARIANT_ID_ENTERPRISE) {
+					subscriptionPlan = "enterprise";
+				} else {
+					subscriptionPlan = "pro";
+				}
+			}
+
+			const renewsAt = attributes?.renews_at;
+			const endsAt = attributes?.ends_at;
+			const periodEndStr = renewsAt || endsAt;
+			const billingPeriodEnd = periodEndStr ? new Date(periodEndStr) : null;
+
+			logger.info("[Webhook] Updating user subscription plan", {
+				userId,
+				subscriptionPlan,
+				subscriptionId,
+				status,
+			});
+
+			await userRepository.update(userId, {
+				subscriptionPlan,
+				lemonSqueezyCustomerId: customerId,
+				lemonSqueezySubscriptionId: subscriptionId,
+				billingPeriodEnd,
+			});
+		}
+
+		return successResponse(res, null, "Webhook handled successfully");
 	},
 );

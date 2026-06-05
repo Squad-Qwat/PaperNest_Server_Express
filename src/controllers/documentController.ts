@@ -1,6 +1,6 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { Request, Response } from "express";
-import fs from "fs/promises";
-import path from "path";
 import { asyncHandler } from "../middlewares/errorHandler";
 import citationRepository from "../repositories/citationRepository";
 import commentRepository from "../repositories/commentRepository";
@@ -19,8 +19,6 @@ import {
 	noContentResponse,
 	successResponse,
 } from "../utils/responseFormatter";
-
-
 
 /**
  * Create a new document in workspace
@@ -89,7 +87,6 @@ export const createDocument = asyncHandler(
 			version.documentBodyId,
 		);
 
-
 		// If templateId is provided, also handle assets (cls, sty, bib files)
 		if (templateId) {
 			try {
@@ -115,9 +112,11 @@ export const createDocument = asyncHandler(
 						// Upload to R2 with organized key structure
 						const normalizedName = asset.name.split(path.sep).join("/");
 						const r2Key = `latex-assets/${document.documentId}/${normalizedName}`;
-						
+
 						// Dynamic import to prevent circular dependency
-						const { StorageService } = await import("../services/StorageService");
+						const { StorageService } = await import(
+							"../services/StorageService"
+						);
 
 						const url = await StorageService.uploadBuffer(
 							buffer,
@@ -376,7 +375,7 @@ export const deleteDocument = asyncHandler(
 		// 1. Delete R2 files (LaTeX assets)
 		try {
 			const r2Prefix = `latex-assets/${documentId}/`;
-			
+
 			// Dynamic import to prevent circular dependency
 			const { StorageService } = await import("../services/StorageService");
 
@@ -400,7 +399,9 @@ export const deleteDocument = asyncHandler(
 				reviewRepository.deleteAllByDocument(documentId),
 				documentPermissionRepository.deleteAllByDocument(documentId),
 			]);
-			logger.info(`All related Firestore records deleted for document ${documentId}`);
+			logger.info(
+				`All related Firestore records deleted for document ${documentId}`,
+			);
 		} catch (firestoreError) {
 			logger.error(
 				`Error during Firestore cascade delete for document ${documentId}:`,
