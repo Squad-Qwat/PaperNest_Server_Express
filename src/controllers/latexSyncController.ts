@@ -45,6 +45,20 @@ export const syncToCode = async (req: Request, res: Response) => {
 		return errorResponse(res, "Missing parameters (page, x, y)", 400);
 	}
 
+	const pageStr = String(page);
+	const xStr = String(x);
+	const yStr = String(y);
+
+	if (!/^\d+$/.test(pageStr)) {
+		return errorResponse(res, "Invalid page parameter format", 400);
+	}
+	if (!/^[+-]?([0-9]*[.])?[0-9]+$/.test(xStr)) {
+		return errorResponse(res, "Invalid x coordinate format", 400);
+	}
+	if (!/^[+-]?([0-9]*[.])?[0-9]+$/.test(yStr)) {
+		return errorResponse(res, "Invalid y coordinate format", 400);
+	}
+
 	try {
 		const userId = (req as any).userId;
 		const docIdStr = await getDocumentWithAccess(req, res, userId);
@@ -52,9 +66,9 @@ export const syncToCode = async (req: Request, res: Response) => {
 
 		const result = await synctexService.syncToCode(
 			docIdStr,
-			parseInt(String(page), 10),
-			parseFloat(String(x)),
-			parseFloat(String(y)),
+			parseInt(pageStr, 10),
+			parseFloat(xStr),
+			parseFloat(yStr),
 		);
 
 		if (!result) {
@@ -75,6 +89,25 @@ export const syncToPdf = async (req: Request, res: Response) => {
 		return errorResponse(res, "Missing parameters (file, line)", 400);
 	}
 
+	const fileStr = String(file);
+	const lineStr = String(line);
+
+	const safeFileRegex = /^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/]*$/;
+	if (!safeFileRegex.test(fileStr) || fileStr.includes("..")) {
+		return errorResponse(res, "Invalid file parameter format", 400);
+	}
+
+	if (!/^\d+$/.test(lineStr)) {
+		return errorResponse(res, "Invalid line parameter format", 400);
+	}
+
+	if (column) {
+		const colStr = String(column);
+		if (!/^\d+$/.test(colStr)) {
+			return errorResponse(res, "Invalid column parameter format", 400);
+		}
+	}
+
 	try {
 		const userId = (req as any).userId;
 		const docIdStr = await getDocumentWithAccess(req, res, userId);
@@ -83,8 +116,8 @@ export const syncToPdf = async (req: Request, res: Response) => {
 		const colVal = column ? parseInt(String(column), 10) : 0;
 		const result = await synctexService.syncToPdf(
 			docIdStr,
-			String(file),
-			parseInt(String(line), 10),
+			fileStr,
+			parseInt(lineStr, 10),
 			colVal,
 		);
 

@@ -7,6 +7,9 @@ import logger from "../utils/logger";
 
 export class SynctexService {
 	private executeCommand(file: string, args: string[]): Promise<string> {
+		if (file !== "synctex") {
+			return Promise.reject(new Error("Invalid execution binary target"));
+		}
 		return new Promise((resolve, reject) => {
 			execFile(file, args, (error, stdout, stderr) => {
 				if (error) {
@@ -128,6 +131,27 @@ export class SynctexService {
 		height?: number;
 	} | null> {
 		try {
+			if (!/^[a-zA-Z0-9_-]+$/.test(documentId)) {
+				logger.error(`[SynctexService] Invalid documentId: ${documentId}`);
+				return null;
+			}
+
+			const safeFileRegex = /^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/]*$/;
+			if (!safeFileRegex.test(file) || file.includes("..")) {
+				logger.error(`[SynctexService] Invalid file path: ${file}`);
+				return null;
+			}
+
+			if (!Number.isInteger(line) || line < 0) {
+				logger.error(`[SynctexService] Invalid line number: ${line}`);
+				return null;
+			}
+
+			if (!Number.isInteger(column) || column < 0) {
+				logger.error(`[SynctexService] Invalid column number: ${column}`);
+				return null;
+			}
+
 			const resolved = await this.getPdfPathAndDir(documentId);
 			if (!resolved) return null;
 
