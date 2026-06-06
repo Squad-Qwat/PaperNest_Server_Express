@@ -26,7 +26,9 @@ export const validateTurnstile = async (
 			secretKey === "1x00000000000000000000000000000000AA" ||
 			turnstileToken === "XXXX.DUMMY.TOKEN.XXXX"
 		) {
-			logger.info("Turnstile validation bypassed for dummy/testing credentials");
+			logger.info(
+				"Turnstile validation bypassed for dummy/testing credentials",
+			);
 			next();
 			return;
 		}

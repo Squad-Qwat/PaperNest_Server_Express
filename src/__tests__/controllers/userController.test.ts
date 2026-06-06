@@ -150,8 +150,14 @@ describe("UserController", () => {
 
 		it("should throw ConflictError if username is already taken by another user", async () => {
 			const updates = { username: "alex99" };
-			const existingUser = { ...mockUser, userId: "user-456", username: "alex99" };
-			jest.mocked(userRepository.findByUsername).mockResolvedValue(existingUser as any);
+			const existingUser = {
+				...mockUser,
+				userId: "user-456",
+				username: "alex99",
+			};
+			jest
+				.mocked(userRepository.findByUsername)
+				.mockResolvedValue(existingUser as any);
 			mockReq.params = { userId: "user-123" };
 			mockReq.userId = "user-123";
 			mockReq.body = updates;
@@ -169,9 +175,15 @@ describe("UserController", () => {
 
 		it("should update user username if username belongs to the same user", async () => {
 			const updates = { username: "rina123" };
-			const existingUser = { ...mockUser, userId: "user-123", username: "rina123" };
+			const existingUser = {
+				...mockUser,
+				userId: "user-123",
+				username: "rina123",
+			};
 			const updatedUser = { ...mockUser, ...updates };
-			jest.mocked(userRepository.findByUsername).mockResolvedValue(existingUser as any);
+			jest
+				.mocked(userRepository.findByUsername)
+				.mockResolvedValue(existingUser as any);
 			jest.mocked(userRepository.update).mockResolvedValue(updatedUser);
 			mockReq.params = { userId: "user-123" };
 			mockReq.userId = "user-123";

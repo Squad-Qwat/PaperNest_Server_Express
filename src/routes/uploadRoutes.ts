@@ -23,7 +23,12 @@ router.post("/presigned-url", authenticate, uploadRateLimiter, getPresignedUrl);
  * @desc    Generate a presigned PUT URL targeting an existing R2 key (in-place overwrite)
  * @access  Protected
  */
-router.post("/overwrite-url", authenticate, editFileLimiter, getOverwritePresignedUrl);
+router.post(
+	"/overwrite-url",
+	authenticate,
+	editFileLimiter,
+	getOverwritePresignedUrl,
+);
 
 /**
  * @route   GET /api/upload/download

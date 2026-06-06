@@ -19,14 +19,14 @@ export const searchPapers = asyncHandler(
 		logger.info(`[SemanticScholarController] Searching papers for: "${q}"`);
 
 		let parsedLimit = limit ? parseInt(limit as string, 10) : 10;
-		if (isNaN(parsedLimit) || parsedLimit < 1) {
+		if (Number.isNaN(parsedLimit) || parsedLimit < 1) {
 			parsedLimit = 10;
 		} else if (parsedLimit > 50) {
 			parsedLimit = 50;
 		}
 
 		let parsedOffset = offset ? parseInt(offset as string, 10) : 0;
-		if (isNaN(parsedOffset) || parsedOffset < 0) {
+		if (Number.isNaN(parsedOffset) || parsedOffset < 0) {
 			parsedOffset = 0;
 		}
 

@@ -108,7 +108,10 @@ export const proxyDownload = async (
 					const contentType =
 						response.ContentType || "application/octet-stream";
 					res.setHeader("Content-Type", contentType);
-					res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+					res.setHeader(
+						"Cache-Control",
+						"no-store, no-cache, must-revalidate, proxy-revalidate",
+					);
 					res.setHeader("Pragma", "no-cache");
 					res.setHeader("Expires", "0");
 
@@ -128,7 +131,11 @@ export const proxyDownload = async (
 
 		const { isSafeUrl } = await import("../utils/ssrfFilter");
 		if (!(await isSafeUrl(url))) {
-			return errorResponse(res, "Access to the requested URL is forbidden (SSRF Blocked)", 403);
+			return errorResponse(
+				res,
+				"Access to the requested URL is forbidden (SSRF Blocked)",
+				403,
+			);
 		}
 
 		// Fallback: Generic fetch with axios (useful for non-R2 assets or if R2 fetch failed)
@@ -145,7 +152,10 @@ export const proxyDownload = async (
 		const contentType =
 			response.headers["content-type"] || "application/octet-stream";
 		res.setHeader("Content-Type", contentType);
-		res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+		res.setHeader(
+			"Cache-Control",
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
 		res.setHeader("Pragma", "no-cache");
 		res.setHeader("Expires", "0");
 		res.send(Buffer.from(response.data));

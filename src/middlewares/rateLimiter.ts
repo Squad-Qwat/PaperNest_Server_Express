@@ -1,9 +1,9 @@
-import type { NextFunction, Request, Response } from "express";
+import type { Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
-import { redis } from "../config/redis";
 import { HTTP_STATUS } from "../config/constants";
 import { env } from "../config/env";
+import { redis } from "../config/redis";
 import { errorResponse } from "../utils/responseFormatter";
 
 const sendCommandWithTimeout = async (...args: string[]) => {

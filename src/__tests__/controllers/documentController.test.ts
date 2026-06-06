@@ -35,7 +35,9 @@ jest.mock("../../services/liveblocksWebhookService");
 jest.mock("../../services/StorageService", () => ({
 	StorageService: {
 		deleteFilesByPrefix: jest.fn(() => Promise.resolve()),
-		uploadBuffer: jest.fn(() => Promise.resolve("https://example.com/mock-file")),
+		uploadBuffer: jest.fn(() =>
+			Promise.resolve("https://example.com/mock-file"),
+		),
 	},
 }));
 

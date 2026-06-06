@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
 
-const mockSecret = require("crypto").randomBytes(16).toString("hex");
+const mockSecret = require("node:crypto").randomBytes(16).toString("hex");
 
 jest.mock("../../config/env", () => ({
 	env: {

@@ -6,7 +6,6 @@ import axios from "axios";
 
 const uuidv4 = () => crypto.randomUUID();
 
-import { env } from "../config/env";
 import type {
 	LatexCompileOptions,
 	LatexCompileResult,
@@ -202,10 +201,17 @@ export class LatexService {
 					await fs.mkdir(persistentDir, { recursive: true });
 					try {
 						await fs.copyFile(pdfPath, path.join(persistentDir, pdfFileName));
-						await fs.copyFile(synctexPath, path.join(persistentDir, synctexFileName));
-						logger.info(`[LatexService] Saved pdf and synctex to persistent cache for document: ${documentId}`);
+						await fs.copyFile(
+							synctexPath,
+							path.join(persistentDir, synctexFileName),
+						);
+						logger.info(
+							`[LatexService] Saved pdf and synctex to persistent cache for document: ${documentId}`,
+						);
 					} catch (err: any) {
-						logger.warn(`[LatexService] Failed to copy pdf or synctex to cache: ${err.message}`);
+						logger.warn(
+							`[LatexService] Failed to copy pdf or synctex to cache: ${err.message}`,
+						);
 					}
 				}
 			} catch (_e) {

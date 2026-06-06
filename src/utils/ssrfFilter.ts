@@ -42,7 +42,11 @@ export const isSafeUrl = async (urlStr: string): Promise<boolean> => {
 		}
 
 		const lowerHost = hostname.toLowerCase();
-		if (lowerHost === "localhost" || lowerHost.endsWith(".local") || lowerHost.endsWith(".internal")) {
+		if (
+			lowerHost === "localhost" ||
+			lowerHost.endsWith(".local") ||
+			lowerHost.endsWith(".internal")
+		) {
 			return false;
 		}
 
