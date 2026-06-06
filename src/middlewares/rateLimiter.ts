@@ -77,7 +77,7 @@ export const apiRateLimiter = makeLimiter({
 
 export const aiRateLimiter = makeLimiter({
 	windowMs: 60 * 60 * 1000,
-	max: 20,
+	max: 200,
 	message: "AI API rate limit exceeded, please try again later",
 	store: createStore("ai"),
 	passOnStoreError: true,
