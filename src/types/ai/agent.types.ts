@@ -44,4 +44,5 @@ export interface AgentStreamParams {
 	providerId?: string;
 	modelId?: string;
 	files?: Array<{ filename: string; mediaType: string; url: string }>;
+	activeFileName?: string;
 }

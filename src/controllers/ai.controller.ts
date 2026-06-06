@@ -23,6 +23,7 @@ export const streamAIResponse = async (
 			agentId = "manual_graph",
 			files = [],
 			taggedDocumentIds = [],
+			activeFileName,
 		} = req.body;
 
 		const { agentFactory } = await import(
@@ -157,6 +158,7 @@ export const streamAIResponse = async (
 				providerId,
 				modelId,
 				files,
+				activeFileName,
 			})) {
 				if (isDisconnected) break;
 				res.write(`data: ${JSON.stringify(chunk)}\n\n`);
