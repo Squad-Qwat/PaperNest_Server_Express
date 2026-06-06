@@ -111,8 +111,8 @@ export async function* streamAgent(
 			.filter((msg) => msg.text.length > 0)
 			.map((msg) =>
 				msg.role === "user"
-					? new HumanMessage(msg.text)
-					: new AIMessage(msg.text),
+					? new HumanMessage(`[PREVIOUS REQUEST - ALREADY RESOLVED]\n${msg.text}`)
+					: new AIMessage(`[PREVIOUS AI RESPONSE - ACTIONS ALREADY EXECUTED]\n${msg.text}`),
 			);
 
 		const prunedHistory = pruneMessageHistory(historyMessages);

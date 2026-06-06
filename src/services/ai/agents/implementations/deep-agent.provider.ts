@@ -69,11 +69,13 @@ export class DeepAgentProvider implements IAgentProvider {
 		});
 
 		// 4. Prepare Input
+		// Mark past conversation history as explicitly COMPLETED so the agent doesn't try to re-execute past commands
+		// since tool call history is not fully preserved from the frontend.
 		const inputMessages = params.conversationHistory.map(
 			(msg: { role: string; content: string }) =>
 				msg.role === "user"
-					? new HumanMessage(msg.content)
-					: new AIMessage(msg.content),
+					? new HumanMessage(`[PREVIOUS REQUEST - ALREADY RESOLVED]\n${msg.content}`)
+					: new AIMessage(`[PREVIOUS AI RESPONSE - ACTIONS ALREADY EXECUTED]\n${msg.content}`),
 		);
 
 		const lastUserMessage = params.message;
