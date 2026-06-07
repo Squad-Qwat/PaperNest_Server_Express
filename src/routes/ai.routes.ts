@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { streamAIResponse } from "../controllers/ai.controller";
+import { getAutocomplete, streamAIResponse } from "../controllers/ai.controller";
 import { indexPDF } from "../controllers/rag.controller";
 import { authenticate } from "../middlewares/auth";
 import { checkQuota } from "../middlewares/quotaLimiter";
@@ -20,5 +20,15 @@ router.post(
 // POST /rag/index
 // Triggers PDF indexing for RAG context
 router.post("/rag/index", authenticate, aiRateLimiter, indexPDF);
+
+// POST /autocomplete
+// Generates inline AI completion (Ghost Text)
+router.post(
+	"/autocomplete",
+	authenticate,
+	aiRateLimiter,
+	checkQuota("ai"),
+	getAutocomplete,
+);
 
 export default router;

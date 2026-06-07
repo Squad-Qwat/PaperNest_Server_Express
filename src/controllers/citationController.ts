@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import admin from "firebase-admin";
 import { asyncHandler } from "../middlewares/errorHandler";
 import citationRepository from "../repositories/citationRepository";
 import type { Citation } from "../types";
@@ -147,10 +148,40 @@ export const updateCitation = asyncHandler(
 export const deleteCitation = asyncHandler(
 	async (req: Request, res: Response) => {
 		const citationId = req.params.citationId as string;
+		const documentId = req.params.documentId as string | undefined;
 
-		logger.info("Delete citation request", { citationId });
+		logger.info("Delete citation request", { citationId, documentId });
 
-		await citationRepository.delete(citationId);
+		if (documentId) {
+			const citation = await citationRepository.findById(citationId);
+			if (!citation) {
+				throw new NotFoundError("Citation not found");
+			}
+
+			const workspaceCitations = await citationRepository.findByWorkspace(
+				citation.workspaceId,
+			);
+
+			const hasDuplicateWorkspaceCitation = workspaceCitations.some(
+				(c) =>
+					c.citationId !== citationId &&
+					!c.documentId &&
+					((citation.doi && c.doi === citation.doi) ||
+						c.title.toLowerCase() === citation.title.toLowerCase()),
+			);
+
+			if (hasDuplicateWorkspaceCitation) {
+				logger.info("Delete document citation: duplicate exists at workspace level, deleting globally", { citationId });
+				await citationRepository.delete(citationId);
+			} else {
+				logger.info("Delete document citation: unlinking documentId from citation to keep in workspace library", { citationId });
+				await citationRepository.update(citationId, {
+					documentId: admin.firestore.FieldValue.delete() as any,
+				});
+			}
+		} else {
+			await citationRepository.delete(citationId);
+		}
 
 		return noContentResponse(res);
 	},
