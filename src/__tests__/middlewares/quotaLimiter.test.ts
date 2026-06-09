@@ -175,7 +175,7 @@ describe("QuotaLimiter Middleware", () => {
 				} as any,
 			};
 
-			jest.mocked(redis.incr).mockResolvedValue(11);
+			jest.mocked(redis.incr).mockResolvedValue(201);
 
 			const middleware = checkQuota("ai");
 			await middleware(req as Request, res as Response, next);

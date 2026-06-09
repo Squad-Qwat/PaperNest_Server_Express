@@ -83,6 +83,7 @@ export class MockDocumentReference {
 export class MockQuery {
 	private filters: any[] = [];
 	private orderByFields: any[] = [];
+	private limitCount: number | null = null;
 
 	constructor(private collectionRef: MockCollectionReference) {}
 
