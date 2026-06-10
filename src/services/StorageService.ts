@@ -135,6 +135,32 @@ export class StorageService {
 	}
 
 	/**
+	 * Generates a presigned PUT URL for an EXISTING R2 key (overwrite in-place).
+	 * Used when editing auxiliary files (.bib, .sty, etc.) to avoid creating
+	 * orphaned objects on every save.
+	 * @param existingKey The full R2 object key to overwrite
+	 * @param contentType MIME type of the file
+	 */
+	static async generateOverwritePresignedUrl(
+		existingKey: string,
+		contentType: string,
+	) {
+		const command = new PutObjectCommand({
+			Bucket: process.env.R2_BUCKET_NAME,
+			Key: existingKey,
+			ContentType: contentType,
+		});
+
+		try {
+			const url = await getSignedUrl(r2, command, { expiresIn: 900 });
+			return { url };
+		} catch (error) {
+			console.error("Error generating overwrite presigned URL:", error);
+			throw new Error("Could not generate overwrite pre-signed URL");
+		}
+	}
+
+	/**
 	 * Uploads a buffer directly to R2
 	 * @param buffer The file content as a Buffer
 	 * @param key The destination key in the bucket

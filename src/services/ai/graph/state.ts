@@ -204,6 +204,10 @@ export const AgentState = Annotation.Root({
 		reducer: (_, newVal) => newVal ?? "gemini-2.5-flash-lite",
 		default: () => "gemini-2.5-flash-lite",
 	}),
+	activeFileName: Annotation<string>({
+		reducer: (_, newVal) => newVal ?? "main.tex",
+		default: () => "main.tex",
+	}),
 });
 
 /**

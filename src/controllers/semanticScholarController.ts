@@ -18,10 +18,22 @@ export const searchPapers = asyncHandler(
 
 		logger.info(`[SemanticScholarController] Searching papers for: "${q}"`);
 
+		let parsedLimit = limit ? parseInt(limit as string, 10) : 10;
+		if (Number.isNaN(parsedLimit) || parsedLimit < 1) {
+			parsedLimit = 10;
+		} else if (parsedLimit > 50) {
+			parsedLimit = 50;
+		}
+
+		let parsedOffset = offset ? parseInt(offset as string, 10) : 0;
+		if (Number.isNaN(parsedOffset) || parsedOffset < 0) {
+			parsedOffset = 0;
+		}
+
 		const results = await semanticScholarService.searchPapers(
 			q as string,
-			limit ? parseInt(limit as string, 10) : 10,
-			offset ? parseInt(offset as string, 10) : 0,
+			parsedLimit,
+			parsedOffset,
 		);
 
 		return successResponse(res, results, "Papers retrieved successfully");

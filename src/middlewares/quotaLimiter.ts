@@ -8,7 +8,7 @@ export const TIER_LIMITS = {
 	free: {
 		documents: 3,
 		latexCompilations: Infinity,
-		aiRequests: 10,
+		aiRequests: 200,
 	},
 	pro: {
 		documents: Infinity,

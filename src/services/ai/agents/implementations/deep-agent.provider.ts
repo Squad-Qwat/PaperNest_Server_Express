@@ -59,6 +59,7 @@ export class DeepAgentProvider implements IAgentProvider {
             3. **VALIDATE (Verify)**: After every edit, you MUST call 'compile_latex' to ensure the document still builds.
             4. **DEBUG**: If compilation fails, call 'get_compile_logs' to diagnose and fix the error immediately.
             5. **NO SKIPPING**: If a task requires searching or reading, you MUST execute the corresponding tool. Do not assume you have the context unless you just retrieved it in the current turn.
+            6. **MINIMAL/FOCUS EDIT**: Modify ONLY the parts of the document that the user explicitly requests. Do NOT edit, shorten, delete, or rewrite other sections (such as abstracts, titles, or other headings) for consistency or any other reason, unless specifically asked to do so by the user.
 
             ### RAG KNOWLEDGE:
             When the user asks about their research, data, or content from reference PDFs, use the 'search_attached_pdfs' tool first to retrieve factual information.
@@ -68,11 +69,13 @@ export class DeepAgentProvider implements IAgentProvider {
 		});
 
 		// 4. Prepare Input
+		// Mark past conversation history as explicitly COMPLETED so the agent doesn't try to re-execute past commands
+		// since tool call history is not fully preserved from the frontend.
 		const inputMessages = params.conversationHistory.map(
 			(msg: { role: string; content: string }) =>
 				msg.role === "user"
-					? new HumanMessage(msg.content)
-					: new AIMessage(msg.content),
+					? new HumanMessage(`[PREVIOUS REQUEST - ALREADY RESOLVED]\n${msg.content}`)
+					: new AIMessage(`[PREVIOUS AI RESPONSE - ACTIONS ALREADY EXECUTED]\n${msg.content}`),
 		);
 
 		const lastUserMessage = params.message;

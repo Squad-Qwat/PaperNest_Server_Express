@@ -38,6 +38,42 @@ export const getPresignedUrl = async (
 	}
 };
 
+/**
+ * Generates a presigned PUT URL that targets an EXISTING R2 key so the file
+ * is overwritten in-place instead of creating an orphan object.
+ * Body: { r2Key: string, contentType: string }
+ */
+export const getOverwritePresignedUrl = async (
+	req: Request,
+	res: Response,
+): Promise<any> => {
+	try {
+		const { r2Key, contentType } = req.body;
+
+		if (!r2Key || !contentType) {
+			return errorResponse(res, "r2Key and contentType are required", 400);
+		}
+
+		// Security: r2Key must not contain path traversal sequences
+		if (r2Key.includes("..") || r2Key.startsWith("/")) {
+			return errorResponse(res, "Invalid r2Key", 400);
+		}
+
+		const result = await StorageService.generateOverwritePresignedUrl(
+			r2Key,
+			contentType,
+		);
+
+		return successResponse(res, result, "Overwrite URL generated successfully");
+	} catch (error: any) {
+		return errorResponse(
+			res,
+			error.message || "Failed to generate overwrite URL",
+			500,
+		);
+	}
+};
+
 export const proxyDownload = async (
 	req: Request,
 	res: Response,
@@ -50,12 +86,18 @@ export const proxyDownload = async (
 
 		console.log(`[ProxyDownload] Request: ${url}`);
 
+		let urlObj: URL;
+		try {
+			urlObj = new URL(url);
+		} catch {
+			return errorResponse(res, "Invalid URL format", 400);
+		}
+
 		// Check if it's an R2 asset (belongs to our public domain)
 		const publicDomain = process.env.R2_PUBLIC_DOMAIN || "assets.papernest.com";
-		if (url.includes(publicDomain)) {
+		if (urlObj.hostname === publicDomain) {
 			try {
-				// Extract the key from the URL (everything after the domain//)
-				const urlObj = new URL(url);
+				// Extract the key from the URL
 				let key = urlObj.pathname;
 				if (key.startsWith("/")) key = key.substring(1);
 
@@ -66,17 +108,16 @@ export const proxyDownload = async (
 					const contentType =
 						response.ContentType || "application/octet-stream";
 					res.setHeader("Content-Type", contentType);
-					res.setHeader("Cache-Control", "public, max-age=3600");
+					res.setHeader(
+						"Cache-Control",
+						"no-store, no-cache, must-revalidate, proxy-revalidate",
+					);
+					res.setHeader("Pragma", "no-cache");
+					res.setHeader("Expires", "0");
 
-					// Stream the response body if it's a readable stream
 					const body = response.Body as any;
-					if (typeof body.pipe === "function") {
-						body.pipe(res);
-					} else {
-						// For other body types (like Uint8Array from SDK v3 in some environments)
-						const buffer = Buffer.from(await body.transformToByteArray());
-						res.send(buffer);
-					}
+					const buffer = Buffer.from(await body.transformToByteArray());
+					res.send(buffer);
 					return;
 				}
 			} catch (r2Error: any) {
@@ -86,6 +127,15 @@ export const proxyDownload = async (
 				);
 				// Fallback to public fetch if authenticated fails (just in case)
 			}
+		}
+
+		const { isSafeUrl } = await import("../utils/ssrfFilter");
+		if (!(await isSafeUrl(url))) {
+			return errorResponse(
+				res,
+				"Access to the requested URL is forbidden (SSRF Blocked)",
+				403,
+			);
 		}
 
 		// Fallback: Generic fetch with axios (useful for non-R2 assets or if R2 fetch failed)
@@ -102,7 +152,12 @@ export const proxyDownload = async (
 		const contentType =
 			response.headers["content-type"] || "application/octet-stream";
 		res.setHeader("Content-Type", contentType);
-		res.setHeader("Cache-Control", "public, max-age=3600");
+		res.setHeader(
+			"Cache-Control",
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		res.setHeader("Pragma", "no-cache");
+		res.setHeader("Expires", "0");
 		res.send(Buffer.from(response.data));
 	} catch (error: any) {
 		const status = error.response?.status || 500;

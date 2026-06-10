@@ -94,6 +94,7 @@ export async function* streamAgent(
 	providerId?: string,
 	modelId?: string,
 	files?: Array<{ filename: string; mediaType: string; url: string }>,
+	activeFileName?: string,
 ): AsyncGenerator<StreamEvent> {
 	console.log("[Graph] Starting Plan-and-Execute agent for thread:", threadId);
 
@@ -110,8 +111,8 @@ export async function* streamAgent(
 			.filter((msg) => msg.text.length > 0)
 			.map((msg) =>
 				msg.role === "user"
-					? new HumanMessage(msg.text)
-					: new AIMessage(msg.text),
+					? new HumanMessage(`[PREVIOUS REQUEST - ALREADY RESOLVED]\n${msg.text}`)
+					: new AIMessage(`[PREVIOUS AI RESPONSE - ACTIONS ALREADY EXECUTED]\n${msg.text}`),
 			);
 
 		const prunedHistory = pruneMessageHistory(historyMessages);
@@ -172,6 +173,7 @@ export async function* streamAgent(
 			reasoningEnabled,
 			providerId: providerId || "google-genai",
 			modelId: modelId || "gemma-4-31b-it",
+			activeFileName: activeFileName || "main.tex",
 		};
 
 		if (existingToolResults && existingToolResults.length > 0) {

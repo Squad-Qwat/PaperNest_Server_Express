@@ -1,5 +1,5 @@
-import { semanticScholarService } from "./SemanticScholarService";
 import logger from "../utils/logger";
+import { semanticScholarService } from "./SemanticScholarService";
 
 /**
  * Initializes background scheduled jobs

@@ -119,7 +119,7 @@ export const executorNode = async (state: AgentStateType) => {
 		.replace("{current_step}", currentStep.description.trim())
 		.replace("{full_plan}", planText);
 
-	const contextContent = `\n[CURRENT DOCUMENT STATE]\n${state.documentContent || "(empty)"}\n`;
+	const contextContent = `\n[CURRENT DOCUMENT STATE]\nActive File: ${state.activeFileName || "main.tex"}\n${state.documentContent || "(empty)"}\n`;
 	const sysMsg = new SystemMessage(
 		`${prompts.system}\n\n${executorPrompt}\n\n${contextContent}`,
 	);

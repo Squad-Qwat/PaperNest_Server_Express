@@ -1,12 +1,13 @@
 import { Router } from "express";
 import {
 	deleteFile,
+	getOverwritePresignedUrl,
 	getPresignedUrl,
 	proxyDownload,
 	renameFile,
 } from "../controllers/uploadController";
 import { authenticate } from "../middlewares/auth";
-import { uploadRateLimiter } from "../middlewares/rateLimiter";
+import { editFileLimiter, uploadRateLimiter } from "../middlewares/rateLimiter";
 
 const router: Router = Router();
 
@@ -18,10 +19,22 @@ const router: Router = Router();
 router.post("/presigned-url", authenticate, uploadRateLimiter, getPresignedUrl);
 
 /**
+ * @route   POST /api/upload/overwrite-url
+ * @desc    Generate a presigned PUT URL targeting an existing R2 key (in-place overwrite)
+ * @access  Protected
+ */
+router.post(
+	"/overwrite-url",
+	authenticate,
+	editFileLimiter,
+	getOverwritePresignedUrl,
+);
+
+/**
  * @route   GET /api/upload/download
  * @desc    Proxy asset download to bypass CORS for LaTeX compilation assets
  */
-router.get("/download", authenticate, uploadRateLimiter, proxyDownload);
+router.get("/download", authenticate, editFileLimiter, proxyDownload);
 
 /**
  * @route   DELETE /api/upload/file/:documentId/:fileId

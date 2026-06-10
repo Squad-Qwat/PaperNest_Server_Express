@@ -312,7 +312,7 @@ export const getInvitationByToken = asyncHandler(
 		const token = req.params.token as string;
 
 		const invitation = await invitationRepository.findByToken(token);
-		if (!invitation || invitation.status !== "pending") {
+		if (invitation?.status !== "pending") {
 			throw new NotFoundError("Invitation not found or no longer valid");
 		}
 
@@ -360,7 +360,7 @@ export const acceptInvitation = asyncHandler(
 		const userId = req.userId!;
 
 		const invitation = await invitationRepository.findByToken(token);
-		if (!invitation || invitation.status !== "pending") {
+		if (invitation?.status !== "pending") {
 			throw new NotFoundError("Invitation not found or no longer valid");
 		}
 

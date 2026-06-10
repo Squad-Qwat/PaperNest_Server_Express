@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import zlib from "node:zlib";
 import { promisify } from "node:util";
+import zlib from "node:zlib";
 import logger from "../utils/logger";
 
 export class SynctexService {
@@ -25,15 +25,16 @@ export class SynctexService {
 		persistentDir: string,
 		targetFilename: string,
 	): Promise<string | null> {
-		const sanitizedTarget = targetFilename.replace(/[^a-zA-Z0-9_\-\.]/g, "");
 		try {
 			const files = await fs.readdir(persistentDir);
-			const synctexFile = files.find((f) => f.toLowerCase().endsWith(".synctex.gz"));
+			const synctexFile = files.find((f) =>
+				f.toLowerCase().endsWith(".synctex.gz"),
+			);
 			if (!synctexFile) return null;
 
 			const synctexPath = path.join(persistentDir, synctexFile);
 			const compressedData = await fs.readFile(synctexPath);
-			
+
 			const gunzip = promisify(zlib.gunzip);
 			const decompressed = await gunzip(compressedData);
 			const content = decompressed.toString("utf-8");
@@ -44,14 +45,18 @@ export class SynctexService {
 				if (match) {
 					const registeredPath = match[2].trim();
 					const registeredBase = path.basename(registeredPath);
-					if (registeredBase.toLowerCase() === sanitizedTarget.toLowerCase()) {
-						logger.info(`[SynctexService] Resolved input path: ${sanitizedTarget} -> ${registeredPath}`);
-						return registeredPath.replace(/[^a-zA-Z0-9_\-\.\/]/g, "");
+					if (registeredBase.toLowerCase() === targetFilename.toLowerCase()) {
+						logger.info(
+							`[SynctexService] Resolved input path: ${targetFilename} -> ${registeredPath}`,
+						);
+						return registeredPath;
 					}
 				}
 			}
 		} catch (error: any) {
-			logger.error(`[SynctexService] Error resolving input path: ${error.message}`);
+			logger.error(
+				`[SynctexService] Error resolving input path: ${error.message}`,
+			);
 		}
 		return null;
 	}
@@ -70,7 +75,9 @@ export class SynctexService {
 		const files = await fs.readdir(persistentDir);
 		const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf"));
 		if (!pdfFile) {
-			logger.warn(`[SynctexService] No PDF found in persistent dir for document ${documentId}`);
+			logger.warn(
+				`[SynctexService] No PDF found in persistent dir for document ${documentId}`,
+			);
 			return null;
 		}
 
@@ -91,7 +98,9 @@ export class SynctexService {
 			if (!resolved) return null;
 
 			const { pdfPath } = resolved;
-			logger.info(`[SynctexService] Executing synctex edit for document ${documentId}`);
+			logger.info(
+				`[SynctexService] Executing synctex edit for document ${documentId}`,
+			);
 			const output = await this.executeCommand("synctex", [
 				"edit",
 				"-o",
@@ -137,7 +146,7 @@ export class SynctexService {
 				return null;
 			}
 
-			const safeFileRegex = /^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/]*$/;
+			const safeFileRegex = /^[a-zA-Z0-9_][a-zA-Z0-9_\-./]*$/;
 			if (!safeFileRegex.test(file) || file.includes("..")) {
 				logger.error(`[SynctexService] Invalid file path: ${file}`);
 				return null;
@@ -157,14 +166,20 @@ export class SynctexService {
 			if (!resolved) return null;
 
 			const { pdfPath, persistentDir } = resolved;
-			const sanitizedFile = file.replace(/[^a-zA-Z0-9_\-\.\/]/g, "");
-			const safeFile = path.basename(sanitizedFile).replace(/[^a-zA-Z0-9_\-\.]/g, "");
-			const resolvedInputPath = await this.resolveInputPath(persistentDir, safeFile);
+			const safeFile = path.basename(file);
+			const resolvedInputPath = await this.resolveInputPath(
+				persistentDir,
+				safeFile,
+			);
 			if (!resolvedInputPath) {
-				logger.error(`[SynctexService] Could not resolve input path for: ${safeFile}`);
+				logger.error(
+					`[SynctexService] Could not resolve input path for: ${safeFile}`,
+				);
 				return null;
 			}
-			logger.info(`[SynctexService] Executing synctex view for document ${documentId}`);
+			logger.info(
+				`[SynctexService] Executing synctex view for document ${documentId}`,
+			);
 			const output = await this.executeCommand("synctex", [
 				"view",
 				"-i",

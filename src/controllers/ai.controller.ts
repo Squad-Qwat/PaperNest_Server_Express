@@ -23,6 +23,7 @@ export const streamAIResponse = async (
 			agentId = "manual_graph",
 			files = [],
 			taggedDocumentIds = [],
+			activeFileName,
 		} = req.body;
 
 		const { agentFactory } = await import(
@@ -157,6 +158,7 @@ export const streamAIResponse = async (
 				providerId,
 				modelId,
 				files,
+				activeFileName,
 			})) {
 				if (isDisconnected) break;
 				res.write(`data: ${JSON.stringify(chunk)}\n\n`);
@@ -201,5 +203,65 @@ export const streamAIResponse = async (
 				);
 			}
 		}
+	}
+};
+
+export const getAutocomplete = async (
+	req: Request,
+	res: Response,
+): Promise<any> => {
+	try {
+		const {
+			prefix,
+			suffix,
+			providerId,
+			modelId,
+		} = req.body;
+
+		if (typeof prefix !== "string" || typeof suffix !== "string") {
+			return errorResponse(res, "Prefix and suffix are required", 400);
+		}
+
+		const { getAIConfig } = await import("../services/ai/config");
+		const aiConfig = getAIConfig();
+		const activeProviderId = providerId || aiConfig.provider;
+		const activeModelId = modelId || aiConfig.model;
+
+		const { aiRegistry } = await import(
+			"../services/ai/providers/registry"
+		);
+		const provider = aiRegistry.getProvider(activeProviderId as any);
+		if (!provider) {
+			return errorResponse(res, "AI provider not found", 400);
+		}
+
+		const llm = provider.createModel({
+			model: activeModelId,
+			temperature: 0.1,
+			maxTokens: 128,
+			streaming: false,
+		});
+
+		const { SystemMessage, HumanMessage } = await import(
+			"@langchain/core/messages"
+		);
+
+		const prompt = `<|fim_prefix|>${prefix}<|fim_suffix|>${suffix}<|fim_middle|>`;
+		const response = await llm.invoke([
+			new SystemMessage(
+				"You are a code completion AI. Complete the code inside the <|fim_middle|> tag. Return ONLY the exact characters that should be inserted at the cursor, with no markdown formatting, no conversational text, and no explanation. Do not repeat the prefix or suffix.",
+			),
+			new HumanMessage(prompt),
+		]);
+
+		const { contentToText } = await import(
+			"../services/ai/utils"
+		);
+		const completion = contentToText(response.content);
+
+		return res.json({ completion });
+	} catch (error) {
+		console.error("[AI Autocomplete Error]", error);
+		return errorResponse(res, "Failed to generate autocomplete", 500);
 	}
 };

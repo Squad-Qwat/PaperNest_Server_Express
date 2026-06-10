@@ -63,7 +63,6 @@ router.post(
 
 router.post(
 	"/refresh",
-	authRateLimiter,
 	validate({ body: refreshTokenSchema }),
 	authController.refreshToken,
 );

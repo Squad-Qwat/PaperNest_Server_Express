@@ -59,7 +59,8 @@ export const plannerNode = async (state: AgentStateType) => {
 	}
 
 	const documentSnippet =
-		state.documentContent?.slice(0, 2000) || "(no document content)";
+		`[Active File: ${state.activeFileName || "main.tex"}]\n` +
+		(state.documentContent?.slice(0, 2000) || "(no document content)");
 	const tools = getActiveToolsForState(state);
 	const toolDescriptions = getToolDescriptions(tools);
 

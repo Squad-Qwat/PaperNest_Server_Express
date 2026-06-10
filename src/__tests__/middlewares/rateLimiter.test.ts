@@ -9,10 +9,10 @@ jest.mock("../../config/redis", () => ({
 
 import { redis } from "../../config/redis";
 import {
-	globalRateLimiter,
-	authRateLimiter,
-	apiRateLimiter,
 	aiRateLimiter,
+	apiRateLimiter,
+	authRateLimiter,
+	globalRateLimiter,
 	uploadRateLimiter,
 } from "../../middlewares/rateLimiter";
 
@@ -52,7 +52,9 @@ describe("Rate Limiter Middleware", () => {
 			},
 		};
 
-		(jest.mocked(redis.exec) as any).mockImplementation(mockRedisImplementation(1));
+		(jest.mocked(redis.exec) as any).mockImplementation(
+			mockRedisImplementation(1),
+		);
 	});
 
 	describe("globalRateLimiter", () => {
@@ -64,7 +66,9 @@ describe("Rate Limiter Middleware", () => {
 		});
 
 		it("should block request (400 Bad Request) if limit is exceeded", async () => {
-			(jest.mocked(redis.exec) as any).mockImplementation(mockRedisImplementation(200));
+			(jest.mocked(redis.exec) as any).mockImplementation(
+				mockRedisImplementation(200),
+			);
 
 			await globalRateLimiter(req as Request, res as Response, next);
 
@@ -74,7 +78,9 @@ describe("Rate Limiter Middleware", () => {
 		});
 
 		it("should fail-open and allow request if Redis store throws an error", async () => {
-			(jest.mocked(redis.exec) as any).mockImplementation(mockRedisImplementation(1, true));
+			(jest.mocked(redis.exec) as any).mockImplementation(
+				mockRedisImplementation(1, true),
+			);
 
 			await globalRateLimiter(req as Request, res as Response, next);
 

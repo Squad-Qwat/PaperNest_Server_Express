@@ -1,26 +1,39 @@
+import type { Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
-import { redis } from "../config/redis";
 import { HTTP_STATUS } from "../config/constants";
 import { env } from "../config/env";
+import { redis } from "../config/redis";
 import { errorResponse } from "../utils/responseFormatter";
 
-const store = new RedisStore({
-	sendCommand: async (...args: string[]) => {
-		return await redis.exec(args as [string, ...string[]]);
-	},
-	prefix: "rate_limit:",
-});
+const sendCommandWithTimeout = async (...args: string[]) => {
+	const timeoutPromise = new Promise((_, reject) =>
+		setTimeout(() => reject(new Error("Redis request timeout")), 1500),
+	);
+	const redisPromise = redis.exec(args as [string, ...string[]]);
+	return (await Promise.race([redisPromise, timeoutPromise])) as any;
+};
 
-export const globalRateLimiter = rateLimit({
+const createStore = (prefix: string) => {
+	return new RedisStore({
+		sendCommand: sendCommandWithTimeout,
+		prefix: `rate_limit:${prefix}:`,
+	});
+};
+
+const makeLimiter = (options: any) => {
+	return rateLimit(options);
+};
+
+export const globalRateLimiter = makeLimiter({
 	windowMs: env.RATE_LIMIT_WINDOW_MS,
 	max: env.RATE_LIMIT_MAX_REQUESTS,
 	message: "Too many requests from this IP, please try again later",
 	standardHeaders: true,
 	legacyHeaders: false,
-	store,
+	store: createStore("global"),
 	passOnStoreError: true,
-	handler: (_req, res) => {
+	handler: (_req: Request, res: Response) => {
 		errorResponse(
 			res,
 			"Too many requests, please try again later",
@@ -29,14 +42,14 @@ export const globalRateLimiter = rateLimit({
 	},
 });
 
-export const authRateLimiter = rateLimit({
+export const authRateLimiter = makeLimiter({
 	windowMs: 15 * 60 * 1000,
 	max: 5,
 	message: "Too many authentication attempts, please try again later",
 	skipSuccessfulRequests: true,
-	store,
+	store: createStore("auth"),
 	passOnStoreError: true,
-	handler: (_req, res) => {
+	handler: (_req: Request, res: Response) => {
 		errorResponse(
 			res,
 			"Too many authentication attempts, please try again in 15 minutes",
@@ -45,15 +58,15 @@ export const authRateLimiter = rateLimit({
 	},
 });
 
-export const apiRateLimiter = rateLimit({
+export const apiRateLimiter = makeLimiter({
 	windowMs: 15 * 60 * 1000,
-	max: 100,
+	max: 300,
 	message: "Too many API requests, please try again later",
 	standardHeaders: true,
 	legacyHeaders: false,
-	store,
+	store: createStore("api"),
 	passOnStoreError: true,
-	handler: (_req, res) => {
+	handler: (_req: Request, res: Response) => {
 		errorResponse(
 			res,
 			"Too many requests, please slow down",
@@ -62,13 +75,13 @@ export const apiRateLimiter = rateLimit({
 	},
 });
 
-export const aiRateLimiter = rateLimit({
+export const aiRateLimiter = makeLimiter({
 	windowMs: 60 * 60 * 1000,
-	max: 20,
+	max: 200,
 	message: "AI API rate limit exceeded, please try again later",
-	store,
+	store: createStore("ai"),
 	passOnStoreError: true,
-	handler: (_req, res) => {
+	handler: (_req: Request, res: Response) => {
 		errorResponse(
 			res,
 			"AI API rate limit exceeded. Please try again in an hour",
@@ -77,17 +90,37 @@ export const aiRateLimiter = rateLimit({
 	},
 });
 
-export const uploadRateLimiter = rateLimit({
+export const uploadRateLimiter = makeLimiter({
 	windowMs: 15 * 60 * 1000,
-	max: 10,
+	max: 30,
 	message: "Too many file uploads, please try again later",
-	store,
+	store: createStore("upload"),
 	passOnStoreError: true,
-	handler: (_req, res) => {
+	handler: (_req: Request, res: Response) => {
 		errorResponse(
 			res,
 			"Too many file uploads, please try again later",
 			HTTP_STATUS.BAD_REQUEST,
+		);
+	},
+});
+
+/**
+ * Rate limiter for file edit/overwrite operations and proxy downloads.
+ * Much more lenient than uploadRateLimiter since these happen frequently
+ * during normal editing (autosave, file fetching, etc.)
+ */
+export const editFileLimiter = makeLimiter({
+	windowMs: 15 * 60 * 1000,
+	max: 500,
+	message: "Too many edit requests, please try again later",
+	store: createStore("edit"),
+	passOnStoreError: true,
+	handler: (_req: Request, res: Response) => {
+		errorResponse(
+			res,
+			"Too many edit requests, please slow down",
+			HTTP_STATUS.TOO_MANY_REQUESTS,
 		);
 	},
 });

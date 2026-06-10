@@ -9,7 +9,11 @@ import {
 	successResponse,
 } from "../utils/responseFormatter";
 
-const getDocumentWithAccess = async (req: Request, res: Response, userId: string): Promise<string | null> => {
+const getDocumentWithAccess = async (
+	req: Request,
+	res: Response,
+	userId: string,
+): Promise<string | null> => {
 	const { documentId } = req.query;
 	const docIdStr = String(documentId);
 	if (!/^[a-zA-Z0-9_-]+$/.test(docIdStr)) {
@@ -72,7 +76,11 @@ export const syncToCode = async (req: Request, res: Response) => {
 		);
 
 		if (!result) {
-			return errorResponse(res, "Could not map PDF coordinates to source code", 422);
+			return errorResponse(
+				res,
+				"Could not map PDF coordinates to source code",
+				422,
+			);
 		}
 
 		return successResponse(res, result, "Sync coordinates to code successful");
@@ -92,13 +100,16 @@ export const syncToPdf = async (req: Request, res: Response) => {
 	const fileStr = String(file);
 	const lineStr = String(line);
 
-	const safeFileRegex = /^[a-zA-Z0-9_][a-zA-Z0-9_\-\.\/]*$/;
-	if (!safeFileRegex.test(fileStr) || fileStr.includes("..") || fileStr.startsWith("-")) {
+	const safeFileRegex = /^[a-zA-Z0-9_][a-zA-Z0-9_\-./]*$/;
+	if (
+		!safeFileRegex.test(fileStr) ||
+		fileStr.includes("..") ||
+		fileStr.startsWith("-")
+	) {
 		return errorResponse(res, "Invalid file parameter format", 400);
 	}
 
-	// Apply explicit replace sanitization to satisfy static analysis taint flows
-	const sanitizedFile = fileStr.replace(/[^a-zA-Z0-9_\-\.\/]/g, "");
+	const sanitizedFile = fileStr.replace(/[^a-zA-Z0-9_\-./]/g, "");
 
 	if (!/^\d+$/.test(lineStr)) {
 		return errorResponse(res, "Invalid line parameter format", 400);
@@ -125,10 +136,18 @@ export const syncToPdf = async (req: Request, res: Response) => {
 		);
 
 		if (!result) {
-			return errorResponse(res, "Could not map source line to PDF coordinates", 422);
+			return errorResponse(
+				res,
+				"Could not map source line to PDF coordinates",
+				422,
+			);
 		}
 
-		return successResponse(res, result, "Sync code to PDF coordinates successful");
+		return successResponse(
+			res,
+			result,
+			"Sync code to PDF coordinates successful",
+		);
 	} catch (error: any) {
 		logger.error(`[LatexSyncController] syncToPdf error: ${error.message}`);
 		return errorResponse(res, "Internal Server Error", 500);

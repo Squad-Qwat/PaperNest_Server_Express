@@ -20,7 +20,7 @@ export interface AIConfig extends AIProviderConfig {
 export const getAIConfig = (): AIConfig => {
 	return {
 		provider: (process.env.AI_PROVIDER as AIProvider) || "google-genai",
-		model: process.env.AI_MODEL || "gemini-2.5-flash",
+		model: process.env.AI_MODEL || "gemini-3.1-flash-lite",
 		temperature: Number(process.env.AI_TEMPERATURE) || 0.7,
 		maxTokens: Number(process.env.AI_MAX_TOKENS) || 8192,
 		streaming: true,
