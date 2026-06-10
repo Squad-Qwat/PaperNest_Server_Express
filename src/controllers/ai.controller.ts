@@ -259,13 +259,6 @@ export const getAutocomplete = async (
 		);
 		const completion = contentToText(response.content);
 
-		// Debug log to trace autocomplete context and output
-		console.log("\n====== [AUTOCOMPLETE DEBUG] ======");
-		console.log("PREFIX (last 100 chars):", JSON.stringify(prefix.slice(-100)));
-		console.log("SUFFIX (first 100 chars):", JSON.stringify(suffix.slice(0, 100)));
-		console.log("COMPLETION GENERATED:", JSON.stringify(completion));
-		console.log("==================================\n");
-
 		return res.json({ completion });
 	} catch (error) {
 		console.error("[AI Autocomplete Error]", error);
