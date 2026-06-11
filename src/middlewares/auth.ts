@@ -18,12 +18,17 @@ export const authenticate = async (
 ): Promise<void> => {
 	try {
 		const authHeader = req.headers.authorization;
+		let token = "";
 
-		if (!authHeader?.startsWith("Bearer ")) {
-			return unauthorizedResponse(res, "No token provided") as any;
+		if (authHeader?.startsWith("Bearer ")) {
+			token = authHeader.substring(7);
+		} else if (req.query.token) {
+			token = req.query.token as string;
 		}
 
-		const token = authHeader.substring(7);
+		if (!token) {
+			return unauthorizedResponse(res, "No token provided") as any;
+		}
 
 		try {
 			const decodedToken = await auth.verifyIdToken(token);

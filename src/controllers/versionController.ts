@@ -55,9 +55,15 @@ export const getCurrentVersion = asyncHandler(
 			throw new NotFoundError("No current version found");
 		}
 
+		const user = await userRepository.findById(version.userId);
+		const populatedVersion = {
+			...version,
+			user: user || null,
+		};
+
 		return successResponse(
 			res,
-			{ version },
+			{ version: populatedVersion },
 			"Current version retrieved successfully",
 		);
 	},
@@ -92,7 +98,13 @@ export const getVersionByNumber = asyncHandler(
 			throw new NotFoundError("Version not found");
 		}
 
-		return successResponse(res, { version }, "Version retrieved successfully");
+		const user = await userRepository.findById(version.userId);
+		const populatedVersion = {
+			...version,
+			user: user || null,
+		};
+
+		return successResponse(res, { version: populatedVersion }, "Version retrieved successfully");
 	},
 );
 
@@ -134,7 +146,13 @@ export const createVersion = asyncHandler(
 			version.documentBodyId,
 		);
 
-		return createdResponse(res, { version }, "Version created successfully");
+		const user = await userRepository.findById(userId);
+		const populatedVersion = {
+			...version,
+			user: user || null,
+		};
+
+		return createdResponse(res, { version: populatedVersion }, "Version created successfully");
 	},
 );
 
@@ -215,9 +233,15 @@ export const revertToVersion = asyncHandler(
 			);
 		}
 
+		const user = await userRepository.findById(targetVersion.userId);
+		const populatedVersion = {
+			...targetVersion,
+			user: user || null,
+		};
+
 		return successResponse(
 			res,
-			{ version: targetVersion, revertedFrom: null },
+			{ version: populatedVersion, revertedFrom: null },
 			`Document reverted to version ${versionNum} successfully`,
 		);
 	},

@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { FileManagementService } from "../services/FileManagementService";
 import { StorageService } from "../services/StorageService";
 import { errorResponse, successResponse } from "../utils/responseFormatter";
+import logger from "../utils/logger";
 
 export const getPresignedUrl = async (
 	req: Request,
@@ -17,6 +18,16 @@ export const getPresignedUrl = async (
 
 		// Default to 'latex-assets' if folder isn't provided
 		const targetFolder = folder || "latex-assets";
+
+		// Jika upload avatar baru, hapus avatar lama di R2 agar ditimpa dan hemat space
+		if (targetFolder.startsWith("avatars/")) {
+			try {
+				const prefix = targetFolder.endsWith("/") ? targetFolder : `${targetFolder}/`;
+				await StorageService.deleteFilesByPrefix(prefix);
+			} catch (deleteError) {
+				logger.warn(`Failed to cleanup older avatar files under prefix ${targetFolder}:`, deleteError);
+			}
+		}
 
 		const result = await StorageService.generatePresignedUrl(
 			filename,

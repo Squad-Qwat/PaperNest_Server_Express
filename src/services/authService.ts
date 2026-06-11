@@ -264,7 +264,7 @@ export const handleSocialLogin = async (
 			};
 		}
 
-		if (picture && user.photoURL !== picture) {
+		if (picture && !user.photoURL) {
 			await userRepository.update(user.userId, { photoURL: picture });
 			user.photoURL = picture;
 		}

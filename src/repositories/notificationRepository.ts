@@ -137,6 +137,47 @@ export class NotificationRepository {
 	}
 
 	/**
+	 * Delete notifications by related ID (e.g. documentId or reviewId)
+	 */
+	async deleteByRelatedId(relatedId: string): Promise<void> {
+		const snapshot = await this.collection
+			.where("relatedId", "==", relatedId)
+			.get();
+
+		if (snapshot.empty) return;
+
+		const batch = db.batch();
+		snapshot.docs.forEach((doc) => {
+			batch.delete(doc.ref);
+		});
+
+		await batch.commit();
+	}
+
+	/**
+	 * Delete notifications by a list of related IDs
+	 */
+	async deleteByRelatedIds(relatedIds: string[]): Promise<void> {
+		if (!relatedIds || relatedIds.length === 0) return;
+
+		const batchSize = 10;
+		for (let i = 0; i < relatedIds.length; i += batchSize) {
+			const batchIds = relatedIds.slice(i, i + batchSize);
+			const snapshot = await this.collection
+				.where("relatedId", "in", batchIds)
+				.get();
+
+			if (!snapshot.empty) {
+				const batch = db.batch();
+				snapshot.docs.forEach((doc) => {
+					batch.delete(doc.ref);
+				});
+				await batch.commit();
+			}
+		}
+	}
+
+	/**
 	 * Delete all notifications for a user
 	 */
 	async deleteAllByUser(userId: string): Promise<void> {
