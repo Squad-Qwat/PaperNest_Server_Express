@@ -17,6 +17,58 @@ import {
 	successResponse,
 } from "../utils/responseFormatter";
 
+// Helper to populate student and lecturer user details on multiple reviews
+const populateReviewUsers = async (reviews: Review[]): Promise<any[]> => {
+	if (reviews.length === 0) return [];
+
+	const studentIds = reviews.map((r) => r.studentUserId);
+	const lecturerIds = reviews.map((r) => r.lecturerUserId);
+	const allUserIds = [...new Set([...studentIds, ...lecturerIds])];
+	const users = await userRepository.findByIds(allUserIds);
+	const userMap = new Map(users.map((u) => [u.userId, u]));
+
+	return reviews.map((review) => {
+		const student = userMap.get(review.studentUserId);
+		const lecturer = userMap.get(review.lecturerUserId);
+		return {
+			...review,
+			student: student
+				? {
+						name: student.name,
+						photoURL: student.photoURL || null,
+				  }
+				: undefined,
+			lecturer: lecturer
+				? {
+						name: lecturer.name,
+						photoURL: lecturer.photoURL || null,
+				  }
+				: undefined,
+		};
+	});
+};
+
+// Helper to populate student and lecturer user details on a single review
+const populateSingleReviewUsers = async (review: Review): Promise<any> => {
+	const student = await userRepository.findById(review.studentUserId);
+	const lecturer = await userRepository.findById(review.lecturerUserId);
+	return {
+		...review,
+		student: student
+			? {
+					name: student.name,
+					photoURL: student.photoURL || null,
+			  }
+			: undefined,
+		lecturer: lecturer
+			? {
+					name: lecturer.name,
+					photoURL: lecturer.photoURL || null,
+			  }
+			: undefined,
+	};
+};
+
 /**
  * Create a review request
  * POST /api/documents/:documentId/versions/:documentBodyId/reviews
@@ -73,9 +125,11 @@ export const createReview = asyncHandler(
 			isRead: false,
 		});
 
+		const populatedReview = await populateSingleReviewUsers(review);
+
 		return createdResponse(
 			res,
-			{ review },
+			{ review: populatedReview },
 			"Review request created successfully",
 		);
 	},
@@ -113,9 +167,11 @@ export const getUserReviews = asyncHandler(
 			}
 		}
 
+		const populatedReviews = await populateReviewUsers(reviews);
+
 		return successResponse(
 			res,
-			{ reviews, count: reviews.length },
+			{ reviews: populatedReviews, count: reviews.length },
 			"Reviews retrieved successfully",
 		);
 	},
@@ -133,10 +189,11 @@ export const getPendingReviews = asyncHandler(
 		logger.info("Get pending reviews request", { userId });
 
 		const reviews = await reviewRepository.findPendingByLecturer(userId);
+		const populatedReviews = await populateReviewUsers(reviews);
 
 		return successResponse(
 			res,
-			{ reviews, count: reviews.length },
+			{ reviews: populatedReviews, count: reviews.length },
 			"Pending reviews retrieved successfully",
 		);
 	},
@@ -154,10 +211,11 @@ export const getDocumentReviews = asyncHandler(
 		logger.info("Get document reviews request", { documentId });
 
 		const reviews = await reviewRepository.findByDocument(documentId);
+		const populatedReviews = await populateReviewUsers(reviews);
 
 		return successResponse(
 			res,
-			{ reviews, count: reviews.length },
+			{ reviews: populatedReviews, count: reviews.length },
 			"Reviews retrieved successfully",
 		);
 	},
@@ -180,7 +238,9 @@ export const getReviewById = asyncHandler(
 			throw new NotFoundError("Review not found");
 		}
 
-		return successResponse(res, { review }, "Review retrieved successfully");
+		const populatedReview = await populateSingleReviewUsers(review);
+
+		return successResponse(res, { review: populatedReview }, "Review retrieved successfully");
 	},
 );
 
@@ -197,8 +257,9 @@ export const updateReview = asyncHandler(
 		logger.info("Update review request", { reviewId });
 
 		const review = await reviewRepository.update(reviewId, { message });
+		const populatedReview = await populateSingleReviewUsers(review);
 
-		return successResponse(res, { review }, "Review updated successfully");
+		return successResponse(res, { review: populatedReview }, "Review updated successfully");
 	},
 );
 
@@ -229,7 +290,9 @@ export const approveReview = asyncHandler(
 			isRead: false,
 		});
 
-		return successResponse(res, { review }, "Review approved successfully");
+		const populatedReview = await populateSingleReviewUsers(review);
+
+		return successResponse(res, { review: populatedReview }, "Review approved successfully");
 	},
 );
 
@@ -260,7 +323,9 @@ export const rejectReview = asyncHandler(
 			isRead: false,
 		});
 
-		return successResponse(res, { review }, "Review rejected successfully");
+		const populatedReview = await populateSingleReviewUsers(review);
+
+		return successResponse(res, { review: populatedReview }, "Review rejected successfully");
 	},
 );
 
@@ -296,7 +361,9 @@ export const requestRevision = asyncHandler(
 			isRead: false,
 		});
 
-		return successResponse(res, { review }, "Revision requested successfully");
+		const populatedReview = await populateSingleReviewUsers(review);
+
+		return successResponse(res, { review: populatedReview }, "Revision requested successfully");
 	},
 );
 

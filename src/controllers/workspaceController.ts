@@ -164,10 +164,6 @@ export const deleteWorkspace = asyncHandler(
 
 		logger.info("Delete workspace request", { workspaceId });
 
-		// Cascade delete all UserWorkspace records first
-		await userWorkspaceRepository.deleteByWorkspace(workspaceId as string);
-
-		// TODO: Implement cascade delete for documents, comments, etc.
 		await workspaceRepository.delete(workspaceId as string);
 
 		return noContentResponse(res);

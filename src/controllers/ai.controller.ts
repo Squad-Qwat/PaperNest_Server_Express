@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import type { ToolResult } from "../types/ai/agent.types";
-import { errorResponse } from "../utils/responseFormatter";
+import { errorResponse, forbiddenResponse } from "../utils/responseFormatter";
 
 export const streamAIResponse = async (
 	req: Request,
@@ -25,6 +25,32 @@ export const streamAIResponse = async (
 			taggedDocumentIds = [],
 			activeFileName,
 		} = req.body;
+
+		const userId = req.userId!;
+		let targetWorkspaceId = workspaceId;
+
+		if (!targetWorkspaceId && documentId) {
+			const { default: documentRepository } = await import(
+				"../repositories/documentRepository"
+			);
+			const document = await documentRepository.findById(documentId);
+			if (document) {
+				targetWorkspaceId = document.workspaceId;
+			}
+		}
+
+		if (targetWorkspaceId) {
+			const { default: userWorkspaceRepository } = await import(
+				"../repositories/userWorkspaceRepository"
+			);
+			const hasAccess = await userWorkspaceRepository.hasAccess(
+				userId,
+				targetWorkspaceId,
+			);
+			if (!hasAccess) {
+				return forbiddenResponse(res, "You do not have access to this workspace");
+			}
+		}
 
 		const { agentFactory } = await import(
 			"../services/ai/agents/agent.factory"

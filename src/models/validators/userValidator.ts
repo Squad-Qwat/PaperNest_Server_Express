@@ -15,7 +15,7 @@ export const updateUserSchema = Joi.object({
 		"string.min": "Username must be at least 3 characters long",
 		"string.max": "Username cannot exceed 30 characters",
 	}),
-	photoURL: Joi.string().uri().allow(null).messages({
+	photoURL: Joi.string().uri().allow(null, "").messages({
 		"string.uri": "Photo URL must be a valid URL",
 	}),
 }).min(1);
