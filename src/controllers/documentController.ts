@@ -8,6 +8,7 @@ import documentBodyRepository from "../repositories/documentBodyRepository";
 import documentFileRepository from "../repositories/documentFileRepository";
 import documentPermissionRepository from "../repositories/documentPermissionRepository";
 import documentRepository from "../repositories/documentRepository";
+import notificationRepository from "../repositories/notificationRepository";
 import reviewRepository from "../repositories/reviewRepository";
 import liveblocksWebhookService from "../services/liveblocksWebhookService";
 import permissionService from "../services/permissionService";
@@ -391,6 +392,10 @@ export const deleteDocument = asyncHandler(
 
 		// 2. Cascade delete from Firestore collections
 		try {
+			// Find all reviews associated with this document to get their IDs for notification cleanup
+			const reviews = await reviewRepository.findByDocument(documentId);
+			const reviewIds = reviews.map((r) => r.reviewId);
+
 			await Promise.all([
 				documentBodyRepository.deleteAllByDocument(documentId),
 				documentFileRepository.deleteAllByDocument(documentId),
@@ -398,9 +403,11 @@ export const deleteDocument = asyncHandler(
 				commentRepository.deleteAllByDocument(documentId),
 				reviewRepository.deleteAllByDocument(documentId),
 				documentPermissionRepository.deleteAllByDocument(documentId),
+				notificationRepository.deleteByRelatedId(documentId),
+				notificationRepository.deleteByRelatedIds(reviewIds),
 			]);
 			logger.info(
-				`All related Firestore records deleted for document ${documentId}`,
+				`All related Firestore records and notifications deleted for document ${documentId}`,
 			);
 		} catch (firestoreError) {
 			logger.error(

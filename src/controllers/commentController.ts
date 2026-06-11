@@ -51,7 +51,7 @@ export const createComment = asyncHandler(
 				type: "comment",
 				title: "New Comment",
 				message: `New comment on "${document.title}"`,
-				relatedId: comment.commentId,
+				relatedId: documentId,
 				isRead: false,
 			});
 
@@ -80,7 +80,7 @@ export const createComment = asyncHandler(
 					type: "comment",
 					title: "Comment Reply",
 					message: "Someone replied to your comment",
-					relatedId: comment.commentId,
+					relatedId: documentId,
 					isRead: false,
 				});
 

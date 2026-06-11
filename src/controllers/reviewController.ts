@@ -394,7 +394,10 @@ export const deleteReview = asyncHandler(
 			throw new ForbiddenError("Cannot delete review that has been processed");
 		}
 
-		await reviewRepository.delete(reviewId);
+		await Promise.all([
+			reviewRepository.delete(reviewId),
+			notificationRepository.deleteByRelatedId(reviewId),
+		]);
 
 		return noContentResponse(res);
 	},
