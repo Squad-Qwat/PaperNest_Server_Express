@@ -42,4 +42,8 @@ export class VertexAIProvider implements AIProvider {
 		}
 		return { valid: true };
 	}
+
+	getNativeSearchTools(): any[] {
+		return [{ google_search: {} }];
+	}
 }

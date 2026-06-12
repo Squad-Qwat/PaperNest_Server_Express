@@ -208,6 +208,10 @@ export const AgentState = Annotation.Root({
 		reducer: (_, newVal) => newVal ?? "main.tex",
 		default: () => "main.tex",
 	}),
+	webSearchEnabled: Annotation<boolean>({
+		reducer: (_, newVal) => newVal ?? false,
+		default: () => false,
+	}),
 });
 
 /**
