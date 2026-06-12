@@ -2,6 +2,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createAIModel } from "../../config";
 import { loadPrompts } from "../../promptLoader";
 import { getActiveToolsForState } from "../../tools/workspace.tool";
+import { aiRegistry } from "../../providers/registry";
 import {
 	contentToText,
 	extractTokenMetadata,
@@ -38,6 +39,15 @@ export const executorNode = async (state: AgentStateType) => {
 
 	const tools = getActiveToolsForState(state);
 
+	const provider = aiRegistry.getProvider(state.providerId as any);
+	const searchTools = (state.webSearchEnabled && provider && typeof provider.getNativeSearchTools === "function")
+		? provider.getNativeSearchTools()
+		: [];
+
+	if (searchTools.length > 0) {
+		tools.push(...searchTools);
+	}
+
 	const wasActionExecuted =
 		currentStep?.tool &&
 		state.lastToolResults?.some(
@@ -49,10 +59,12 @@ export const executorNode = async (state: AgentStateType) => {
 		currentStep.tool === "null" ||
 		currentStep.tool === "none" ||
 		currentStep.tool === "" ||
+		currentStep.tool === "google_search" ||
+		currentStep.tool === "web_search" ||
 		!!wasActionExecuted;
 
 	const modelWithTools = isStepConversational
-		? model
+		? (searchTools.length > 0 ? (model as any).bindTools(searchTools) : model)
 		: (model as any).bindTools(tools);
 
 	console.log("[Executor] Current step lookup:", {
@@ -111,15 +123,20 @@ export const executorNode = async (state: AgentStateType) => {
 		.join("\n");
 
 	const toolDescriptions = isStepConversational
-		? "No tools are available for this conversational step. Respond to the user with a direct text response."
-		: getToolDescriptions(tools);
+		? (state.webSearchEnabled
+			? "You have access to Google Search to look up live internet information, news, and current events. Respond directly to the user with the search results and information."
+			: "No tools are available for this conversational step. Respond to the user with a direct text response.")
+		: getToolDescriptions(tools.filter((t) => t && typeof t.name === "string"));
 
 	const executorPrompt = prompts.executor
 		.replace("{tool_descriptions}", toolDescriptions)
 		.replace("{current_step}", currentStep.description.trim())
 		.replace("{full_plan}", planText);
 
-	const contextContent = `\n[CURRENT DOCUMENT STATE]\nActive File: ${state.activeFileName || "main.tex"}\n${state.documentContent || "(empty)"}\n`;
+	const hasActiveDocument = state.documentId && state.documentId !== "unknown" && state.documentId !== "";
+	const contextContent = hasActiveDocument
+		? `\n[CURRENT DOCUMENT STATE]\nActive File: ${state.activeFileName || "main.tex"}\n${state.documentContent || "(empty)"}\n`
+		: `\n[CURRENT DOCUMENT STATE]\nNo active document open. The user is currently on the workspace dashboard and cannot edit files directly. Respond to their request conversationally.\n`;
 	const sysMsg = new SystemMessage(
 		`${prompts.system}\n\n${executorPrompt}\n\n${contextContent}`,
 	);

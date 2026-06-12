@@ -16,4 +16,5 @@ export interface AIProvider {
 	createModel(config: AIProviderConfig): BaseChatModel;
 	getAvailableModels(): string[];
 	validateCredentials(): { valid: boolean; error?: string };
+	getNativeSearchTools?(): any[];
 }

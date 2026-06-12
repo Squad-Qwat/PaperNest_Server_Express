@@ -27,6 +27,7 @@ export class ManualGraphProvider implements IAgentProvider {
 			params.modelId,
 			params.files,
 			params.activeFileName,
+			params.webSearchEnabled,
 		);
 	}
 }

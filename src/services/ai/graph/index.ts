@@ -95,6 +95,7 @@ export async function* streamAgent(
 	modelId?: string,
 	files?: Array<{ filename: string; mediaType: string; url: string }>,
 	activeFileName?: string,
+	webSearchEnabled: boolean = false,
 ): AsyncGenerator<StreamEvent> {
 	console.log("[Graph] Starting Plan-and-Execute agent for thread:", threadId);
 
@@ -174,6 +175,7 @@ export async function* streamAgent(
 			providerId: providerId || "google-genai",
 			modelId: modelId || "gemma-4-31b-it",
 			activeFileName: activeFileName || "main.tex",
+			webSearchEnabled,
 		};
 
 		if (existingToolResults && existingToolResults.length > 0) {

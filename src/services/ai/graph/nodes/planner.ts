@@ -2,6 +2,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createAIModel } from "../../config";
 import { loadPrompts } from "../../promptLoader";
 import { getActiveToolsForState } from "../../tools/workspace.tool";
+import { aiRegistry } from "../../providers/registry";
 import { extractTokenMetadata, getToolDescriptions } from "../../utils";
 import { PlanSchema } from "../schemas/planSchema";
 import type { AgentStateType } from "../state";
@@ -58,11 +59,37 @@ export const plannerNode = async (state: AgentStateType) => {
 		};
 	}
 
-	const documentSnippet =
-		`[Active File: ${state.activeFileName || "main.tex"}]\n` +
-		(state.documentContent?.slice(0, 2000) || "(no document content)");
+	const hasActiveDocument = state.documentId && state.documentId !== "unknown" && state.documentId !== "";
+	const documentSnippet = hasActiveDocument
+		? `[Active File: ${state.activeFileName || "main.tex"}]\n` + (state.documentContent?.slice(0, 2000) || "(no document content)")
+		: "(no active document - user is on the workspace dashboard, not inside the document editor)";
 	const tools = getActiveToolsForState(state);
-	const toolDescriptions = getToolDescriptions(tools);
+	let toolDescriptions = getToolDescriptions(tools);
+
+	const provider = aiRegistry.getProvider(state.providerId as any);
+	const searchTools = (state.webSearchEnabled && provider && typeof provider.getNativeSearchTools === "function")
+		? provider.getNativeSearchTools()
+		: [];
+
+	if (searchTools.length > 0) {
+		const searchToolDescriptions: string[] = [];
+		for (const tool of searchTools) {
+			if (tool && typeof tool === "object") {
+				if ("google_search" in tool) {
+					searchToolDescriptions.push("- **google_search**: Use Google Search to query the live internet for recent news, current events, or real-time web search information.");
+				} else if ("name" in tool && "description" in tool) {
+					searchToolDescriptions.push(`- **${tool.name}**: ${tool.description}`);
+				} else {
+					const keys = Object.keys(tool);
+					const toolName = keys[0] || "web_search";
+					searchToolDescriptions.push(`- **${toolName}**: Query the live internet/web for search results and current events.`);
+				}
+			}
+		}
+		if (searchToolDescriptions.length > 0) {
+			toolDescriptions += "\n" + searchToolDescriptions.join("\n");
+		}
+	}
 
 	const plannerPrompt = prompts.planner
 		.replace("{tool_descriptions}", toolDescriptions)
