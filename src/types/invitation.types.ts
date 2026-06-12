@@ -4,7 +4,7 @@ export interface Invitation {
 	invitationId: string;
 	workspaceId: string;
 	email: string;
-	role: Exclude<WorkspaceRole, "owner">;
+	role: WorkspaceRole;
 	inviterId: string;
 	token: string;
 	status: "pending" | "accepted" | "expired" | "declined";

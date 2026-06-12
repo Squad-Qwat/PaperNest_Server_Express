@@ -472,14 +472,18 @@ export const removeMember = asyncHandler(
 
 		// Check if user is removing themselves or is owner
 		const workspace = await workspaceRepository.findById(workspaceId as string);
+		const callerRole = await userWorkspaceRepository.getUserRole(
+			userId,
+			workspaceId as string,
+		);
 		const isSelf = userWorkspace.userId === userId;
-		const isOwner = workspace?.ownerId === userId;
+		const isOwner = callerRole === "owner";
 
 		if (!isSelf && !isOwner) {
 			throw new ForbiddenError("Only owner can remove members");
 		}
 
-		// Cannot remove owner
+		// Cannot remove original owner (creator)
 		if (
 			userWorkspace.role === "owner" &&
 			userWorkspace.userId === workspace?.ownerId

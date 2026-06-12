@@ -102,12 +102,17 @@ export const authorizeWorkspaceOwner = async (
 			throw new Error("Workspace ID is required");
 		}
 
-		const workspace = await workspaceRepository.findById(workspaceId);
-		if (!workspace) {
+		const workspaceExists = await workspaceRepository.exists(workspaceId);
+		if (!workspaceExists) {
 			throw new NotFoundError("Workspace not found");
 		}
 
-		if (workspace.ownerId !== userId) {
+		const userRole = await userWorkspaceRepository.getUserRole(
+			userId,
+			workspaceId,
+		);
+
+		if (userRole !== "owner") {
 			throw new ForbiddenError("Only workspace owner can perform this action");
 		}
 

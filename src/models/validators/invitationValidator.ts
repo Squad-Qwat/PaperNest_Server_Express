@@ -6,10 +6,10 @@ export const sendInvitationsSchema = Joi.object({
 		"string.email": "Invalid email format",
 	}),
 	role: Joi.string()
-		.valid("editor", "viewer", "reviewer")
+		.valid("owner", "editor", "viewer", "reviewer")
 		.default("viewer")
 		.messages({
-			"any.only": "Role must be either editor, viewer, or reviewer",
+			"any.only": "Role must be owner, editor, viewer, or reviewer",
 		}),
 });
 
