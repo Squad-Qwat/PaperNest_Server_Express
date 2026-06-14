@@ -7,10 +7,14 @@ export const createReviewSchema = Joi.object({
 	lecturerUserId: Joi.string().required().messages({
 		"any.required": "Lecturer user ID is required",
 	}),
-	message: Joi.string().allow("").max(2000).default("").messages({
-		"string.max": "Message cannot exceed 2000 characters",
+	message: Joi.string().trim().min(1).max(50).required().messages({
+		"string.empty": "Message is required and cannot be empty",
+		"string.min": "Message is required and cannot be empty",
+		"string.max": "Message cannot exceed 50 characters",
+		"any.required": "Message is required",
 	}),
 });
+
 
 /**
  * Validation schema for updating review message
