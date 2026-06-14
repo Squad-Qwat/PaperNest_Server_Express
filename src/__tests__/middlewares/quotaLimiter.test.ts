@@ -48,29 +48,7 @@ describe("QuotaLimiter Middleware", () => {
 	});
 
 	describe("documents resource", () => {
-		it("should allow document creation if under free limit (3)", async () => {
-			req = {
-				userId: "user-free",
-				user: {
-					userId: "user-free",
-					subscriptionPlan: "free",
-				} as any,
-			};
-
-			jest
-				.mocked(documentRepository.findByCreator)
-				.mockResolvedValue([
-					{ documentId: "doc-1" },
-					{ documentId: "doc-2" },
-				] as any);
-
-			const middleware = checkQuota("documents");
-			await middleware(req as Request, res as Response, next);
-
-			expect(next).toHaveBeenCalledWith();
-		});
-
-		it("should block document creation if limit reached (3)", async () => {
+		it("should allow document creation if under free limit (7)", async () => {
 			req = {
 				userId: "user-free",
 				user: {
@@ -85,6 +63,36 @@ describe("QuotaLimiter Middleware", () => {
 					{ documentId: "doc-1" },
 					{ documentId: "doc-2" },
 					{ documentId: "doc-3" },
+					{ documentId: "doc-4" },
+					{ documentId: "doc-5" },
+					{ documentId: "doc-6" },
+				] as any);
+
+			const middleware = checkQuota("documents");
+			await middleware(req as Request, res as Response, next);
+
+			expect(next).toHaveBeenCalledWith();
+		});
+
+		it("should block document creation if limit reached (7)", async () => {
+			req = {
+				userId: "user-free",
+				user: {
+					userId: "user-free",
+					subscriptionPlan: "free",
+				} as any,
+			};
+
+			jest
+				.mocked(documentRepository.findByCreator)
+				.mockResolvedValue([
+					{ documentId: "doc-1" },
+					{ documentId: "doc-2" },
+					{ documentId: "doc-3" },
+					{ documentId: "doc-4" },
+					{ documentId: "doc-5" },
+					{ documentId: "doc-6" },
+					{ documentId: "doc-7" },
 				] as any);
 
 			const middleware = checkQuota("documents");
@@ -92,6 +100,7 @@ describe("QuotaLimiter Middleware", () => {
 
 			expect(next).toHaveBeenCalledWith(expect.any(ForbiddenError));
 		});
+
 	});
 
 	describe("latex resource", () => {
