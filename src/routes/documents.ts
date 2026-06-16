@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as documentController from "../controllers/documentController";
+import { exportDocumentZip } from "../controllers/exportController";
 import * as versionController from "../controllers/versionController";
 import { authenticate } from "../middlewares/auth";
 import {
@@ -28,6 +29,17 @@ router.get(
 	"/documents/my-documents",
 	authenticate,
 	documentController.getUserDocuments,
+);
+
+/**
+ * @route   GET /api/documents/:documentId/export-zip
+ * @desc    Export document as ZIP (main.tex + all auxiliary files)
+ * @access  Protected (viewer or higher)
+ */
+router.get(
+	"/documents/:documentId/export-zip",
+	authenticate,
+	exportDocumentZip,
 );
 
 /**
