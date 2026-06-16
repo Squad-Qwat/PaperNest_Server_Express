@@ -9,7 +9,7 @@ export class EmailService {
 	): Promise<void> {
 		try {
 			const { error } = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: "Verify your email - PaperNest",
 				html: `
@@ -65,7 +65,7 @@ export class EmailService {
 	): Promise<void> {
 		try {
 			const response = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: `Invitation: Join ${workspaceName} on PaperNest`,
 				text: `Hi! ${inviterName} has invited you to join the "${workspaceName}" workspace on PaperNest. Click here to accept: ${inviteUrl}`,
@@ -113,7 +113,7 @@ export class EmailService {
 	): Promise<void> {
 		try {
 			const response = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: `Komentar Baru: "${documentTitle}" di PaperNest`,
 				html: `
@@ -157,7 +157,7 @@ export class EmailService {
 	static async sendWelcomeEmail(to: string, name: string): Promise<void> {
 		try {
 			const response = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: "Welcome to PaperNest! 🚀",
 				html: `
