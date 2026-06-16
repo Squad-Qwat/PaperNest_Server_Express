@@ -130,3 +130,24 @@ export const verifyOTPSchema = Joi.object({
 		"any.required": "OTP is required",
 	}),
 });
+
+export const resetPasswordSchema = Joi.object({
+	token: Joi.string().min(96).max(96).required().messages({
+		"string.min": "Invalid reset token",
+		"string.max": "Invalid reset token",
+		"any.required": "Reset token is required",
+	}),
+	password: Joi.string()
+		.min(8)
+		.pattern(/[a-z]/)
+		.pattern(/[A-Z]/)
+		.pattern(/[0-9]/)
+		.pattern(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/)
+		.required()
+		.messages({
+			"string.min": "Password must be at least 8 characters long",
+			"string.pattern.base":
+				"Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character",
+			"any.required": "Password is required",
+		}),
+});

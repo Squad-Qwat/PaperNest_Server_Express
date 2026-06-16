@@ -76,6 +76,25 @@ export const sendPasswordReset = asyncHandler(
 	},
 );
 
+export const validateResetToken = asyncHandler(
+	async (req: Request, res: Response) => {
+		const { token } = req.query as { token?: string };
+		if (!token || token.length !== 96) {
+			throw new Error("RESET_TOKEN_INVALID_OR_EXPIRED");
+		}
+		await authService.validateResetToken(token);
+		return successResponse(res, null, "Token is valid");
+	},
+);
+
+export const resetPassword = asyncHandler(
+	async (req: Request, res: Response) => {
+		const { token, password } = req.body;
+		await authService.resetPassword(token, password);
+		return successResponse(res, null, "Password has been reset successfully");
+	},
+);
+
 export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
 	if (!req.body.firebaseToken) {
 		throw new Error("Firebase token is required");
@@ -164,6 +183,8 @@ export default {
 	deleteAccount,
 	updateEmail,
 	sendPasswordReset,
+	validateResetToken,
+	resetPassword,
 	checkEmail,
 	sendOTP,
 	verifyOTP,

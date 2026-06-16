@@ -11,6 +11,7 @@ import {
 	passwordResetSchema,
 	refreshTokenSchema,
 	registerSchema,
+	resetPasswordSchema,
 	updateEmailSchema,
 	verifyOTPSchema,
 	verifyTokenSchema,
@@ -90,6 +91,21 @@ router.post(
 	authRateLimiter,
 	validate({ body: passwordResetSchema }),
 	authController.sendPasswordReset,
+);
+
+// GET: validate a reset token (frontend checks before showing the form)
+router.get(
+	"/password/reset/validate",
+	authRateLimiter,
+	authController.validateResetToken,
+);
+
+// POST: actually reset the password with the token
+router.post(
+	"/password/reset/confirm",
+	authRateLimiter,
+	validate({ body: resetPasswordSchema }),
+	authController.resetPassword,
 );
 
 router.post(

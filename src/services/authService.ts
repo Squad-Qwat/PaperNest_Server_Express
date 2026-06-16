@@ -19,6 +19,7 @@ import { BadRequestError } from "../utils/errorTypes";
 import logger from "../utils/logger";
 import { EmailService } from "./emailService";
 import { OTPService } from "./otpService";
+import { PasswordResetService } from "./passwordResetService";
 import registrationService from "./registrationService";
 
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
@@ -395,8 +396,81 @@ export const updateUserEmail = async (userId: string, newEmail: string) => {
 };
 
 export const sendPasswordResetEmail = async (email: string) => {
-	const resetLink = await auth.generatePasswordResetLink(email);
-	logger.info(`Password reset link for ${email}: ${resetLink}`);
+	try {
+		const firebaseUser = await auth.getUserByEmail(email);
+
+		// Block social-only accounts (no password provider)
+		const hasPasswordProvider = firebaseUser.providerData.some(
+			(p) => p.providerId === "password",
+		);
+		if (!hasPasswordProvider) {
+			// Fail silently — don't leak which provider the user has
+			logger.info(
+				`Password reset blocked for social-only account: ${email}`,
+			);
+			return;
+		}
+
+		const token = PasswordResetService.generateToken();
+		await PasswordResetService.saveToken(token, firebaseUser.uid, email);
+
+		const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
+		await EmailService.sendPasswordResetEmail(
+			email,
+			firebaseUser.displayName || "User",
+			resetUrl,
+		);
+	} catch (error: any) {
+		// Silently ignore "user not found" to prevent email enumeration
+		if (error.code !== "auth/user-not-found") {
+			logger.error("Password reset email error:", error);
+		}
+	}
+};
+
+export const resetPassword = async (
+	token: string,
+	newPassword: string,
+): Promise<void> => {
+	// 1. Validate token
+	const { uid, email } = await PasswordResetService.validate(token);
+
+	// 2. Guard: social-only accounts must not reset password via this flow
+	const firebaseUser = await auth.getUser(uid);
+	const hasPasswordProvider = firebaseUser.providerData.some(
+		(p) => p.providerId === "password",
+	);
+	if (!hasPasswordProvider) {
+		throw new BadRequestError("SOCIAL_ACCOUNT_NO_PASSWORD");
+	}
+
+	// 3. Mark token used before any write (prevents concurrent replay)
+	await PasswordResetService.markUsed(token);
+
+	try {
+		// 4. Update password via Firebase Admin (handles hashing)
+		await auth.updateUser(uid, { password: newPassword });
+
+		// 5. Revoke all refresh tokens — forces logout on all devices
+		await auth.revokeRefreshTokens(uid);
+
+		// 6. Clean up token
+		await PasswordResetService.deleteToken(token);
+
+		logger.info(`Password reset successful for uid=${uid} email=${email}`);
+	} catch (error: any) {
+		// If Firebase write fails, token stays "used" — user must request again
+		logger.error("Failed to reset password:", error);
+		throw new BadRequestError(
+			error.code === "auth/weak-password"
+				? "Password is too weak"
+				: "Failed to reset password. Please try again.",
+		);
+	}
+};
+
+export const validateResetToken = async (token: string): Promise<void> => {
+	await PasswordResetService.validate(token);
 };
 
 export const sendOTP = async (uid: string) => {
@@ -433,6 +507,8 @@ export default {
 	deleteUser,
 	updateEmail: updateUserEmail,
 	sendPasswordReset: sendPasswordResetEmail,
+	validateResetToken,
+	resetPassword,
 	checkEmail: checkEmailAvailability,
 	sendOTP,
 	verifyOTP,
