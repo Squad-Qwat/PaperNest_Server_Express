@@ -148,6 +148,18 @@ describe("UserController", () => {
 			await verifyUserUpdateSuccess(updatedUser);
 		});
 
+		it("[NEW] should update user username if not taken and fullname is valid", async () => {
+			const updates = { username: "rina123", name: "Rina Updated" };
+			const updatedUser = { ...mockUser, ...updates };
+			jest.mocked(userRepository.findByUsername).mockResolvedValue(null);
+			jest.mocked(userRepository.update).mockResolvedValue(updatedUser);
+			mockReq.params = { userId: "user-123" };
+			mockReq.userId = "user-123";
+			mockReq.body = updates;
+
+			await verifyUserUpdateSuccess(updatedUser);
+		});
+
 		it("should throw ConflictError if username is already taken by another user", async () => {
 			const updates = { username: "alex99" };
 			const existingUser = {
