@@ -176,6 +176,9 @@ describe("WorkspaceController", () => {
 				.mocked(workspaceRepository.findById)
 				.mockResolvedValue({ ...mockWorkspace, ownerId: "owner-id" });
 			jest
+				.mocked(userWorkspaceRepository.getUserRole)
+				.mockResolvedValue("owner");
+			jest
 				.mocked(userWorkspaceRepository.delete)
 				.mockResolvedValue(undefined as any);
 
@@ -203,6 +206,9 @@ describe("WorkspaceController", () => {
 			jest
 				.mocked(workspaceRepository.findById)
 				.mockResolvedValue({ ...mockWorkspace, ownerId: "owner-id" });
+			jest
+				.mocked(userWorkspaceRepository.getUserRole)
+				.mockResolvedValue("editor");
 
 			await workspaceController.removeMember(mockReq, mockRes, next);
 

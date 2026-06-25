@@ -9,7 +9,7 @@ export class EmailService {
 	): Promise<void> {
 		try {
 			const { error } = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: "Verify your email - PaperNest",
 				html: `
@@ -65,7 +65,7 @@ export class EmailService {
 	): Promise<void> {
 		try {
 			const response = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: `Invitation: Join ${workspaceName} on PaperNest`,
 				text: `Hi! ${inviterName} has invited you to join the "${workspaceName}" workspace on PaperNest. Click here to accept: ${inviteUrl}`,
@@ -113,7 +113,7 @@ export class EmailService {
 	): Promise<void> {
 		try {
 			const response = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: `Komentar Baru: "${documentTitle}" di PaperNest`,
 				html: `
@@ -154,10 +154,76 @@ export class EmailService {
 		}
 	}
 
+	static async sendPasswordResetEmail(
+		to: string,
+		name: string,
+		resetUrl: string,
+	): Promise<void> {
+		try {
+			const { error } = await resend.emails.send({
+				from: "PaperNest <noreply@papernest.web.id>",
+				to,
+				subject: "Reset your password - PaperNest",
+				html: `
+					<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; color: #111827; margin: 0; padding: 40px 20px;">
+						<div style="max-width: 480px; margin: 0 auto;">
+							<div style="margin-bottom: 32px;">
+								<h1 style="font-size: 24px; font-weight: 700; color: #009689; margin: 0; letter-spacing: -0.02em;">PaperNest</h1>
+							</div>
+
+							<div style="margin-bottom: 32px;">
+								<h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #111827;">Reset your password</h2>
+								<p style="font-size: 15px; line-height: 24px; color: #4b5563; margin: 0;">
+									Hi ${name},<br />
+									We received a request to reset your PaperNest account password. Click the button below to set a new password.
+								</p>
+							</div>
+
+							<div style="text-align: center; margin-bottom: 32px;">
+								<a href="${resetUrl}" style="background-color: #009689; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">
+									Reset Password
+								</a>
+							</div>
+
+							<div style="margin-bottom: 32px;">
+								<p style="font-size: 13px; line-height: 20px; color: #6b7280; margin: 0;">
+									This link will expire in <strong>15 minutes</strong>. If you did not request a password reset, you can safely ignore this email — your password will remain unchanged.
+								</p>
+							</div>
+
+							<div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 32px;">
+								<p style="font-size: 12px; color: #6b7280; margin: 0 0 8px 0; font-weight: 600;">
+									If the button above does not work, paste this URL in your browser:
+								</p>
+								<p style="font-size: 12px; color: #009689; word-break: break-all; margin: 0;">
+									${resetUrl}
+								</p>
+							</div>
+
+							<div style="border-top: 1px solid #f3f4f6; padding-top: 24px; text-align: left;">
+								<p style="font-size: 12px; color: #9ca3af; margin: 0;">
+									&copy; ${new Date().getFullYear()} PaperNest. All rights reserved.
+								</p>
+							</div>
+						</div>
+					</div>
+				`,
+			});
+
+			if (error) {
+				logger.error("Resend API error (password reset)", { error });
+				throw new Error(error.message);
+			}
+		} catch (error: any) {
+			logger.error("Failed to send password reset email", { error: error.message });
+			throw new Error(`Failed to send password reset email: ${error.message}`);
+		}
+	}
+
 	static async sendWelcomeEmail(to: string, name: string): Promise<void> {
 		try {
 			const response = await resend.emails.send({
-				from: "PaperNest <noreply@papernest.abiyyufahri.my.id>",
+				from: "PaperNest <noreply@papernest.web.id>",
 				to,
 				subject: "Welcome to PaperNest! 🚀",
 				html: `

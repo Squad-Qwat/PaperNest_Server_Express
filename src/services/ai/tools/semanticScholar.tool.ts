@@ -2,10 +2,6 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { semanticScholarService } from "../../SemanticScholarService";
 
-/**
- * Semantic Scholar Search Tool for AI Agents
- * Allows agents to search for academic papers to support writing or citations
- */
 export const semanticScholarTool = tool(
 	async ({ query, limit = 5, yearRange, fieldsOfStudy }) => {
 		console.log(
@@ -16,7 +12,7 @@ export const semanticScholarTool = tool(
 			const results = await semanticScholarService.searchPapers(query, limit);
 
 			if (results.data.length === 0) {
-				return "No papers found for the given search query on Semantic Scholar.";
+				return "No papers found for the given search query.";
 			}
 
 			const formattedResults = results.data
@@ -35,21 +31,21 @@ export const semanticScholarTool = tool(
 				})
 				.join("\n---\n\n");
 
-			return `Relevant academic papers found on Semantic Scholar:\n\n${formattedResults}`;
+			return `Relevant academic papers found:\n\n${formattedResults}`;
 		} catch (error) {
 			console.error("[SemanticScholarTool] Search failed:", error);
-			return "Error searching Semantic Scholar. Please check the network connectivity or try a different query.";
+			return "Error searching academic database. Please check the network connectivity or try a different query.";
 		}
 	},
 	{
 		name: "search_semantic_scholar",
 		description:
-			"Search for academic papers and research articles on Semantic Scholar. Use this when the user needs to find references, citations, or verify scientific claims. Returns paper titles, authors, years, and direct PDF links if available.",
+			"Search for academic papers, preprints, and books by title, keywords, or identifiers (DOI, arXiv ID, PMID, PMCID, ISBN). Wrap the title query in double quotes for a precise/exact title search. Returns matching paper titles, authors, years, and PDF links.",
 		schema: z.object({
 			query: z
 				.string()
 				.describe(
-					"The search query or keywords to look for in academic literature",
+					"The search query, keywords, or identifier (e.g. arXiv ID, DOI, PMID, PMCID, ISBN)",
 				),
 			limit: z
 				.number()
